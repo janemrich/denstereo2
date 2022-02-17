@@ -12,6 +12,7 @@ from detectron2.engine import launch
 from detectron2.data import MetadataCatalog
 from mmcv import Config
 import cv2
+import wandb
 
 cv2.setNumThreads(0)  # pytorch issue 1355: possible deadlock in dataloader
 # OpenCL may be enabled by default in OpenCV3; disable it because it's not
@@ -149,6 +150,8 @@ def main(args):
     else:
         renderer = None
     '''
+
+    wandb.init(project="denstereo", entity="jemrich")
     renderer = None
     logger.info(f"Used GDRN module name: {cfg.MODEL.POSE_NET.NAME}")
     model, optimizer = eval(cfg.MODEL.POSE_NET.NAME).build_model_optimizer(cfg, is_test=args.eval_only)
