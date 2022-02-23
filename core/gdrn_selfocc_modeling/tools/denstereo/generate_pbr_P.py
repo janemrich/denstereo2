@@ -12,9 +12,7 @@ from tqdm import tqdm
 cur_dir = osp.abspath(osp.dirname(__file__))
 PROJ_ROOT = osp.join(cur_dir, "../../../..")
 sys.path.insert(0, PROJ_ROOT)
-
-from lib.egl_renderer.egl_renderer_v3 import EGLRenderer
-
+# from lib.egl_renderer.egl_renderer_v3 import EGLRenderer
 # from lib.vis_utils.image import grid_show
 
 idx2class = {
@@ -52,17 +50,17 @@ IM_W = 640
 near = 0.01
 far = 6.5
 
-data_dir = osp.normpath(osp.join(PROJ_ROOT, "datasets/BOP_DATASETS/ycbv/train_pbr"))
+bop_dir = osp.normpath(osp.join(PROJ_ROOT, "datasets/BOP_DATASETS/"))
 
 cls_indexes = sorted(idx2class.keys())
 cls_names = [idx2class[cls_idx] for cls_idx in cls_indexes]
-model_dir = osp.normpath(osp.join(PROJ_ROOT, "datasets/BOP_DATASETS/ycbv/models"))
+model_dir = osp.normpath(osp.join(PROJ_ROOT, "datasets/BOP_DATASETS/denstereo-test/models"))
 model_paths = [osp.join(model_dir, f"obj_{obj_id:06d}.ply") for obj_id in cls_indexes]
 texture_paths = [osp.join(model_dir, f"obj_{obj_id:06d}.png") for obj_id in cls_indexes]
 
 scenes = [i for i in range(0, 49 + 1)]
-save_root = "/data/wanggu/Storage"
-xyz_root = osp.normpath(osp.join(save_root, "BOP_DATASETS/ycbv/train_pbr/xyz_crop"))
+save_root = "/igd/a4/homestud/jemrich/datasets"
+xyz_root = osp.normpath(osp.join(save_root, "BOP_DATASETS/denstereo-test/train_pbr_left/xyz_crop"))
 
 K = np.array([[1066.778, 0.0, 312.9869079589844], [0.0, 1067.487, 241.3108977675438], [0.0, 0.0, 1.0]], dtype=np.float32)
 
@@ -132,10 +130,11 @@ def get_time_delta(sec):
     return delta_time_str
 
 class XyzGen(object):
-    def __init__(self, split="train", scene="all"):
-        if split == "train":
+    def __init__(self, dataset="denstereo-test", split="train", scene="all"):
+        print(dataset, split, scenes)
+        if split == "train" or "train_pbr_right" or "train_pbr_left":
             scene_ids = scenes
-            data_root = data_dir
+            data_root = osp.join(bop_dir, dataset, split)
         else:
             raise ValueError(f"split {split} error")
 
@@ -144,13 +143,13 @@ class XyzGen(object):
         else:
             assert int(scene) in scene_ids, f"{scene} not in {scene_ids}"
             sel_scene_ids = [int(scene)]
-        print("split: ", split, "selected scene ids: ", sel_scene_ids)
+        print("dataset: ", dataset, "split: ", split, "selected scene ids: ", sel_scene_ids)
         self.split = split
         self.scene = scene
         self.sel_scene_ids = sel_scene_ids
         self.data_root = data_root
         self.model = modelload(model_dir, cls_indexes)
-        self.xyz_root = "/data/wanggu/Storage/BOP_DATASETS/ycbv/train_pbr/xyz_crop"
+        self.xyz_root = osp.join("/igd/a4/homestud/jemrich/datasets/BOP_DATASETS/", dataset, split, "xyz_crop")
 
     def main(self):
         split = self.split
@@ -167,7 +166,7 @@ class XyzGen(object):
             scene_root = osp.join(data_root, f"{scene_id:06d}")
 
             gt_dict = mmcv.load(osp.join(scene_root, "scene_gt.json"))
-            gt_info_dict = mmcv.load(osp.join(scene_root, "scene_gt_info.json"))
+            # gt_info_dict = mmcv.load(osp.join(scene_root, "scene_gt_info.json"))
             cam_dict = mmcv.load(osp.join(scene_root, "scene_camera.json"))
 
             for str_im_id in tqdm(gt_dict, postfix=f"{scene_id}"):
@@ -269,7 +268,8 @@ if __name__ == "__main__":
     import setproctitle
     import torch
 
-    parser = argparse.ArgumentParser(description="gen ycbv train_pbr xyz")
+    parser = argparse.ArgumentParser(description="gen denstereo train_pbr xyz")
+    parser.add_argument("--dataset", type=str, default="denstereo-test", help="dataset")
     parser.add_argument("--split", type=str, default="train", help="split")
     parser.add_argument("--scene", type=str, default="all", help="scene id")
     parser.add_argument("--gpu", type=str, default="0", help="gpu")
@@ -286,8 +286,8 @@ if __name__ == "__main__":
     tensor_kwargs = {"device": device, "dtype": dtype}
 
     T_begin = time.perf_counter()
-    setproctitle.setproctitle(f"gen_xyz_ycbv_train_pbr_{args.split}_{args.scene}")
-    xyz_gen = XyzGen(args.split, args.scene)
+    setproctitle.setproctitle(f"gen_xyz_denstereo_train_pbr_{args.split}_{args.scene}")
+    xyz_gen = XyzGen(args.dataset, args.split, args.scene)
     xyz_gen.main()
     T_end = time.perf_counter() - T_begin
     print("split", args.split, "scene", args.scene, "total time: ", get_time_delta(T_end))
