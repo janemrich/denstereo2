@@ -1,6 +1,8 @@
 # generate Q0
 
 import sys
+import wandb
+import argparse
 
 sys.path.append('../')
 import numpy as np
@@ -14,6 +16,7 @@ import ref
 from _collections import OrderedDict
 import os.path as osp
 import mmcv
+from numba import jit
 
 LM_13_OBJECTS = [
     "ape",
@@ -39,23 +42,27 @@ intrinsic_matrix = {
 }
 
 
+@jit(nopython=True)
 def transformer(P0, R, t):
-    P0 = np.reshape(P0, [3, 1])
-    P = np.matmul(R, P0) + t
+    P0 = np.reshape(P0, (3, 1))
+    P = (R @ P0) + t
     return P
 
 
+@jit(nopython=True)
 def transformer_back(P, R, t):  # 计算P0=RTP-RTt
     P0 = np.matmul(R.T, P) - np.matmul(R.T, t)
     return P0
 
 
+@jit(nopython=True)
 def projector(P0, K, R, t):  # 计算相机投影， 将P0经过R， t变换再投影到图像上
     p = np.matmul(K, P0) / P0[2]
     p = p[0:2, :] / p[2]
     return p
 
 
+@jit(nopython=True)
 def pointintriangle(A, B, C, P):  # 判断一点是否在3角面片内部，ABC是三角面片3个点
     P = np.expand_dims(P, 1)
     v0 = C - A
@@ -81,6 +88,57 @@ def pointintriangle(A, B, C, P):  # 判断一点是否在3角面片内部，ABC�
     if v < 0 or v > 1:
         return False
     return u + v <= 1
+
+def calc_xy_crop(vert_id, vert, camK, R, t, norm_d, height, width, camK_inv, pixellist, mask, xyz):
+    for i in range(vert_id.shape[0]):  # 行数
+        P1 = transformer(vert[vert_id[i][0], :].T.copy(), R, t)
+        P2 = transformer(vert[vert_id[i][1], :].T.copy(), R, t)
+        P3 = transformer(vert[vert_id[i][2], :].T.copy(), R, t)
+        p1 = projector(P1, camK, R, t)
+        p2 = projector(P2, camK, R, t)  # col first
+        p3 = projector(P3, camK, R, t)
+        planenormal = norm_d[vert_id[i][0], :]
+        planenormal = np.expand_dims(planenormal, 1)
+        planenormal = np.matmul(R, planenormal)
+        # 计算在p1, p2, p3 三角形内的整数点，并为他们初始化一个candidate
+        p_x_min, p_x_max = np.min([p1[0, :], p2[0, :], p3[0, :]]), np.max(
+            [p1[0, :], p2[0, :], p3[0, :]])
+        p_y_min, p_y_max = np.min([p1[1, :], p2[1, :], p3[1, :]]), np.max(
+            [p1[1, :], p2[1, :], p3[1, :]])  # row
+        # inside the image
+        if p_y_min < 0.: p_y_min = 0.
+        if p_y_max >= height: p_y_max = height - 1.
+        if p_x_min < 0.: p_x_min = 0.
+        if p_x_max >= width: p_x_max = width - 1.
+        for x in np.arange(int(p_x_min), int(p_x_max) + 1, 1):
+            for y in np.arange(int(p_y_min), int(p_y_max) + 1, 1): # row
+                if pointintriangle(p1, p2, p3, np.asarray([x, y], dtype=float).T):
+                    point = np.array([x, y, 1]).astype(float)
+                    point = np.expand_dims(point, 1)
+                    Zp_upper = np.matmul(planenormal.T, P1)
+                    Zp_lower = np.matmul(planenormal.T, np.matmul(camK_inv, point))
+                    Zp = np.abs(Zp_upper / Zp_lower)
+                    pixellist[y, x] = np.min([Zp, pixellist[y, x]])
+    # 生成P0的图， 之前只存储了Zp， 现在计算值
+    # pixellist is the result
+    P0_output = np.zeros([height, width, 3], dtype=np.float32)
+    x1, y1, x2, y2 = xyz["xyxy"]
+    for i in range(y1, y2+1):
+        for j in range(x1, x2+1):
+            if mask[i][j] < 1 or pixellist[i, j] > 30:
+                continue
+            else:
+                point = np.array([j, i, 1])
+                point = np.expand_dims(point, 1)
+                P = (pixellist[i, j] * np.matmul(camK_inv, point))
+                P0 = transformer_back(P, R, t)
+                # P0_3 = P0.reshape(3)
+                P0_output[i, j, :] = P0.reshape(3)  # 边界上的点在计算的时候会出现错误， 没有完全包裹住
+
+    return {
+        "xyz_crop": P0_output[y1:y2 + 1, x1:x2 + 1, :],
+        "xyxy": [x1, y1, x2, y2],
+    }
 
 
 def modelload(model_dir, ids):
@@ -148,7 +206,7 @@ class estimate_coor_P0():
                         assert osp.exists(mask_visib_file), mask_visib_file
                         # load mask visib  TODO: load both mask_visib and mask_full
                         mask = mmcv.imread(mask_visib_file, "unchanged")
-                        mask = mask.astype(np.bool).astype(np.float)
+                        mask = mask.astype(bool).astype(float)
                         if mask.sum() == 0:
                             P = {
                                 "xyz_crop": np.zeros((height, width, 3), dtype=np.float16),
@@ -170,63 +228,30 @@ class estimate_coor_P0():
                             vert_id = np.asarray(vert_id, np.int64)
                             pixellist = np.zeros([height, width]) + 100  # 加一个大数
                             # 实际上就是将每个3角面片投影回来，查看其中包含的整点像素，为其提供一个估计，然后最后选择能看到的那个，Z值最小
-                            for i in range(vert_id.shape[0]):  # 行数
-                                P1 = transformer(vert[vert_id[i][0], :].T, R, t)
-                                P2 = transformer(vert[vert_id[i][1], :].T, R, t)
-                                P3 = transformer(vert[vert_id[i][2], :].T, R, t)
-                                p1 = projector(P1, camK, R, t)
-                                p2 = projector(P2, camK, R, t)  # col first
-                                p3 = projector(P3, camK, R, t)
-                                planenormal = norm_d[vert_id[i][0], :]
-                                planenormal = np.expand_dims(planenormal, 1)
-                                planenormal = np.matmul(R, planenormal)
-                                # 计算在p1, p2, p3 三角形内的整数点，并为他们初始化一个candidate
-                                p_x_min, p_x_max = np.min([p1[0, :], p2[0, :], p3[0, :]]), np.max(
-                                    [p1[0, :], p2[0, :], p3[0, :]])
-                                p_y_min, p_y_max = np.min([p1[1, :], p2[1, :], p3[1, :]]), np.max(
-                                    [p1[1, :], p2[1, :], p3[1, :]])  # row
-                                # inside the image
-                                if p_y_min < 0.: p_y_min = 0.
-                                if p_y_max >= height: p_y_max = height - 1.
-                                if p_x_min < 0.: p_x_min = 0.
-                                if p_x_max >= width: p_x_max = width - 1.
-                                for x in np.arange(int(p_x_min), int(p_x_max) + 1, 1):
-                                    for y in np.arange(int(p_y_min), int(p_y_max) + 1, 1): # row
-                                        if pointintriangle(p1, p2, p3, np.asarray([x, y], dtype=np.float).T):
-                                            point = np.array([x, y, 1]).astype(np.float)
-                                            point = np.expand_dims(point, 1)
-                                            Zp_upper = np.matmul(planenormal.T, P1)
-                                            Zp_lower = np.matmul(planenormal.T, np.matmul(camK_inv, point))
-                                            Zp = np.abs(Zp_upper / Zp_lower)
-                                            pixellist[y, x] = np.min([Zp, pixellist[y, x]])
-                            # 生成P0的图， 之前只存储了Zp， 现在计算值
-                            # pixellist is the result
-                            P0_output = np.zeros([height, width, 3], dtype=np.float32)
-                            x1, y1, x2, y2 = xyz["xyxy"]
-                            for i in range(y1, y2+1):
-                                for j in range(x1, x2+1):
-                                    if mask[i][j] < 1 or pixellist[i, j] > 30:
-                                        continue
-                                    else:
-                                        point = np.array([j, i, 1])
-                                        point = np.expand_dims(point, 1)
-                                        P = (pixellist[i, j] * np.matmul(camK_inv, point))
-                                        P0 = transformer_back(P, R, t)
-                                        # P0_3 = P0.reshape(3)
-                                        P0_output[i, j, :] = P0.reshape(3)  # 边界上的点在计算的时候会出现错误， 没有完全包裹住
-
-                            xyz_value = xyz["xyz_crop"]
-                            P = {
-                                "xyz_crop": P0_output[y1:y2 + 1, x1:x2 + 1, :],
-                                "xyxy": [x1, y1, x2, y2],
-                            }
+                            P = calc_xy_crop(vert_id, vert, camK, R, t, norm_d, height, width, camK_inv, pixellist, mask, xyz)
 
                         outpath = osp.join(self.new_xyz_root, f"{scene_id:06d}/{int_im_id:06d}_{anno_i:06d}-xyz.pkl")
                         mmcv.dump(P, outpath)
+                        wandb.log({'scene': scene_id,
+                                    'im_id': int_im_id,
+                                    'anno_id': anno_i})
 
 
 if __name__ == "__main__":
-    model_dir = "/data/wanggu/Storage/BOP_DATASETS/lmo/models"
-    root_dir = "/data/wanggu/Storage/BOP_DATASETS/lm/train_pbr"
-    G_P = estimate_coor_P0(root_dir, model_dir, 0, 50)
+
+    parser = argparse.ArgumentParser(description="gen lm train_pbr xyz")
+    parser.add_argument("--dataset", type=str, default="lm", help="dataset")
+    parser.add_argument("--split", type=str, default="train_pbr", help="split")
+    parser.add_argument("--scene", type=int, default=0, help="scene id")
+    parser.add_argument("--last_scene", type=int, default=0, help="last scenes to do")
+    args = parser.parse_args()
+
+    # base_dir = "/opt/spool/jemrich/BOP_DATASETS/"
+    base_dir = "/home/jemrich/datasets/BOP_DATASETS"
+    model_dir = osp.join(base_dir, args.dataset, "models")
+    root_dir = osp.join(base_dir, args.dataset, args.split)
+
+    wandb.init()
+
+    G_P = estimate_coor_P0(root_dir, model_dir, args.scene, args.last_scene+1)  # 0, 5 start and end sequence number
     G_P.run()
