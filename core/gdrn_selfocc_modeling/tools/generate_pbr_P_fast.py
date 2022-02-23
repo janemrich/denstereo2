@@ -1,20 +1,16 @@
-
-
 import sys
+import argparse
 
 sys.path.append('../')
 import numpy as np
-from PIL import Image, ImageFile
 import os
-import matplotlib.image as mp
 from plyfile import PlyData
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
 import ref
 from _collections import OrderedDict
 import os.path as osp
 import mmcv
 import torch
+import wandb
 
 LM_13_OBJECTS = [
     "ape",
@@ -100,7 +96,7 @@ def modelload(model_dir, ids, scale=1000.):
 
 
 class estimate_coor_P0():
-    def __init__(self, rootdir, modeldir, start_id, end_id):  # /data/wanggu//Storage/BOP_DATASETS/lm/train_pbr
+    def __init__(self, rootdir, modeldir, start_id, end_id):  # /home/jemrich/datasets/BOP_DATASETS/lm/train_pbr
         self.dataset_root = rootdir
         self.modeldir = modeldir
         self.start_id = start_id
@@ -234,10 +230,26 @@ class estimate_coor_P0():
 
                         # outpath = osp.join(self.new_xyz_root, f"{scene_id:06d}/{int_im_id:06d}_{anno_i:06d}-xyz.pkl")
                         mmcv.dump(P, out_path)
+                        wandb.log({'scene': scene_id,
+                                    'im_id': int_im_id,
+                                    'anno_id': anno_i})
+
 
 
 if __name__ == "__main__":
-    model_dir = "/data/wanggu/Storage/BOP_DATASETS/lmo/models"
-    root_dir = "/data/wanggu/Storage/BOP_DATASETS/lm/train_pbr"
-    G_P = estimate_coor_P0(root_dir, model_dir, 0, 5)  # 0, 5 start and end sequence number
+
+    parser = argparse.ArgumentParser(description="gen lm train_pbr xyz")
+    parser.add_argument("--dataset", type=str, default="lm", help="dataset")
+    parser.add_argument("--split", type=str, default="train_pbr", help="split")
+    parser.add_argument("--scene", type=int, default=0, help="scene id")
+    parser.add_argument("--last_scene", type=int, default=0, help="last scenes to do")
+    args = parser.parse_args()
+
+    base_dir = "/opt/spool/jemrich/BOP_DATASETS/"
+    model_dir = osp.join(base_dir, args.dataset, "models")
+    root_dir = osp.join(base_dir, args.dataset, args.split)
+
+    wandb.init()
+
+    G_P = estimate_coor_P0(root_dir, model_dir, args.scene, args.last_scene+1)  # 0, 5 start and end sequence number
     G_P.run()
