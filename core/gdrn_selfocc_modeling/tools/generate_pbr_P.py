@@ -34,6 +34,7 @@ LM_13_OBJECTS = [
     "phone",
 ]  # no bowl, cup
 LM_OCC_OBJECTS = ["ape", "can", "cat", "driller", "duck", "eggbox", "glue", "holepuncher"]
+LM_OCC_OBJECTS = ["ape"]
 
 intrinsic_matrix = {
     'linemod': np.array([[572.4114, 0., 325.2611],
@@ -51,13 +52,13 @@ def transformer(P0, R, t):
 
 @jit(nopython=True)
 def transformer_back(P, R, t):  # 计算P0=RTP-RTt
-    P0 = np.matmul(R.T, P) - np.matmul(R.T, t)
+    P0 = (R.T @ P) - (R.T @ t)
     return P0
 
 
 @jit(nopython=True)
 def projector(P0, K, R, t):  # 计算相机投影， 将P0经过R， t变换再投影到图像上
-    p = np.matmul(K, P0) / P0[2]
+    p = (K  @ P0) / P0[2]
     p = p[0:2, :] / p[2]
     return p
 
@@ -69,11 +70,11 @@ def pointintriangle(A, B, C, P):  # 判断一点是否在3角面片内部，ABC�
     v1 = B - A
     v2 = P - A
 
-    dot00 = np.matmul(v0.T, v0)
-    dot01 = np.matmul(v0.T, v1)
-    dot02 = np.matmul(v0.T, v2)
-    dot11 = np.matmul(v1.T, v1)
-    dot12 = np.matmul(v1.T, v2)
+    dot00 = (v0.T @ v0)
+    dot01 = (v0.T @ v1)
+    dot02 = (v0.T @ v2)
+    dot11 = (v1.T @ v1)
+    dot12 = (v1.T @ v2)
 
     down = dot00 * dot11 - dot01 * dot01
     if down < 1e-6:
@@ -87,9 +88,13 @@ def pointintriangle(A, B, C, P):  # 判断一点是否在3角面片内部，ABC�
     v = (dot00 * dot12 - dot01 * dot02) * inverdeno
     if v < 0 or v > 1:
         return False
-    return u + v <= 1
+    if u + v <= 1: # necessary for numba
+        return True
+    else:
+        return False
 
-def calc_xy_crop(vert_id, vert, camK, R, t, norm_d, height, width, camK_inv, pixellist, mask, xyz):
+@jit(nopython=True)
+def calc_xy_crop(vert_id, vert, camK, R, t, norm_d, height, width, camK_inv, pixellist, mask, xyxy):
     for i in range(vert_id.shape[0]):  # 行数
         P1 = transformer(vert[vert_id[i][0], :].T.copy(), R, t)
         P2 = transformer(vert[vert_id[i][1], :].T.copy(), R, t)
@@ -99,12 +104,12 @@ def calc_xy_crop(vert_id, vert, camK, R, t, norm_d, height, width, camK_inv, pix
         p3 = projector(P3, camK, R, t)
         planenormal = norm_d[vert_id[i][0], :]
         planenormal = np.expand_dims(planenormal, 1)
-        planenormal = np.matmul(R, planenormal)
+        planenormal = R @ planenormal
         # 计算在p1, p2, p3 三角形内的整数点，并为他们初始化一个candidate
-        p_x_min, p_x_max = np.min([p1[0, :], p2[0, :], p3[0, :]]), np.max(
-            [p1[0, :], p2[0, :], p3[0, :]])
-        p_y_min, p_y_max = np.min([p1[1, :], p2[1, :], p3[1, :]]), np.max(
-            [p1[1, :], p2[1, :], p3[1, :]])  # row
+        p_x_min = min([p1[0].item(), p2[0].item(), p3[0].item()])
+        p_x_max = max([p1[0].item(), p2[0].item(), p3[0].item()])
+        p_y_min = min([p1[1].item(), p2[1].item(), p3[1].item()])
+        p_y_max = max([p1[1].item(), p2[1].item(), p3[1].item()])
         # inside the image
         if p_y_min < 0.: p_y_min = 0.
         if p_y_max >= height: p_y_max = height - 1.
@@ -112,33 +117,31 @@ def calc_xy_crop(vert_id, vert, camK, R, t, norm_d, height, width, camK_inv, pix
         if p_x_max >= width: p_x_max = width - 1.
         for x in np.arange(int(p_x_min), int(p_x_max) + 1, 1):
             for y in np.arange(int(p_y_min), int(p_y_max) + 1, 1): # row
-                if pointintriangle(p1, p2, p3, np.asarray([x, y], dtype=float).T):
-                    point = np.array([x, y, 1]).astype(float)
+                if pointintriangle(p1, p2, p3, np.asarray([x, y], dtype=np.float32).T):
+                    point = np.array([x, y, 1]).astype(np.float32)
                     point = np.expand_dims(point, 1)
-                    Zp_upper = np.matmul(planenormal.T, P1)
-                    Zp_lower = np.matmul(planenormal.T, np.matmul(camK_inv, point))
+                    Zp_upper = planenormal.T @ P1
+                    Zp_lower = planenormal.T @ (camK_inv @ point)
                     Zp = np.abs(Zp_upper / Zp_lower)
-                    pixellist[y, x] = np.min([Zp, pixellist[y, x]])
+                    pixellist[y, x] = min([Zp.item(), pixellist[y, x].item()])
     # 生成P0的图， 之前只存储了Zp， 现在计算值
     # pixellist is the result
-    P0_output = np.zeros([height, width, 3], dtype=np.float32)
-    x1, y1, x2, y2 = xyz["xyxy"]
+    P0_output = np.zeros((height, width, 3), dtype=np.float32)
+    x1, y1, x2, y2 = xyxy
     for i in range(y1, y2+1):
         for j in range(x1, x2+1):
             if mask[i][j] < 1 or pixellist[i, j] > 30:
                 continue
             else:
-                point = np.array([j, i, 1])
+                point = np.array([j, i, 1], dtype=np.float32)
                 point = np.expand_dims(point, 1)
-                P = (pixellist[i, j] * np.matmul(camK_inv, point))
+                P = pixellist[i, j] * (camK_inv @ point)
+                P = P.astype(np.float32)
                 P0 = transformer_back(P, R, t)
                 # P0_3 = P0.reshape(3)
                 P0_output[i, j, :] = P0.reshape(3)  # 边界上的点在计算的时候会出现错误， 没有完全包裹住
 
-    return {
-        "xyz_crop": P0_output[y1:y2 + 1, x1:x2 + 1, :],
-        "xyxy": [x1, y1, x2, y2],
-    }
+    return P0_output[y1:y2 + 1, x1:x2 + 1, :]
 
 
 def modelload(model_dir, ids):
@@ -226,9 +229,17 @@ class estimate_coor_P0():
                                 [ply['vertex'].data['nx'], ply['vertex'].data['ny'], ply['vertex'].data['nz']]).transpose()
                             vert_id = [id for id in ply['face'].data['vertex_indices']]
                             vert_id = np.asarray(vert_id, np.int64)
-                            pixellist = np.zeros([height, width]) + 100  # 加一个大数
+                            pixellist = np.full([height, width], 100, dtype=np.float32)  # 加一个大数
                             # 实际上就是将每个3角面片投影回来，查看其中包含的整点像素，为其提供一个估计，然后最后选择能看到的那个，Z值最小
-                            P = calc_xy_crop(vert_id, vert, camK, R, t, norm_d, height, width, camK_inv, pixellist, mask, xyz)
+                            import time
+                            start = time.time()
+                            xyz_crop = calc_xy_crop(vert_id, vert, camK, R, t, norm_d, height, width, camK_inv, pixellist, mask, xyz["xyxy"])
+                            print(time.time() - start)
+                            x1, y1, x2, y2 = xyz["xyxy"]
+                            P =  {
+                                "xyz_crop": xyz_crop,
+                                "xyxy": [x1, y1, x2, y2],
+                            }
 
                         outpath = osp.join(self.new_xyz_root, f"{scene_id:06d}/{int_im_id:06d}_{anno_i:06d}-xyz.pkl")
                         mmcv.dump(P, outpath)
