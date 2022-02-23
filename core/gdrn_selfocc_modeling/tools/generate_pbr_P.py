@@ -201,6 +201,9 @@ class estimate_coor_P0():
                 for anno_i, anno in enumerate(gt_dict[str_im_id]):
                     obj_id = anno["obj_id"]
                     if obj_id in self.cat_ids:
+                        outpath = osp.join(self.new_xyz_root, f"{scene_id:06d}/{int_im_id:06d}_{anno_i:06d}-xyz.pkl")
+                        if osp.exists(outpath):
+                            continue
                         R = np.array(anno["cam_R_m2c"], dtype="float32").reshape(3, 3)
                         t = (np.array(anno["cam_t_m2c"], dtype="float32") / 1000.0).reshape(3, 1)
                         # mask_file = osp.join(scene_root, "mask/{:06d}_{:06d}.png".format(int_im_id, anno_i))
@@ -241,11 +244,9 @@ class estimate_coor_P0():
                                 "xyxy": [x1, y1, x2, y2],
                             }
 
-                        outpath = osp.join(self.new_xyz_root, f"{scene_id:06d}/{int_im_id:06d}_{anno_i:06d}-xyz.pkl")
                         mmcv.dump(P, outpath)
                         wandb.log({'scene': scene_id,
-                                    'im_id': int_im_id,
-                                    'anno_id': anno_i})
+                                    'im_id': int_im_id})
 
 
 if __name__ == "__main__":
