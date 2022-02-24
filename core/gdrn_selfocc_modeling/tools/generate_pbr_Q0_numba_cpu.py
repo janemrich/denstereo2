@@ -131,7 +131,6 @@ class Q0_generator():
                 os.makedirs(Q0_path)
             for str_im_id in gt_dict.keys():
                 int_im_id = int(str_im_id)
-                import time
                 rgb_path = osp.join(scene_root, "rgb/{:06d}.jpg").format(int_im_id)
                 assert osp.exists(rgb_path), rgb_path
 
@@ -147,7 +146,6 @@ class Q0_generator():
                 depth_factor = 1000.0 / cam_dict[str_im_id]["depth_scale"]  # 10000
 
                 for anno_i, anno in enumerate(gt_dict[str_im_id]):
-                    start = time.time()
                     print("processing seq:{:06d} obj:{:06d}".format(scene_id, int_im_id))
                     obj_id = anno["obj_id"]
                     if obj_id not in self.cat_ids:
@@ -240,7 +238,6 @@ class Q0_generator():
                     #  存储 Q0的坐标
                     outpath = os.path.join(Q0_path, "{:06d}_{:06d}-Q0.pkl".format(int_im_id, anno_i))
                     mmcv.dump(Q0, outpath)
-                    print(time.time() - start)
                 wandb.log({'scene': scene_id,
                             'im_id': int_im_id})
 
