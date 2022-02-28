@@ -248,6 +248,7 @@ if __name__ == "__main__":
     parser.add_argument("--dataset", type=str, default="lm", help="dataset")
     parser.add_argument("--split", type=str, default="train_pbr", help="split")
     parser.add_argument("--xyz_name", type=str, default="xyz_crop_lm", help="xyz folder name")
+    parser.add_argument("--threads", type=int, default=50, help="number of threads")
     args = parser.parse_args()
 
     base_dir = "/opt/spool/jemrich/BOP_DATASETS/"
@@ -260,6 +261,6 @@ if __name__ == "__main__":
         G_Q = Q0_generator(root_dir, model_dir, xyz_root, scenes)
         G_Q.run(scale=1000)
 
-    scenes = np.array(range(50)).reshape((50,1))
-    with Pool(50) as p:
+    scenes = np.array(range(1)).reshape((1,1))
+    with Pool(args.threads) as p:
         p.map(gen_Q0, scenes)

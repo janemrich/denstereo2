@@ -1,7 +1,6 @@
 # generate Q0
 
 import sys
-import wandb
 import argparse
 
 sys.path.append('../')
@@ -16,6 +15,8 @@ import ref
 from _collections import OrderedDict
 import os.path as osp
 import mmcv
+
+from multiprocessing import Pool
 from numba import jit
 
 LM_13_OBJECTS = [
@@ -34,7 +35,6 @@ LM_13_OBJECTS = [
     "phone",
 ]  # no bowl, cup
 LM_OCC_OBJECTS = ["ape", "can", "cat", "driller", "duck", "eggbox", "glue", "holepuncher"]
-LM_OCC_OBJECTS = ["ape"]
 
 intrinsic_matrix = {
     'linemod': np.array([[572.4114, 0., 325.2611],
@@ -65,6 +65,7 @@ def projector(P0, K, R, t):  # Calculate the camera projection, and then projep 
 
 @jit(nopython=True)
 def pointintriangle(A, B, C, P):  # Judging whether a point is in the interior of the 3 corner, ABC is a triangular wrapper 3 points    P = np.expand_dims(P, 1)
+    P = np.expand_dims(P, 1)
     v0 = C - A
     v1 = B - A
     v2 = P - A
@@ -153,11 +154,9 @@ def modelload(model_dir, ids):
 
 
 class estimate_coor_P0():
-    def __init__(self, rootdir, modeldir, start_id, end_id):  # /data/wanggu//Storage/BOP_DATASETS/lm/train_pbr
+    def __init__(self, rootdir, modeldir, scenes):
         self.dataset_root = rootdir
         self.modeldir = modeldir
-        self.start_id = start_id
-        self.end_id = end_id
         # NOTE: careful! Only the selected objects
         self.objs = LM_OCC_OBJECTS
         self.cat_ids = [cat_id for cat_id, obj_name in ref.lm_full.id2obj.items() if obj_name in self.objs]
@@ -165,7 +164,7 @@ class estimate_coor_P0():
         self.cat2label = {v: i for i, v in enumerate(self.cat_ids)}  # id_map
         self.label2cat = {label: cat for cat, label in self.cat2label.items()}
         self.obj2label = OrderedDict((obj, obj_id) for obj_id, obj in enumerate(self.objs))
-        self.scenes = [f"{i:06d}" for i in range(self.start_id, self.end_id)]
+        self.scenes = [f"{i:06d}" for i in scenes]
         self.xyz_root = osp.join(self.dataset_root, "xyz_crop")
         self.model = modelload(modeldir, self.cat_ids)
         self.new_xyz_root = osp.join(self.dataset_root, "xyz_crop_lm")
@@ -244,8 +243,6 @@ class estimate_coor_P0():
                             }
 
                         mmcv.dump(P, outpath)
-                    wandb.log({'scene': scene_id,
-                                'im_id': int_im_id})
 
 
 if __name__ == "__main__":
@@ -253,16 +250,21 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="gen lm train_pbr xyz")
     parser.add_argument("--dataset", type=str, default="lm", help="dataset")
     parser.add_argument("--split", type=str, default="train_pbr", help="split")
-    parser.add_argument("--scene", type=int, default=0, help="scene id")
-    parser.add_argument("--last_scene", type=int, default=0, help="last scenes to do")
+    parser.add_argument("--xyz_name", type=str, default="xyz_crop_lm", help="xyz folder name")
+    parser.add_argument("--threads", type=int, default=50, help="number of threads")
     args = parser.parse_args()
 
-    # base_dir = "/opt/spool/jemrich/BOP_DATASETS/"
-    base_dir = "/home/jemrich/datasets/BOP_DATASETS"
+    base_dir = "/opt/spool/jemrich/BOP_DATASETS/"
+    # base_dir = "/home/jemrich/datasets/BOP_DATASETS"
     model_dir = osp.join(base_dir, args.dataset, "models")
     root_dir = osp.join(base_dir, args.dataset, args.split)
+    xyz_root = osp.join(root_dir, args.xyz_name)
 
-    wandb.init()
+    def gen_Q0(scenes):
+        G_P = estimate_coor_P0(root_dir, model_dir, scenes)
+        G_P.run()
 
-    G_P = estimate_coor_P0(root_dir, model_dir, args.scene, args.last_scene+1)  # 0, 5 start and end sequence number
-    G_P.run()
+    # scenes = np.array(range(10)).reshape((10,1))
+    scenes = [[10]]
+    with Pool(args.threads) as p:
+        p.map(gen_Q0, scenes)
