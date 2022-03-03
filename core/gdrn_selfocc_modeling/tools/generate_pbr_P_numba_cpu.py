@@ -260,11 +260,11 @@ if __name__ == "__main__":
     root_dir = osp.join(base_dir, args.dataset, args.split)
     xyz_root = osp.join(root_dir, args.xyz_name)
 
-    def gen_Q0(scenes):
+    def gen_P(scenes):
         G_P = estimate_coor_P0(root_dir, model_dir, scenes)
         G_P.run()
 
     # scenes = np.array(range(10)).reshape((10,1))
     scenes = [[10]]
     with Pool(args.threads) as p:
-        p.map(gen_Q0, scenes)
+        p.map(gen_P, scenes)

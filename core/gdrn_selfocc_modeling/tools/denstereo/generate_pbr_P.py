@@ -9,11 +9,12 @@ import mmcv
 import numpy as np
 from tqdm import tqdm
 
+from multiprocessing import Pool
+from numba import jit
+
 cur_dir = osp.abspath(osp.dirname(__file__))
 PROJ_ROOT = osp.join(cur_dir, "../../../..")
 sys.path.insert(0, PROJ_ROOT)
-# from lib.egl_renderer.egl_renderer_v3 import EGLRenderer
-# from lib.vis_utils.image import grid_show
 
 idx2class = {
     1: "002_master_chef_can",  # [1.3360, -0.5000, 3.5105]
@@ -39,67 +40,112 @@ idx2class = {
     21: "061_foam_brick",  # [-0.0805, 0.0805, -8.2435]
 }
 
-class2idx = {_name: _id for _id, _name in idx2class.items()}
-
-classes = idx2class.values()
-classes = sorted(classes)
-
 # DEPTH_FACTOR = 10000.
 IM_H = 480
 IM_W = 640
-near = 0.01
-far = 6.5
 
-bop_dir = osp.normpath(osp.join(PROJ_ROOT, "datasets/BOP_DATASETS/"))
-
-cls_indexes = sorted(idx2class.keys())
-cls_names = [idx2class[cls_idx] for cls_idx in cls_indexes]
-model_dir = osp.normpath(osp.join(PROJ_ROOT, "datasets/BOP_DATASETS/denstereo-test/models"))
-model_paths = [osp.join(model_dir, f"obj_{obj_id:06d}.ply") for obj_id in cls_indexes]
-texture_paths = [osp.join(model_dir, f"obj_{obj_id:06d}.png") for obj_id in cls_indexes]
-
-scenes = [i for i in range(0, 49 + 1)]
-save_root = "/igd/a4/homestud/jemrich/datasets"
-xyz_root = osp.normpath(osp.join(save_root, "BOP_DATASETS/denstereo-test/train_pbr_left/xyz_crop"))
 
 K = np.array([[1066.778, 0.0, 312.9869079589844], [0.0, 1067.487, 241.3108977675438], [0.0, 0.0, 1.0]], dtype=np.float32)
 
-def transformer(P0, R, t):  # P0, n,3 torch.tensor
-    P = (torch.mm(R, P0.transpose(1, 0))).T + t.view(1, 3)
+@jit(nopython=True)
+def transformer(P0, R, t):
+    P0 = np.reshape(P0, (3, 1))
+    P = (R @ P0) + t
     return P
 
 
-def transformer_back(P, R, t):  # 计算P0=RTP-RTt  P, 3*1
-    P0 = torch.mm(R.transpose(1, 0), P) - torch.mm(R.transpose(1, 0), t)
+@jit(nopython=True)
+def transformer_back(P, R, t):  # calculateP0=RTP-RTt
+    P0 = (R.T @ P) - (R.T @ t)
     return P0
 
-# P0 n,3
-def projector(P0, K, R, t):  # 计算相机投影， 将P0经过R， t变换再投影到图像上, torch.tensor
-    p = (torch.mm(K, P0.transpose(1, 0))).transpose(1, 0) / P0[:, 2:]  # n,3
-    p = p[:, 0:2] / p[:, 2:]
+
+@jit(nopython=True)
+def projector(P0, K, R, t):  # Calculate the camera projection, and then projep it to the image after R, T transform
+    p = (K  @ P0) / P0[2]
+    p = p[0:2, :] / p[2]
     return p
 
 
-def pointintriangle(A, B, C, P):  # 判断一点是否在3角面片内部，ABC是三角面片3个点
-    # P :2*1  A,B,C : n,2
-    v0 = C - A  # n,2
+@jit(nopython=True)
+def pointintriangle(A, B, C, P):  # Judging whether a point is in the interior of the 3 corner, ABC is a triangular wrapper 3 points    P = np.expand_dims(P, 1)
+    P = np.expand_dims(P, 1)
+    v0 = C - A
     v1 = B - A
-    v2 = P.transpose(1, 0) - A
+    v2 = P - A
 
-    dot00 = torch.sum(v0 * v0, dim=1)  # n,1
-    dot01 = torch.sum(v0 * v1, dim=1)
-    dot02 = torch.sum(v0 * v2, dim=1)
-    dot11 = torch.sum(v1 * v1, dim=1)
-    dot12 = torch.sum(v1 * v2, dim=1)
+    dot00 = (v0.T @ v0)
+    dot01 = (v0.T @ v1)
+    dot02 = (v0.T @ v2)
+    dot11 = (v1.T @ v1)
+    dot12 = (v1.T @ v2)
 
-    down = dot00 * dot11 - dot01 * dot01  # n,1
-    down_save = down.clone()
-    down[down < 1e-7] = 1
+    down = dot00 * dot11 - dot01 * dot01
+    if down < 1e-6:
+        return False
+
     inverdeno = 1 / down
-    u = (dot11 * dot02 - dot01 * dot12) * inverdeno  # n,1
+
+    u = (dot11 * dot02 - dot01 * dot12) * inverdeno
+    if u < 0 or u > 1:
+        return False
     v = (dot00 * dot12 - dot01 * dot02) * inverdeno
-    mask = (down_save > 1e-6) & (u >= 0) & (v >= 0) & (u+v <= 1)
-    return mask
+    if v < 0 or v > 1:
+        return False
+    if u + v <= 1: # necessary for numba
+        return True
+    else:
+        return False
+
+@jit(nopython=True)
+def calc_xy_crop(vert_id, vert, camK, R, t, norm_d, height, width, camK_inv, pixellist, mask, xyxy):
+    for i in range(vert_id.shape[0]):  # 行数
+        P1 = transformer(vert[vert_id[i][0], :].T.copy(), R, t)
+        P2 = transformer(vert[vert_id[i][1], :].T.copy(), R, t)
+        P3 = transformer(vert[vert_id[i][2], :].T.copy(), R, t)
+        p1 = projector(P1, camK, R, t)
+        p2 = projector(P2, camK, R, t)  # col first
+        p3 = projector(P3, camK, R, t)
+        planenormal = norm_d[vert_id[i][0], :]
+        planenormal = np.expand_dims(planenormal, 1)
+        planenormal = R @ planenormal
+        # Calculatep 1, p2, p3 Integer point in the triangle and initialize one for them candidate
+        p_x_min = min([p1[0].item(), p2[0].item(), p3[0].item()])
+        p_x_max = max([p1[0].item(), p2[0].item(), p3[0].item()])
+        p_y_min = min([p1[1].item(), p2[1].item(), p3[1].item()])
+        p_y_max = max([p1[1].item(), p2[1].item(), p3[1].item()])
+        # inside the image
+        if p_y_min < 0.: p_y_min = 0.
+        if p_y_max >= height: p_y_max = height - 1.
+        if p_x_min < 0.: p_x_min = 0.
+        if p_x_max >= width: p_x_max = width - 1.
+        for x in np.arange(int(p_x_min), int(p_x_max) + 1, 1):
+            for y in np.arange(int(p_y_min), int(p_y_max) + 1, 1): # row
+                if pointintriangle(p1, p2, p3, np.asarray([x, y], dtype=np.float32).T):
+                    point = np.array([x, y, 1]).astype(np.float32)
+                    point = np.expand_dims(point, 1)
+                    Zp_upper = planenormal.T @ P1
+                    Zp_lower = planenormal.T @ (camK_inv @ point)
+                    Zp = np.abs(Zp_upper / Zp_lower)
+                    pixellist[y, x] = min([Zp.item(), pixellist[y, x].item()])
+    # 生成P0的图， 之前只存储了Zp， 现在计算值
+    # pixellist is the result
+    P0_output = np.zeros((height, width, 3), dtype=np.float32)
+    x1, y1, x2, y2 = xyxy
+    for i in range(y1, y2+1):
+        for j in range(x1, x2+1):
+            if mask[i][j] < 1 or pixellist[i, j] > 30:
+                continue
+            else:
+                point = np.array([j, i, 1], dtype=np.float32)
+                point = np.expand_dims(point, 1)
+                P = pixellist[i, j] * (camK_inv @ point)
+                P = P.astype(np.float32)
+                P0 = transformer_back(P, R, t)
+                # P0_3 = P0.reshape(3)
+                P0_output[i, j, :] = P0.reshape(3)  # 边界上的点在计算的时候会出现错误， 没有完全包裹住
+
+    return P0_output[y1:y2 + 1, x1:x2 + 1, :]
 
 
 def modelload(model_dir, ids, scale=1000.):
@@ -116,9 +162,9 @@ def modelload(model_dir, ids, scale=1000.):
         vert_id = [id for id in ply['face'].data['vertex_indices']]
         vert_id = np.asarray(vert_id, np.int64)
         modellist[str(obj)] = {
-            "vert": torch.as_tensor(vert.astype("float32")).cuda(),
-            "norm_d": torch.as_tensor(norm_d.astype("float32")).cuda(),
-            "vert_id": torch.as_tensor(vert_id.astype("int64")).cuda(),
+            "vert": np.array(vert.astype("float32")),
+            "norm_d": np.array(norm_d.astype("float32")),
+            "vert_id": np.array(vert_id.astype("int64"))
         }
     return modellist
 
@@ -130,64 +176,47 @@ def get_time_delta(sec):
     return delta_time_str
 
 class XyzGen(object):
-    def __init__(self, dataset="denstereo-test", split="train", scene="all"):
-        print(dataset, split, scenes)
-        if split == "train" or "train_pbr_right" or "train_pbr_left":
-            scene_ids = scenes
-            data_root = osp.join(bop_dir, dataset, split)
-        else:
-            raise ValueError(f"split {split} error")
-
-        if scene == "all":
-            sel_scene_ids = scene_ids
-        else:
-            assert int(scene) in scene_ids, f"{scene} not in {scene_ids}"
-            sel_scene_ids = [int(scene)]
-        print("dataset: ", dataset, "split: ", split, "selected scene ids: ", sel_scene_ids)
+    def __init__(self, root_dir, model_dir, xyz_root_new, split="train", scene="all"):
+        self.dataset_root = root_dir
+        self.modeldir = model_dir
         self.split = split
         self.scene = scene
-        self.sel_scene_ids = sel_scene_ids
-        self.data_root = data_root
+        cls_indexes = sorted(idx2class.keys())
         self.model = modelload(model_dir, cls_indexes)
-        self.xyz_root = osp.join("/igd/a4/homestud/jemrich/datasets/BOP_DATASETS/", dataset, split, "xyz_crop")
+        self.xyz_root = osp.join(self.dataset_root, "xyz_crop")
+        self.new_xyz_root = xyz_root_new
 
     def main(self):
         split = self.split
         scene = self.scene  # "all" or a single scene
-        sel_scene_ids = self.sel_scene_ids
-        data_root = self.data_root
+        camK = K.astype(np.float32)
         camK_inv = np.linalg.inv(K)
-        camK_cuda = torch.as_tensor(K).cuda()
-        camK_inv_cuda = torch.as_tensor(camK_inv).cuda()
         height = 480
         width = 640
-        for scene_id in tqdm(sel_scene_ids, postfix=f"{split}_{scene}"):
+        for scene_id in tqdm(scene, postfix=f"{split}_{scene}"):
+            scene_id = int(scene_id)
             print("split: {} scene: {}".format(split, scene_id))
-            scene_root = osp.join(data_root, f"{scene_id:06d}")
+            scene_root = osp.join(self.dataset_root, f"{scene_id:06d}")
 
             gt_dict = mmcv.load(osp.join(scene_root, "scene_gt.json"))
-            # gt_info_dict = mmcv.load(osp.join(scene_root, "scene_gt_info.json"))
-            cam_dict = mmcv.load(osp.join(scene_root, "scene_camera.json"))
 
             for str_im_id in tqdm(gt_dict, postfix=f"{scene_id}"):
                 int_im_id = int(str_im_id)
 
                 for anno_i, anno in enumerate(gt_dict[str_im_id]):
                     obj_id = anno["obj_id"]
-                    if obj_id not in idx2class:
+                    outpath = osp.join(self.new_xyz_root, f"{scene_id:06d}/{int_im_id:06d}_{anno_i:06d}-xyz.pkl")
+                    if osp.exists(outpath):
                         continue
                     R = np.array(anno["cam_R_m2c"], dtype="float32").reshape(3, 3)
                     t = (np.array(anno["cam_t_m2c"], dtype="float32") / 1000.0).reshape(3, 1)
-                    R_cuda = torch.as_tensor(R).cuda()
-                    t_cuda = torch.as_tensor(t).cuda()
                     # mask_file = osp.join(scene_root, "mask/{:06d}_{:06d}.png".format(int_im_id, anno_i))
                     mask_visib_file = osp.join(scene_root, "mask/{:06d}_{:06d}.png".format(int_im_id, anno_i))
                     # assert osp.exists(mask_file), mask_file
                     # load mask visib  TODO: load both mask_visib and mask_full
                     mask = mmcv.imread(mask_visib_file, "unchanged")
-                    mask = mask.astype(np.bool).astype(np.float)
-                    mask_cuda = torch.as_tensor(mask).cuda()
-                    if torch.sum(mask_cuda) == 0:
+                    mask = mask.astype(bool).astype(float)
+                    if np.sum(mask) == 0:
                         P = {
                             "xyz_crop": np.zeros((height, width, 3), dtype=np.float16),
                             "xyxy": [0, 0, width - 1, height - 1],
@@ -196,70 +225,21 @@ class XyzGen(object):
                     else:
 
                         xyz_path = osp.join(self.xyz_root, f"{scene_id:06d}/{int_im_id:06d}_{anno_i:06d}-xyz.pkl")
-
                         assert osp.exists(xyz_path), xyz_path
                         xyz = mmcv.load(xyz_path)
                         # begin to estimate new xyz
-                        # 实际上就是将每个3角面片投影回来，查看其中包含的整点像素，为其提供一个估计，然后最后选择能看到的那个，Z值最小
-                        vert = torch.as_tensor(self.model[str(obj_id)]["vert"])
-                        norm_d = torch.as_tensor(self.model[str(obj_id)]["norm_d"])
-                        vert_id = torch.as_tensor(self.model[str(obj_id)]["vert_id"])
-                        # project all vertices
-                        vert_trans = transformer(vert, R_cuda, t_cuda)  # already on cuda
-                        d_trans = (torch.mm(R_cuda, (norm_d[vert_id[:, 0], :]).transpose(1, 0))).transpose(1, 0)
-                        vert_proj = projector(vert_trans, camK_cuda, R_cuda, t_cuda)  # n, 2
-                        # construct triangle
-                        A_before = vert_trans[vert_id[:, 0], :]  # already on cuda
-                        A = vert_proj[vert_id[:, 0], :]
-                        B = vert_proj[vert_id[:, 1], :]
-                        C = vert_proj[vert_id[:, 2], :]
+                        vert = self.model[str(obj_id)]["vert"]
+                        norm_d = self.model[str(obj_id)]["norm_d"]
+                        vert_id = self.model[str(obj_id)]["vert_id"]
 
-                        # 生成P0的图， 之前只存储了Zp， 现在计算值
-                        # pixellist is the result
-                        P0_output = torch.zeros([height, width, 3], dtype=torch.float32).cuda()
-                        # np.zeros([height, width, 3], dtype=np.float32)
+                        pixellist = np.full([height, width], 100, dtype=np.float32)
+                        xyz_crop = calc_xy_crop(vert_id, vert, camK, R, t, norm_d, height, width, camK_inv, pixellist, mask, xyz["xyxy"])
                         x1, y1, x2, y2 = xyz["xyxy"]
-                        for i in range(y1, y2 + 1):
-                            for j in range(x1, x2 + 1):
-                                if mask_cuda[i][j] < 1:
-                                    continue
-                                else:
-                                    point = torch.as_tensor([j, i, 1], dtype=torch.float32).cuda()
-                                    point = point.view(3, 1)  # 3,1
-                                    flag = pointintriangle(A, B, C, point[0:2, :])
-                                    if torch.sum(flag) == 0:
-                                        continue
-                                    '''for test'''
-                                    '''
-                                    ids = np.arange(0, vert_id.shape[0])
-                                    selected = ids[flag]
-                                    s_a = A[selected, :]
-                                    s_b =B[selected, :]
-                                    s_c = C[selected,:]
-                                    flag = pointintriangle(s_a, s_b, s_c, point[0:2, :])
-                                    '''
-                                    ''''''
-                                    p_A = A_before[flag, :]
-                                    p_d = d_trans[flag, :]
-                                    plane_d = torch.sum(p_d * p_A, dim=1).view(-1, 1)  # m, 1
-                                    point_diretion = torch.mm(camK_inv_cuda, point)  # 3, 1
-                                    down_Z = torch.mm(p_d, point_diretion)  # m, 1
-                                    Z_p = plane_d / down_Z
-                                    Z_p = torch.abs(Z_p)
-                                    Z_p_final = torch.min(Z_p)
-                                    P = (Z_p_final * point_diretion)
-                                    P0 = transformer_back(P, R_cuda, t_cuda)
-                                    # P0_3 = P0.reshape(3)
-                                    P0_output[i, j, :] = P0.reshape(3)  # 边界上的点在计算的时候会出现错误， 没有完全包裹住
-
-                        # xyz_value = xyz["xyz_crop"]
-                        P0_res = P0_output.cpu().numpy()
                         P = {
-                            "xyz_crop": P0_output[y1:y2 + 1, x1:x2 + 1, :].cpu().numpy(),
+                            "xyz_crop": xyz_crop,
                             "xyxy": [x1, y1, x2, y2],
                         }
-                        xyz = 1
-
+                    mmcv.dump(P, outpath)
 
 if __name__ == "__main__":
     import argparse
@@ -272,22 +252,28 @@ if __name__ == "__main__":
     parser.add_argument("--dataset", type=str, default="denstereo-test", help="dataset")
     parser.add_argument("--split", type=str, default="train", help="split")
     parser.add_argument("--scene", type=str, default="all", help="scene id")
-    parser.add_argument("--gpu", type=str, default="0", help="gpu")
-    parser.add_argument("--vis", default=False, action="store_true", help="vis")
+    parser.add_argument("--xyz_name", type=str, default="xyz_crop_hd", help="xyz high fidelity output folder name")
+    parser.add_argument("--threads", type=int, default=50, help="number of threads")
     args = parser.parse_args()
 
     height = IM_H
     width = IM_W
 
-    VIS = args.vis
+    base_dir = "/opt/spool/jemrich/BOP_DATASETS/"
+    # base_dir = "/home/jemrich/datasets/BOP_DATASETS"
+    # base_dir = "/igd/a4/homestud/jemrich/datasets/BOP_DATASETS"
+    model_dir = osp.join(base_dir, args.dataset, "models")
+    root_dir = osp.join(base_dir, args.dataset, args.split)
+    xyz_root_new = osp.join(root_dir, args.xyz_name)
 
-    device = torch.device(int(args.gpu))
-    dtype = torch.float32
-    tensor_kwargs = {"device": device, "dtype": dtype}
+    def gen_P(scenes):
+        T_begin = time.perf_counter()
+        setproctitle.setproctitle(f"gen_xyz_{args.dataset}_{args.split}_{args.scene}")
+        xyz_gen = XyzGen(root_dir, model_dir, xyz_root_new, args.split, scenes)
+        xyz_gen.main()
+        T_end = time.perf_counter() - T_begin
+        print("split", args.split, "scene", args.scene, "total time: ", get_time_delta(T_end))
 
-    T_begin = time.perf_counter()
-    setproctitle.setproctitle(f"gen_xyz_denstereo_train_pbr_{args.split}_{args.scene}")
-    xyz_gen = XyzGen(args.dataset, args.split, args.scene)
-    xyz_gen.main()
-    T_end = time.perf_counter() - T_begin
-    print("split", args.split, "scene", args.scene, "total time: ", get_time_delta(T_end))
+    scenes = np.array(range(50)).reshape((50, 1))
+    with Pool(args.threads) as p:
+        p.map(gen_P, scenes)

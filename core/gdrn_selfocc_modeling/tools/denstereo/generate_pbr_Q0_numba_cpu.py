@@ -40,10 +40,33 @@ def test_in_box(point, xmin, xmax, ymin, ymax, zmin, zmax, R_t, t):
         return (0, np.zeros((3), dtype=np.float32))
 
 @jit(nopython=True)
-def calc_Q0(height, width, mask, RnxTt, RnyTt, RnzTt,
-            Q0_x, Q0_y, Q0_z, R, R_t, t, camK_inv,
-            n_x, n_y, n_z, occ_mask_x, occ_mask_y, occ_mask_z,
-            xmin, xmax, ymin, ymax, zmin, zmax):
+def calc_Q0(
+        height,
+        width,
+        mask,
+        RnxTt,
+        RnyTt,
+        RnzTt,
+        Q0_x,
+        Q0_y,
+        Q0_z,
+        R,
+        R_t,
+        t,
+        camK_inv,
+        n_x,
+        n_y,
+        n_z,
+        occ_mask_x,
+        occ_mask_y,
+        occ_mask_z,
+        xmin,
+        xmax,
+        ymin,
+        ymax,
+        zmin,
+        zmax
+    ):
 
     for i in range(height):
         for j in range(width):
@@ -87,34 +110,11 @@ def calc_Q0(height, width, mask, RnxTt, RnyTt, RnzTt,
     return Q0_x, Q0_y, Q0_z
 
 
-LM_13_OBJECTS = [
-    "ape",
-    "benchvise",
-    "camera",
-    "can",
-    "cat",
-    "driller",
-    "duck",
-    "eggbox",
-    "glue",
-    "holepuncher",
-    "iron",
-    "lamp",
-    "phone",
-]  # no bowl, cup
-LM_OCC_OBJECTS = ["ape", "can", "cat", "driller", "duck", "eggbox", "glue", "holepuncher"]
 
 class Q0_generator():
     def __init__(self, rootdir, modeldir, xyz_crop_dir, scenes):
         self.dataset_root = rootdir
         self.modeldir = modeldir
-        # NOTE: careful! Only the selected objects
-        self.objs = LM_OCC_OBJECTS
-        self.cat_ids = [cat_id for cat_id, obj_name in ref.lm_full.id2obj.items() if obj_name in self.objs]
-        # map selected objs to [0, num_objs-1]
-        self.cat2label = {v: i for i, v in enumerate(self.cat_ids)}  # id_map
-        self.label2cat = {label: cat for cat, label in self.cat2label.items()}
-        self.obj2label = OrderedDict((obj, obj_id) for obj_id, obj in enumerate(self.objs))
         self.scenes = [f"{i:06d}" for i in scenes]
         self.xyz_root = xyz_crop_dir
 
@@ -124,7 +124,6 @@ class Q0_generator():
             scene_root = osp.join(self.dataset_root, scene)
 
             gt_dict = mmcv.load(osp.join(scene_root, "scene_gt.json"))
-            gt_info_dict = mmcv.load(osp.join(scene_root, "scene_gt_info.json"))
             cam_dict = mmcv.load(osp.join(scene_root, "scene_camera.json"))
 
             Q0_path = osp.join(self.dataset_root, "Q0", scene)
@@ -144,13 +143,9 @@ class Q0_generator():
 
                 camK = np.array(cam_dict[str_im_id]["cam_K"], dtype=np.float32).reshape(3, 3)
                 camK_inv = np.linalg.inv(camK)
-                depth_factor = 1000.0 / cam_dict[str_im_id]["depth_scale"]  # 10000
 
                 for anno_i, anno in enumerate(gt_dict[str_im_id]):
-                    print("processing seq:{:06d} obj:{:06d}".format(scene_id, int_im_id))
-                    obj_id = anno["obj_id"]
-                    if obj_id not in self.cat_ids:
-                        continue
+                    print("processing seq:{:06d} image:{:06d}".format(scene_id, int_im_id))
                     outpath = os.path.join(Q0_path, "{:06d}_{:06d}-Q0.pkl".format(int_im_id, anno_i))
                     if osp.exists(outpath):
                         continue
@@ -165,7 +160,6 @@ class Q0_generator():
                     # load mask visib  TODO: load both mask_visib and mask_full
                     mask = mmcv.imread(mask_visib_file, "unchanged")
                     mask = mask.astype(np.bool).astype(np.float)
-                    area = mask.sum()
                     '''
                     show mask
                     plt.imshow(mask)
@@ -247,7 +241,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="gen lm train_pbr xyz")
     parser.add_argument("--dataset", type=str, default="lm", help="dataset")
     parser.add_argument("--split", type=str, default="train_pbr", help="split")
-    parser.add_argument("--xyz_name", type=str, default="xyz_crop_lm", help="xyz folder name")
+    parser.add_argument("--xyz_name", type=str, default="xyz_crop_hd", help="xyz folder name")
     parser.add_argument("--threads", type=int, default=50, help="number of threads")
     args = parser.parse_args()
 
@@ -261,6 +255,6 @@ if __name__ == "__main__":
         G_Q = Q0_generator(root_dir, model_dir, xyz_root, scenes)
         G_Q.run(scale=1000)
 
-    scenes = np.array(range(1)).reshape((1,1))
+    scenes = np.array(range(50)).reshape((50,1))
     with Pool(args.threads) as p:
         p.map(gen_Q0, scenes)
