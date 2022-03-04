@@ -34,7 +34,6 @@ LM_13_OBJECTS = [
     "phone",
 ]  # no bowl, cup
 LM_OCC_OBJECTS = ["ape", "can", "cat", "driller", "duck", "eggbox", "glue", "holepuncher"]
-LM_OCC_OBJECTS = ["ape"]
 
 intrinsic_matrix = {
     'linemod': np.array([[572.4114, 0., 325.2611],
@@ -234,10 +233,7 @@ class estimate_coor_P0():
                             vert_id = np.asarray(vert_id, np.int64)
                             pixellist = np.full([height, width], 100, dtype=np.float32)  # 加一个大数
                             # 实际上就是将每个3角面片投影回来，查看其中包含的整点像素，为其提供一个估计，然后最后选择能看到的那个，Z值最小
-                            import time
-                            start = time.time()
                             xyz_crop = calc_xy_crop(vert_id, vert, camK, R, t, norm_d, height, width, camK_inv, pixellist, mask, xyz["xyxy"])
-                            print(time.time() - start)
                             x1, y1, x2, y2 = xyz["xyxy"]
                             P =  {
                                 "xyz_crop": xyz_crop,
