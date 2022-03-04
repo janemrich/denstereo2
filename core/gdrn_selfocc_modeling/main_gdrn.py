@@ -196,7 +196,7 @@ if __name__ == "__main__":
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("--config-file", default="../../configs/gdrn_selfocc/lmo/gdrn_selfocc_multistep_40E.py", metavar="FILE", help="path to config file")
-    assert osp.exists("../../configs/gdrn_selfocc/lmo/gdrn_selfocc_multistep_40E.py")
+    # assert osp.exists("../../configs/gdrn_selfocc/lmo/gdrn_selfocc_multistep_40E.py")
     parser.add_argument(
         "--resume", default=False, action="store_true", help="whether to attempt to resume from the checkpoint directory"
     )
