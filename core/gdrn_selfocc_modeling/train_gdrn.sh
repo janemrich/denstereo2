@@ -13,6 +13,7 @@ echo "use gpu ids: $CUDA_VISIBLE_DEVICES num gpus: $NGPU"
 NCCL_DEBUG=INFO
 OMP_NUM_THREADS=1
 MKL_NUM_THREADS=1
+echo train_gdrn.sh: python core/gdrn_selffocc_modeling/main_gdrn.py --config-file $CFG --num-gpus $NGPU ${@:3}
 
 python core/gdrn_selfocc_modeling/main_gdrn.py \
     --config-file $CFG --num-gpus $NGPU  ${@:3}
