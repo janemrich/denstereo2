@@ -1,0 +1,22 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        
+
+    
+        {
+            "name": "denstereo",
+            "python": "${command:python.interpreterPath}",
+            "type": "python",
+            "request": "launch",
+            "program": "core/gdrn_selfocc_modeling/main_gdrn.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--config-file", "configs/gdrn_selfocc/lm/gdrn_2rothead_multistep.py"
+            ]
+        }
+    ]
+}
