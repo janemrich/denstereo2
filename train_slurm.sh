@@ -14,3 +14,4 @@ srun -w $NODE --gpus $NGPU  \
     --cpus-per-gpu=4 --mem-per-gpu=32G \
     bash core/gdrn_selfocc_modeling/train_gdrn.sh \
     $CFG $NGPU ${@:4}
+#    --cpus-per-gpu=4 --mem-per-gpu=32G \
