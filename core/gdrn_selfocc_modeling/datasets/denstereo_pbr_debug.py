@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 DATASETS_ROOT = osp.normpath(osp.join(PROJ_ROOT, "datasets"))
 
 
-class DENSTEREO_PBR_Dataset:
+class DENSTEREO_PBR_DEBUG_Dataset:
     def __init__(self, data_cfg):
         """
         Set with_depth and with_masks default to True,
@@ -57,14 +57,14 @@ class DENSTEREO_PBR_Dataset:
         ##################################################
 
         # NOTE: careful! Only the selected objects
-        self.cat_ids = [cat_id for cat_id, obj_name in ref.ycbv.id2obj.items() if obj_name in self.objs]
+        self.cat_ids = [cat_id for cat_id, obj_name in ref.denstereo.id2obj_debug.items() if obj_name in self.objs]
         # map selected objs to [0, num_objs-1]
         self.cat2label = {v: i for i, v in enumerate(self.cat_ids)}  # id_map
         self.label2cat = {label: cat for cat, label in self.cat2label.items()}
         self.obj2label = OrderedDict((obj, obj_id) for obj_id, obj in enumerate(self.objs))
         ##########################################################
 
-        self.scenes = [f"{i:06d}" for i in range(50)]
+        self.scenes = [f"{i:06d}" for i in ref.denstereo.debug_pbr_scenes]
 
     def __call__(self):
         """Load light-weight instance annotations of all images into a list of
@@ -280,8 +280,8 @@ denstereo_model_root = "BOP_DATASETS/denstereo/models/"
 
 
 SPLITS_DENSTEREO_PBR = dict(
-    denstereo_train_pbr =dict(
-        name="denstereo_train_pbr",
+    denstereo_debug_train_pbr =dict(
+        name="denstereo_debug_train_pbr",
         objs=ref.denstereo.objects,  # selected objects
         dataset_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/train_pbr_left"),
         dataset_root_right=osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/train_pbr_right"),
@@ -300,14 +300,14 @@ SPLITS_DENSTEREO_PBR = dict(
         filter_invalid=True,
         ref_key="denstereo",
     ),
-    denstereo_test_pbr =dict(
-        name="denstereo_test_pbr",
+    denstereo_debug_test_pbr =dict(
+        name="denstereo_debug_test_pbr",
         objs=ref.denstereo.objects,  # selected objects
         dataset_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/train_pbr_left"),
         dataset_root_right=osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/train_pbr_right"),
         models_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/models"),
-        xyz_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/train_pbr_left/xyz_crop"),
-        xyz_root_right=osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/train_pbr_right/xyz_crop"),
+        xyz_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/train_pbr_left/xyz_crop_hd"),
+        xyz_root_right=osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/train_pbr_right/xyz_crop_hd"),
         occ_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/train_pbr_left/Q0"),
         occ_root_right=osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/train_pbr_right/Q0"),
         scale_to_meter=0.001,
@@ -320,8 +320,8 @@ SPLITS_DENSTEREO_PBR = dict(
         filter_invalid=True,
         ref_key="denstereo_test",
     ),
-    denstereo_train_pbr_left =dict(
-        name="denstereo_train_pbr_left",
+    denstereo_debug_train_pbr_left =dict(
+        name="denstereo_debug_train_pbr_left",
         objs=ref.denstereo.objects,  # selected objects
         dataset_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/train_pbr_left"),
         models_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/models"),
@@ -337,57 +337,6 @@ SPLITS_DENSTEREO_PBR = dict(
         filter_invalid=True,
         ref_key="denstereo",
     ),
-    denstereo_test_pbr_left =dict(
-        name="denstereo_test_pbr_left",
-        objs=ref.denstereo.objects,  # selected objects
-        dataset_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/train_pbr_left"),
-        models_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/models"),
-        xyz_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/train_pbr_left/xyz_crop"),
-        occ_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/train_pbr_left/Q0"),
-        scale_to_meter=0.001,
-        with_masks=True,  # (load masks but may not use it)
-        with_depth=True,  # (load depth path here, but may not use it)
-        height=480,
-        width=640,
-        use_cache=True,
-        num_to_load=-1,
-        filter_invalid=True,
-        ref_key="denstereo_test",
-    ),
-    denstereo_train_pbr_right =dict(
-        name="denstereo_train_pbr_right",
-        objs=ref.denstereo.objects,  # selected objects
-        dataset_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/train_pbr_right"),
-        models_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/models"),
-        xyz_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/train_pbr_right/xyz_crop_hd"),
-        occ_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/train_pbr_right/Q0"),
-        scale_to_meter=0.001,
-        with_masks=True,  # (load masks but may not use it)
-        with_depth=True,  # (load depth path here, but may not use it)
-        height=480,
-        width=640,
-        use_cache=True,
-        num_to_load=-1,
-        filter_invalid=True,
-        ref_key="denstereo",
-    ),
-    denstereo_test_pbr_right =dict(
-        name="denstereo_test_pbr_right",
-        objs=ref.denstereo.objects,  # selected objects
-        dataset_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/train_pbr_right"),
-        models_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/models"),
-        xyz_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/train_pbr_right/xyz_crop"),
-        occ_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/train_pbr_right/Q0"),
-        scale_to_meter=0.001,
-        with_masks=True,  # (load masks but may not use it)
-        with_depth=True,  # (load depth path here, but may not use it)
-        height=480,
-        width=640,
-        use_cache=True,
-        num_to_load=-1,
-        filter_invalid=True,
-        ref_key="denstereo_test",
-    )
 )
 
 # single obj splits
@@ -438,7 +387,7 @@ def register_with_name_cfg(name, data_cfg=None):
     else:
         assert data_cfg is not None, f"dataset name {name} is not registered"
         used_cfg = data_cfg
-    DatasetCatalog.register(name, DENSTEREO_PBR_Dataset(used_cfg))
+    DatasetCatalog.register(name, DENSTEREO_PBR_DEBUG_Dataset(used_cfg))
     # something like eval_types
     MetadataCatalog.get(name).set(
         id="denstereo",  # NOTE: for pvnet to determine module
