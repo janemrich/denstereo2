@@ -26,8 +26,9 @@ train_pbr_dir = osp.join(dataset_root, "train_pbr_left")
 
 test_dir = osp.join(dataset_root, "test")
 
-test_scenes = [i for i in range(0, 49 + 1)]
-train_pbr_scenes = [i for i in range(0, 45 + 1)]
+test_scenes = [i for i in range(45, 49 + 1)]
+train_pbr_scenes = [i for i in range(0, 44 + 1)]
+debub_pbr_scenes = [0]
 
 model_dir = osp.join(dataset_root, "models")
 fine_model_dir = osp.join(dataset_root, "models_fine")
