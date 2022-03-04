@@ -7,17 +7,26 @@ import mmcv
 import detectron2.utils.comm as comm
 import ref
 from detectron2.data import DatasetCatalog, MetadataCatalog
-from core.gdrn_selfocc_modeling.datasets import lm_syn_imgn, lm_dataset_d2, lm_pbr, lm_blender, ycbv_pbr, ycbv_d2, ycbv_bop_test, denstereo_pbr, denstereo_pbr_debug, denstereo_pbr_test
+# from core.gdrn_selfocc_modeling.datasets import lm_syn_imgn
+# from core.gdrn_selfocc_modeling.datasets import lm_dataset_d2
+# from core.gdrn_selfocc_modeling.datasets import lm_pbr
+# from core.gdrn_selfocc_modeling.datasets import lm_blender
+from core.gdrn_selfocc_modeling.datasets import ycbv_pbr
+from core.gdrn_selfocc_modeling.datasets import ycbv_d2
+from core.gdrn_selfocc_modeling.datasets import ycbv_bop_test
+from core.gdrn_selfocc_modeling.datasets import denstereo_pbr
+from core.gdrn_selfocc_modeling.datasets import denstereo_pbr_debug
+from core.gdrn_selfocc_modeling.datasets import denstereo_pbr_test
 
 
 cur_dir = osp.dirname(osp.abspath(__file__))
 # from lib.utils.utils import iprint
 __all__ = ["register_dataset", "register_datasets", "register_datasets_in_cfg", "get_available_datasets"]
 _DSET_MOD_NAMES = [
-    "lm_syn_imgn",
-    "lm_dataset_d2",
-    "lm_pbr",
-    "lm_blender",
+    # "lm_syn_imgn",
+    # "lm_dataset_d2",
+    # "lm_pbr",
+    # "lm_blender",
     "ycbv_pbr",
     "ycbv_d2",
     "ycbv_bop_test",
