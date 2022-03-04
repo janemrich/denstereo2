@@ -20,7 +20,7 @@ INPUT = dict(
 )
 
 SOLVER = dict(
-    IMS_PER_BATCH=24,
+    IMS_PER_BATCH=1,
     TOTAL_EPOCHS=1,
     LR_SCHEDULER_NAME="flat_and_anneal",
     ANNEAL_METHOD="cosine",  # "cosine"
@@ -34,11 +34,11 @@ SOLVER = dict(
 
 DATASETS = dict(
     TRAIN=(
-        "denstereo_train_pbr_left",
+        "denstereo_debug_train_pbr_left",
     ),
     # TRAIN2=("denstereo_imgn_13_train_1k_per_obj",),
     # TRAIN2_RATIO=0.75,
-    TEST=("denstereo_test_pbr_left",),
+    TEST=("denstereo_debug_train_pbr_left",),
     DET_FILES_TEST=("datasets/BOP_DATASETS/denstereo/test/test_bboxes/bbox_faster_all.json",),)
 
 MODEL = dict(
