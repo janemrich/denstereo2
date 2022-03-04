@@ -59,6 +59,9 @@ id2obj = {
     20: "052_extra_large_clamp",  # [-0.3950, -10.4130, 0.1620]
     21: "061_foam_brick",  # [-0.0805, 0.0805, -8.2435]
 }
+id2obj_debug = {
+    15: "035_power_drill",  # [9.0710, 20.9360, -2.1190]
+}
 objects = sorted(id2obj.values())
 
 obj_num = len(id2obj)
