@@ -41,7 +41,7 @@ INPUT = dict(
     RANDOM_FLIP="none",  # none | horizontal | vertical
     ## bg images
     BG_TYPE="VOC_table",  # VOC_table | coco | VOC | SUN2012
-    BG_IMGS_ROOT="/home/yan/gdnr_selfocc/datasets/VOCdevkit/VOC2012/",  # "datasets/coco/train2017/"
+    BG_IMGS_ROOT="/home/jemrich/datasets/VOCdevkit/VOC2012/",  # "datasets/coco/train2017/"
     NUM_BG_IMGS=10000,
     CHANGE_BG_PROB=0.5,  # prob to change bg of real image
     # truncation fg (randomly replace some side of fg with bg during replace_bg)
