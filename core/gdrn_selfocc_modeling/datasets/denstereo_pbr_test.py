@@ -280,7 +280,7 @@ denstereo_model_root = "BOP_DATASETS/denstereo/models/"
 ################################################################################
 
 
-SPLITS_DENSTEREO_PBR = dict(
+SPLITS_DENSTEREO_PBR_TEST = dict(
     denstereo_test_pbr =dict(
         name="denstereo_test_pbr",
         objs=ref.denstereo.objects,  # selected objects
@@ -349,8 +349,8 @@ for obj in ref.denstereo.objects:
             filter_invalid = False
         else:
             raise ValueError("{}".format(split))
-        if name not in SPLITS_DENSTEREO_PBR:
-            SPLITS_DENSTEREO_PBR[name] = dict(
+        if name not in SPLITS_DENSTEREO_PBR_TEST:
+            SPLITS_DENSTEREO_PBR_TEST[name] = dict(
                 name=name,
                 objs=[obj],  # only this obj
                 dataset_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/train_pbr_left"),
@@ -380,8 +380,8 @@ def register_with_name_cfg(name, data_cfg=None):
             data_cfg can be set in cfg.DATA_CFG.name
     """
     dprint("register dataset: {}".format(name))
-    if name in SPLITS_DENSTEREO_PBR:
-        used_cfg = SPLITS_DENSTEREO_PBR[name]
+    if name in SPLITS_DENSTEREO_PBR_TEST:
+        used_cfg = SPLITS_DENSTEREO_PBR_TEST[name]
     else:
         assert data_cfg is not None, f"dataset name {name} is not registered"
         used_cfg = data_cfg
@@ -398,7 +398,7 @@ def register_with_name_cfg(name, data_cfg=None):
 
 
 def get_available_datasets():
-    return list(SPLITS_DENSTEREO_PBR.keys())
+    return list(SPLITS_DENSTEREO_PBR_TEST.keys())
 
 
 #### tests ###############################################

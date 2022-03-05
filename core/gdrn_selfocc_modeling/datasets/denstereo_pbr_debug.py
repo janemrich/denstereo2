@@ -37,7 +37,7 @@ class DENSTEREO_PBR_DEBUG_Dataset:
 
         self.objs = data_cfg["objs"]  # selected objects
 
-        self.dataset_root = data_cfg.get("dataset_root", osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/"))
+        self.dataset_root = data_cfg.get("dataset_root", osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo"))
         self.xyz_root = data_cfg.get("xyz_root", osp.join(self.dataset_root, "xyz_crop_hd"))
         self.occ_root = data_cfg.get("occ_root", osp.join(self.dataset_root, "Q0"))
         assert osp.exists(self.dataset_root), self.dataset_root
@@ -57,7 +57,7 @@ class DENSTEREO_PBR_DEBUG_Dataset:
         ##################################################
 
         # NOTE: careful! Only the selected objects
-        self.cat_ids = [cat_id for cat_id, obj_name in ref.denstereo.id2obj_debug.items() if obj_name in self.objs]
+        self.cat_ids = [cat_id for cat_id, obj_name in ref.denstereo.id2obj.items() if obj_name in self.objs]
         # map selected objs to [0, num_objs-1]
         self.cat2label = {v: i for i, v in enumerate(self.cat_ids)}  # id_map
         self.label2cat = {label: cat for cat, label in self.cat2label.items()}
@@ -65,6 +65,7 @@ class DENSTEREO_PBR_DEBUG_Dataset:
         ##########################################################
 
         self.scenes = [f"{i:06d}" for i in ref.denstereo.debug_pbr_scenes]
+        self.debug_im_id = data_cfg.get("debug_im_id", None)
 
     def __call__(self):
         """Load light-weight instance annotations of all images into a list of
@@ -132,6 +133,13 @@ class DENSTEREO_PBR_DEBUG_Dataset:
                     obj_id = anno["obj_id"]
                     if obj_id not in self.cat_ids:
                         continue
+
+                    scene_im_anno_id = "{:d}/{:d}/{:d}".format(scene_id, int_im_id, obj_id)
+
+                    if self.debug_im_id is not None:
+                        if self.debug_im_id != scene_im_anno_id:
+                            continue
+
                     cur_label = self.cat2label[obj_id]  # 0-based label
                     R = np.array(anno["cam_R_m2c"], dtype="float32").reshape(3, 3)
                     t = np.array(anno["cam_t_m2c"], dtype="float32") / 1000.0
@@ -279,7 +287,7 @@ denstereo_model_root = "BOP_DATASETS/denstereo/models/"
 ################################################################################
 
 
-SPLITS_DENSTEREO_PBR = dict(
+SPLITS_DENSTEREO_PBR_DEBUG = dict(
     denstereo_debug_train_pbr =dict(
         name="denstereo_debug_train_pbr",
         objs=ref.denstereo.objects,  # selected objects
@@ -351,8 +359,8 @@ for obj in ref.denstereo.objects:
             filter_invalid = False
         else:
             raise ValueError("{}".format(split))
-        if name not in SPLITS_DENSTEREO_PBR:
-            SPLITS_DENSTEREO_PBR[name] = dict(
+        if name not in SPLITS_DENSTEREO_PBR_DEBUG:
+            SPLITS_DENSTEREO_PBR_DEBUG[name] = dict(
                 name=name,
                 objs=[obj],  # only this obj
                 dataset_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/train_pbr_left"),
@@ -371,6 +379,46 @@ for obj in ref.denstereo.objects:
                 ref_key="denstereo",
             )
 
+# ================ add single image dataset for debug =======================================
+for split in ['train_pbr_left']: # TODO add train _right 'train_pbr_right']:
+    for scene in ref.denstereo.debug_pbr_scenes:
+        scene_root = osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/{:s}/{:06d}".format(
+                split,
+                scene
+            )
+        )
+        gt_dict = mmcv.load(osp.join(scene_root, "scene_gt.json"))
+        for im_id in gt_dict.keys():
+            int_im_id = int(im_id)
+            obj_ids = [pose['obj_id'] for pose in gt_dict[im_id]]
+            for obj_id in obj_ids:
+                name = "denstereo_single_{}_{}_{}_{}".format(scene, int_im_id, obj_id, split)
+                if name not in SPLITS_DENSTEREO_PBR_DEBUG:
+                    scene_image_obj_id = "{:d}/{:d}/{:d}".format(scene, int_im_id, obj_id)
+                    SPLITS_DENSTEREO_PBR_DEBUG[name] = dict(
+                        name=name,
+                        dataset_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/{:s}".format(split)),
+                        models_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/models"),
+                        objs=ref.denstereo.objects,  # only this obj
+                        image_prefixes=[
+                            osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/{:s}/{:06d}").format(split, scene)
+                        ],
+                        xyz_prefixes=[
+                            osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/{:s}/xyz_crop_hd/{:06d}".format(split, scene))
+                        ],
+                        scale_to_meter=0.001,
+                        with_masks=True,  # (load masks but may not use it)
+                        with_depth=True,  # (load depth path here, but may not use it)
+                        height=480,
+                        width=640,
+                        cache_dir=osp.join(PROJ_ROOT, ".cache"),
+                        use_cache=True,
+                        num_to_load=-1,
+                        filter_invalid=False,
+                        filter_scene=True,
+                        ref_key="denstereo",
+                        debug_im_id = scene_image_obj_id # NOTE: debug im id
+                    )
 
 def register_with_name_cfg(name, data_cfg=None):
     """Assume pre-defined datasets live in `./datasets`.
@@ -382,8 +430,8 @@ def register_with_name_cfg(name, data_cfg=None):
             data_cfg can be set in cfg.DATA_CFG.name
     """
     dprint("register dataset: {}".format(name))
-    if name in SPLITS_DENSTEREO_PBR:
-        used_cfg = SPLITS_DENSTEREO_PBR[name]
+    if name in SPLITS_DENSTEREO_PBR_DEBUG:
+        used_cfg = SPLITS_DENSTEREO_PBR_DEBUG[name]
     else:
         assert data_cfg is not None, f"dataset name {name} is not registered"
         used_cfg = data_cfg
@@ -400,7 +448,7 @@ def register_with_name_cfg(name, data_cfg=None):
 
 
 def get_available_datasets():
-    return list(SPLITS_DENSTEREO_PBR.keys())
+    return list(SPLITS_DENSTEREO_PBR_DEBUG.keys())
 
 
 #### tests ###############################################
