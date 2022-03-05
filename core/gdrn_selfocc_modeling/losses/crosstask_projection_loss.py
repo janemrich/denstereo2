@@ -72,8 +72,8 @@ class CT_loss_projection(nn.Module):
             roi_q0_y = torch.stack([roi_q0_xz_x, torch.zeros([b, h, w], dtype=torch.float).cuda(), roi_q0_xz_z], dim=1)
             roi_q0_z = torch.stack([roi_q0_yz_y, roi_q0_yz_z, torch.zeros([b, h, w], dtype=torch.float).cuda()], dim=1)
             z_mask_sum = torch.zeros([3], dtype=torch.float).cuda()
-            if K.numel() > 9:  # 这里K的形状是b, 3, 3
-                # 针对p0进行预计算
+            if K.numel() > 9:  # Here K's shape isb, 3, 3
+                # against p0 Pre-estimation
                 '''
                 XK = torch.tensor([572.4114, 0.0, 325.2611, 0.0, 573.5704, 242.0489, 0.0, 0.0, 1.0], dtype=torch.float32).view(3, 3)
                 XK = XK.repeat(b, 1, 1).cuda()
