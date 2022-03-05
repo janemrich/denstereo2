@@ -15,7 +15,8 @@
             "program": "core/gdrn_selfocc_modeling/main_gdrn.py",
             "console": "integratedTerminal",
             "args": [
-                "--config-file", "configs/gdrn_selfocc/lm/gdrn_2rothead_multistep.py"
+                "--config-file", "configs/gdrn_selfocc/denstereo/debug_gdrn_2rothead_multistep.py",
+                "--num-gpus", "1",
             ]
         }
     ]
