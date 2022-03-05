@@ -11,6 +11,7 @@
             "name": "denstereo",
             "python": "${command:python.interpreterPath}",
             "type": "python",
+            "justMyCode": false,
             "request": "launch",
             "program": "core/gdrn_selfocc_modeling/main_gdrn.py",
             "console": "integratedTerminal",
