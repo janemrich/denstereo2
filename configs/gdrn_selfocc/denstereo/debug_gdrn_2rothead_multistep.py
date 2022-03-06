@@ -40,11 +40,11 @@ DATASETS = dict(
         ),
     # TRAIN2=("denstereo_imgn_13_train_1k_per_obj",),
     # TRAIN2_RATIO=0.75,
-    TEST=(
+    # TEST=(
         # 'denstereo_debug_train_pbr_left',
         'denstereo_single_0_2_1_train_pbr_left',
         # "denstereo_single_15_0_0_train_pbr_left",
-        ),
+        # ),
     DET_FILES_TEST=("datasets/BOP_DATASETS/denstereo/test/test_bboxes/bbox_faster_all.json",),)
 
 MODEL = dict(
