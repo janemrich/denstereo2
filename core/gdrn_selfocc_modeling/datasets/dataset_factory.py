@@ -8,7 +8,7 @@ import detectron2.utils.comm as comm
 import ref
 from detectron2.data import DatasetCatalog, MetadataCatalog
 # from core.gdrn_selfocc_modeling.datasets import lm_syn_imgn
-# from core.gdrn_selfocc_modeling.datasets import lm_dataset_d2
+from core.gdrn_selfocc_modeling.datasets import lm_dataset_d2
 # from core.gdrn_selfocc_modeling.datasets import lm_pbr
 # from core.gdrn_selfocc_modeling.datasets import lm_blender
 from core.gdrn_selfocc_modeling.datasets import ycbv_pbr
@@ -24,7 +24,7 @@ cur_dir = osp.dirname(osp.abspath(__file__))
 __all__ = ["register_dataset", "register_datasets", "register_datasets_in_cfg", "get_available_datasets"]
 _DSET_MOD_NAMES = [
     # "lm_syn_imgn",
-    # "lm_dataset_d2",
+    "lm_dataset_d2",
     # "lm_pbr",
     # "lm_blender",
     "ycbv_pbr",
