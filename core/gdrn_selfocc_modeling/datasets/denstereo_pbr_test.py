@@ -340,7 +340,7 @@ SPLITS_DENSTEREO_PBR_TEST = dict(
 # single obj splits
 for obj in ref.denstereo.objects:
     for split in ["train_pbr"]:
-        name = "denstereo_{}_{}".format(obj, split)
+        name = "denstereo_test_{}_{}".format(obj, split)
         if split in ["train_pbr"]:
             filter_invalid = True
         elif split in ["test_pbr"]:

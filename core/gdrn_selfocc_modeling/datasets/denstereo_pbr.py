@@ -300,26 +300,6 @@ SPLITS_DENSTEREO_PBR = dict(
         filter_invalid=True,
         ref_key="denstereo",
     ),
-    denstereo_test_pbr =dict(
-        name="denstereo_test_pbr",
-        objs=ref.denstereo.objects,  # selected objects
-        dataset_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/train_pbr_left"),
-        dataset_root_right=osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/train_pbr_right"),
-        models_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/models"),
-        xyz_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/train_pbr_left/xyz_crop"),
-        xyz_root_right=osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/train_pbr_right/xyz_crop"),
-        occ_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/train_pbr_left/Q0"),
-        occ_root_right=osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/train_pbr_right/Q0"),
-        scale_to_meter=0.001,
-        with_masks=True,  # (load masks but may not use it)
-        with_depth=True,  # (load depth path here, but may not use it)
-        height=480,
-        width=640,
-        use_cache=True,
-        num_to_load=-1,
-        filter_invalid=True,
-        ref_key="denstereo_test",
-    ),
     denstereo_train_pbr_left =dict(
         name="denstereo_train_pbr_left",
         objs=ref.denstereo.objects,  # selected objects
@@ -336,23 +316,6 @@ SPLITS_DENSTEREO_PBR = dict(
         num_to_load=-1,
         filter_invalid=True,
         ref_key="denstereo",
-    ),
-    denstereo_test_pbr_left =dict(
-        name="denstereo_test_pbr_left",
-        objs=ref.denstereo.objects,  # selected objects
-        dataset_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/train_pbr_left"),
-        models_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/models"),
-        xyz_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/train_pbr_left/xyz_crop"),
-        occ_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/train_pbr_left/Q0"),
-        scale_to_meter=0.001,
-        with_masks=True,  # (load masks but may not use it)
-        with_depth=True,  # (load depth path here, but may not use it)
-        height=480,
-        width=640,
-        use_cache=True,
-        num_to_load=-1,
-        filter_invalid=True,
-        ref_key="denstereo_test",
     ),
     denstereo_train_pbr_right =dict(
         name="denstereo_train_pbr_right",
@@ -371,23 +334,6 @@ SPLITS_DENSTEREO_PBR = dict(
         filter_invalid=True,
         ref_key="denstereo",
     ),
-    denstereo_test_pbr_right =dict(
-        name="denstereo_test_pbr_right",
-        objs=ref.denstereo.objects,  # selected objects
-        dataset_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/train_pbr_right"),
-        models_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/models"),
-        xyz_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/train_pbr_right/xyz_crop"),
-        occ_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/train_pbr_right/Q0"),
-        scale_to_meter=0.001,
-        with_masks=True,  # (load masks but may not use it)
-        with_depth=True,  # (load depth path here, but may not use it)
-        height=480,
-        width=640,
-        use_cache=True,
-        num_to_load=-1,
-        filter_invalid=True,
-        ref_key="denstereo_test",
-    )
 )
 
 # single obj splits

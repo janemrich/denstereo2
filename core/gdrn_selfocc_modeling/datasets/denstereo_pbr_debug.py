@@ -66,6 +66,7 @@ class DENSTEREO_PBR_DEBUG_Dataset:
 
         self.scenes = [f"{i:06d}" for i in ref.denstereo.debug_pbr_scenes]
         self.debug_im_id = data_cfg.get("debug_im_id", None)
+        self.max_im = data_cfg.get("max_im", None)
 
     def __call__(self):
         """Load light-weight instance annotations of all images into a list of
@@ -106,6 +107,10 @@ class DENSTEREO_PBR_DEBUG_Dataset:
 
             for str_im_id in tqdm(gt_dict, postfix=f"{scene_id}"):
                 int_im_id = int(str_im_id)
+                if self.max_im is not None:
+                    if self.max_im < int_im_id:
+                        continue
+
                 rgb_path = osp.join(scene_root, "rgb/{:06d}.jpg").format(int_im_id)
                 assert osp.exists(rgb_path), rgb_path
 
@@ -135,7 +140,6 @@ class DENSTEREO_PBR_DEBUG_Dataset:
                         continue
 
                     scene_im_anno_id = "{:d}/{:d}/{:d}".format(scene_id, int_im_id, obj_id)
-
                     if self.debug_im_id is not None:
                         if self.debug_im_id != scene_im_anno_id:
                             continue
@@ -350,7 +354,7 @@ SPLITS_DENSTEREO_PBR_DEBUG = dict(
 # single obj splits
 for obj in ref.denstereo.objects:
     for split in ["train_pbr"]:
-        name = "denstereo_{}_{}".format(obj, split)
+        name = "denstereo_debug_{}_{}".format(obj, split)
         if split in ["train_pbr"]:
             filter_invalid = True
         elif split in ["test_pbr"]:

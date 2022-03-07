@@ -41,10 +41,10 @@ SOLVER = dict(
 )
 
 DATASETS = dict(
-    TRAIN=("denstereo_train_pbr"),
-    TEST=("denstereo_test",),
+    TRAIN=("denstereo_train_pbr_left"),
+    TEST=("denstereo_test_pbr_left",),
     DET_FILES_TEST=(
-        "datasets/BOP_DATASETS/denstereo/test/test_bboxes/fcos_V57eSE_MSx1333_ColorAugAAEWeaker_8e_denstereo_real_pbr_8e_test_keyframe.json",
+        "datasets/BOP_DATASETS/denstereo/test_bboxes/test_pbr_left.json",
     ),
     SYM_OBJS=["024_bowl", "036_wood_block", "051_large_clamp", "052_extra_large_clamp", "061_foam_brick"],  # ycb
 )
