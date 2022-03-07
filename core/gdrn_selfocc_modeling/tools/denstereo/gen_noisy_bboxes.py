@@ -55,7 +55,7 @@ def generate_bboxes(bop_path, dataset, split, scene_from, scene_to, name):
                     test_bboxes[scene_im_id] = detections
 
 
-    with open(dataset_path / 'test_bboxes' / (name + '.json'), 'w') as outfile:
+    with open(bop_path / dataset / 'test_bboxes' / (name + '.json'), 'w') as outfile:
         json.dump(test_bboxes, outfile, indent=1)
 
 
