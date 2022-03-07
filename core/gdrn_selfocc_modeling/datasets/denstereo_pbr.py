@@ -64,7 +64,7 @@ class DENSTEREO_PBR_Dataset:
         self.obj2label = OrderedDict((obj, obj_id) for obj_id, obj in enumerate(self.objs))
         ##########################################################
 
-        self.scenes = [f"{i:06d}" for i in range(50)]
+        self.scenes = [f"{i:06d}" for i in ref.denstereo.train_pbr_scenes]
 
     def __call__(self):
         """Load light-weight instance annotations of all images into a list of
