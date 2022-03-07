@@ -89,7 +89,7 @@ class CT_loss_projection(nn.Module):
                 z_mask = (torch.abs(P[:, 2, :]) > 1e-4) & (torch.abs(Q_x[:, 2, :]) > 1e-4) & occmask_x # b, n
                 z_mask_sum[0] = z_mask.sum()
                 if z_mask.sum() < b * 3:
-                    loss_x = 0
+                    loss_x = torch.zeros((1), device='cuda')
                 else:
                     q0_pro_x = q0_x_projection[z_mask, :]  # m, 3
                     p0_pro_x = p0_projection[z_mask, :]  # m, 3
@@ -114,7 +114,7 @@ class CT_loss_projection(nn.Module):
                 z_mask = (torch.abs(P[:, 2, :]) > 1e-4) & (torch.abs(Q_y[:, 2, :]) > 1e-4) & occmask_y # b, n
                 z_mask_sum[1] = z_mask.sum()
                 if z_mask.sum() < b * 3:
-                    loss_y = 0
+                    loss_y = torch.zeros((1), device='cuda')
                 else:
                     q0_pro_y = q0_y_projection[z_mask, :]  # m, 3
                     p0_pro_y = p0_projection[z_mask, :]  # m, 3
@@ -139,7 +139,7 @@ class CT_loss_projection(nn.Module):
                 z_mask = (torch.abs(P[:, 2, :]) > 1e-4) & (torch.abs(Q_z[:, 2, :]) > 1e-4) & occmask_z  # b, n
                 z_mask_sum[2] = z_mask.sum()
                 if z_mask.sum() < b * 3:
-                    loss_z = 0
+                    loss_z = torch.zeros((1), device='cuda')
                 else:
                     q0_pro_z = q0_z_projection[z_mask, :]  # m, 3
                     p0_pro_z = p0_projection[z_mask, :]  # m, 3
@@ -157,7 +157,8 @@ class CT_loss_projection(nn.Module):
                         loss_z = torch.sum(torch.norm(loss_z_pq, dim=1)) + torch.sum(torch.norm(loss_z_qu, dim=1))
                 loss = ((loss_x + loss_y + loss_z) / (z_mask_sum.sum())) / 572.3   # depends on K
             else:
-                loss = 0  # 这个loss不要就是了
+                loss = torch.zeros((1), device='cuda')# 这个loss不要就是了
+            assert torch.isfinite(loss).all(), z_mask_sum.sum()
             return loss
 
 '''

@@ -62,7 +62,7 @@ class Q_def_loss(nn.Module):
             q0_x_projection = (torch.bmm(K, Q_x)).permute(0, 2, 1)  # b,n,3
             z_mask = (torch.abs(Q_x[:, 2, :]) > 1e-4) & occmask_x  # b, n
             if z_mask.sum() < b * 3:
-                loss_x = 0
+                loss_x = torch.zeros((1), device='cuda')
             else:
                 q0_pro_x = q0_x_projection[z_mask, :]  # m, 3
                 u_x = roi_2d.view(b, 2, -1).permute(0, 2, 1)  # b, n, 2
@@ -82,7 +82,7 @@ class Q_def_loss(nn.Module):
             q0_y_projection = (torch.bmm(K, Q_y)).permute(0, 2, 1)  # b,n,3
             z_mask = (torch.abs(Q_y[:, 2, :]) > 1e-4) & occmask_y  # b, n
             if z_mask.sum() < b * 3:
-                loss_y = 0
+                loss_y = torch.zeros((1), device='cuda')
             else:
                 q0_pro_y = q0_y_projection[z_mask, :]  # m, 3
                 u_y = roi_2d.view(b, 2, -1).permute(0, 2, 1)  # b, n, 2
@@ -102,7 +102,7 @@ class Q_def_loss(nn.Module):
             q0_z_projection = (torch.bmm(K, Q_z)).permute(0, 2, 1)  # b,n,3
             z_mask = (torch.abs(Q_z[:, 2, :]) > 1e-4) & occmask_z  # b, n
             if z_mask.sum() < b * 3:
-                loss_z = 0
+                loss_z = torch.zeros((1), device='cuda')
             else:
                 q0_pro_z = q0_z_projection[z_mask, :]  # m, 3
 
@@ -118,5 +118,5 @@ class Q_def_loss(nn.Module):
 
             loss = (loss_x + loss_y + loss_z) / 572.5
         else:
-            loss = 0
+            loss = torch.zeros((1), device='cuda') 
         return loss

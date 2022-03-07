@@ -455,7 +455,7 @@ class GDRN(nn.Module):
             loss_func = nn.L1Loss(reduction="sum")
             occmask_x = gt_occmask[:, 0, :, :]
             if occmask_x.sum() < s_head_cfg.MIN_Q0_REGION:
-                loss_dict["loss_Q0_x"] = 0
+                loss_dict["loss_Q0_x"] = torch.zeros((1), device=cfg.MODEL.DEVICE)
             else:
                 loss_dict["loss_Q0_x"] = loss_func(out_Q0_xy_x * occmask_x[:, None],
                                                    gt_Q0[:, 0:1] * occmask_x[:, None])\
@@ -466,7 +466,7 @@ class GDRN(nn.Module):
 
             occmask_y = gt_occmask[:, 1, :, :]
             if occmask_y.sum() < s_head_cfg.MIN_Q0_REGION:
-                loss_dict["loss_Q0_y"] = 0
+                loss_dict["loss_Q0_y"] = torch.zeros((1), device=cfg.MODEL.DEVICE)
             else:
                 loss_dict["loss_Q0_y"] = loss_func(out_Q0_xz_x * occmask_y[:, None],
                                                    gt_Q0[:, 2:3] * occmask_y[:, None]) \
@@ -477,7 +477,7 @@ class GDRN(nn.Module):
 
             occmask_z = gt_occmask[:, 2, :, :]
             if occmask_z.sum() < s_head_cfg.MIN_Q0_REGION:
-                loss_dict["loss_Q0_z"] = 0
+                loss_dict["loss_Q0_z"] = torch.zeros((1), device=cfg.MODEL.DEVICE)
             else:
                 loss_dict["loss_Q0_z"] = loss_func(out_Q0_yz_y * occmask_z[:, None],
                                                    gt_Q0[:, 4:5] * occmask_z[:, None]) \
