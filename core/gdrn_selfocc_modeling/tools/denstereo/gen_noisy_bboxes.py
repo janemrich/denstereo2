@@ -29,7 +29,7 @@ def get_noisy_bbox(bbox):
 
     return [x, y, width, height]
 
-def generate_bboxes(bop_path, dataset, split, scene_from, scene_to):
+def generate_bboxes(bop_path, dataset, split, scene_from, scene_to, name):
     dataset_path = bop_path / dataset / split
     test_bboxes = {}
     for scene_id in tqdm.tqdm(range(scene_from, scene_to)):
@@ -55,7 +55,7 @@ def generate_bboxes(bop_path, dataset, split, scene_from, scene_to):
                     test_bboxes[scene_im_id] = detections
 
 
-    with open(dataset_path / 'bbox.json', 'w') as outfile:
+    with open(dataset_path / 'test_bboxes' / name + '.json', 'w') as outfile:
         json.dump(test_bboxes, outfile, indent=1)
 
 
@@ -66,10 +66,18 @@ if __name__ == '__main__':
     parser.add_argument('--split', type=str)
     parser.add_argument('--scene_from', type=int, default=0)
     parser.add_argument('--scene_to', type=int, default=50)
+    parser.add_argument('--name', type=str, default='bbox', help='bbox file name')
     args = parser.parse_args()
 
     bop_path = Path(args.bop_path)
-    generate_bboxes(bop_path, args.dataset, args.split, args.scene_from, args.scene_to)
+    generate_bboxes(
+        bop_path,
+        args.dataset,
+        args.split,
+        args.scene_from,
+        args.scene_to,
+        args.name,
+    )
 
     
 
