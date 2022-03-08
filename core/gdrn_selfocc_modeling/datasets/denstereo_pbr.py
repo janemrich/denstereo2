@@ -480,6 +480,7 @@ for obj in ref.denstereo.objects:
                 use_cache=True,
                 num_to_load=-1,
                 filter_invalid=filter_invalid,
+                scenes=ref.denstereo.train_pbr_scenes,
                 ref_key="denstereo",
             )
 # ================ add single image dataset for debug =======================================
