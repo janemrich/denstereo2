@@ -15,8 +15,8 @@ from core.gdrn_selfocc_modeling.datasets import ycbv_pbr
 from core.gdrn_selfocc_modeling.datasets import ycbv_d2
 from core.gdrn_selfocc_modeling.datasets import ycbv_bop_test
 from core.gdrn_selfocc_modeling.datasets import denstereo_pbr
-from core.gdrn_selfocc_modeling.datasets import denstereo_pbr_debug
-from core.gdrn_selfocc_modeling.datasets import denstereo_pbr_test
+# from core.gdrn_selfocc_modeling.datasets import denstereo_pbr_debug
+# from core.gdrn_selfocc_modeling.datasets import denstereo_pbr_test
 
 
 cur_dir = osp.dirname(osp.abspath(__file__))
