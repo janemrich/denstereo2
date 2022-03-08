@@ -26,7 +26,7 @@ train_pbr_dir = osp.join(dataset_root, "train_pbr_left")
 
 test_dir = osp.join(dataset_root, "test")
 
-test_scenes = [i for i in range(45, 49 + 1)]
+test_pbr_scenes = [i for i in range(45, 49 + 1)]
 train_pbr_scenes = [i for i in range(0, 44 + 1)]
 debug_pbr_scenes = [0]
 

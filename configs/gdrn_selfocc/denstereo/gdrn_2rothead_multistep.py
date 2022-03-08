@@ -39,7 +39,7 @@ DATASETS = dict(
     # TRAIN2=("denstereo_imgn_13_train_1k_per_obj",),
     # TRAIN2_RATIO=0.75,
     TEST=("denstereo_test_pbr_left",),
-    DET_FILES_TEST=("datasets/BOP_DATASETS/denstereo/test/test_bboxes/bbox_faster_all.json",),)
+    DET_FILES_TEST=("datasets/BOP_DATASETS/denstereo/test_bboxes/test_pbr_left.json",),)
 
 MODEL = dict(
     LOAD_DETS_TEST=True,
