@@ -156,6 +156,8 @@ class CT_loss_projection(nn.Module):
                     else:  # L2
                         loss_z = torch.sum(torch.norm(loss_z_pq, dim=1)) + torch.sum(torch.norm(loss_z_qu, dim=1))
                 loss = ((loss_x + loss_y + loss_z) / (z_mask_sum.sum())) / 572.3   # depends on K
+                if not loss.isfinite(loss).all():
+                    loss = torch.zeros((1), device='cuda')
             else:
                 loss = torch.zeros((1), device='cuda')# 这个loss不要就是了
             assert torch.isfinite(loss).all(), z_mask_sum.sum()
