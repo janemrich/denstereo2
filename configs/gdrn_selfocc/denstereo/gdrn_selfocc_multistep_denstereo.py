@@ -32,7 +32,7 @@ SOLVER = dict(
     ANNEAL_METHOD="cosine",  # "cosine"
     ANNEAL_POINT=0.72,
     # REL_STEPS=(0.3125, 0.625, 0.9375),
-    OPTIMIZER_CFG=dict(_delete_=True, type="Ranger", lr=3e-4, weight_decay=0),
+    OPTIMIZER_CFG=dict(_delete_=True, type="Ranger", lr=1e-4, weight_decay=0),
     WEIGHT_DECAY=0.0,
     WARMUP_FACTOR=0.001,
     WARMUP_ITERS=1000,
@@ -41,7 +41,7 @@ SOLVER = dict(
 )
 
 DATASETS = dict(
-    TRAIN=("denstereo_train_pbr_left",),
+    TRAIN=("denstereo_test_pbr_left",),
     TEST=("denstereo_test_pbr_left",),
     DET_FILES_TEST=(
         "datasets/BOP_DATASETS/denstereo/test_bboxes/test_pbr_left.json",
