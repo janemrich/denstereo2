@@ -27,7 +27,7 @@ INPUT = dict(
 
 SOLVER = dict(
     IMS_PER_BATCH=196,
-    TOTAL_EPOCHS=2,
+    TOTAL_EPOCHS=120,
     LR_SCHEDULER_NAME="flat_and_anneal",
     ANNEAL_METHOD="cosine",  # "cosine"
     ANNEAL_POINT=0.72,
@@ -41,7 +41,7 @@ SOLVER = dict(
 )
 
 DATASETS = dict(
-    TRAIN=("denstereo_test_pbr_left",),
+    TRAIN=("denstereo_train_pbr_left",),
     TEST=("denstereo_test_pbr_left",),
     DET_FILES_TEST=(
         "datasets/BOP_DATASETS/denstereo/test_bboxes/test_pbr_left.json",
