@@ -54,6 +54,7 @@ p = {
                 "tudl": 15,
                 "tyol": 15,
                 "ycbv": 15,
+                "denstereo": 15,
             },
             "vsd_taus": list(np.arange(0.05, 0.51, 0.05)),
             "vsd_normalized_by_diameter": True,

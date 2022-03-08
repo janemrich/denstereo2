@@ -90,6 +90,7 @@ def get_model_params(datasets_path, dataset_name, model_type=None):
         "hb": list(range(1, 34)),  # Full HB dataset.
         "ycbv": list(range(1, 22)),
         "ycbvposecnn": list(range(1, 22)),
+        "denstereo": list(range(1, 22)),
     }[dataset_name]
 
     # ID's of objects with ambiguous views evaluated using the ADI pose error
@@ -107,6 +108,7 @@ def get_model_params(datasets_path, dataset_name, model_type=None):
         "hbs": [10, 12, 18, 29],
         "hb": [6, 10, 11, 12, 13, 14, 18, 24, 29],
         "ycbv": [1, 13, 14, 16, 18, 19, 20, 21],  # bop symmetric objs
+        "denstereo": [1, 13, 14, 16, 18, 19, 20, 21],  # bop symmetric objs
         "ycbvposecnn": [13, 16, 19, 20, 21],  # posecnn symmetric objs
     }[dataset_name]
 
@@ -342,6 +344,12 @@ def get_split_params(datasets_path, dataset_name, split, split_type=None):
             p["depth_range"] = (612.92, 1243.59)
             p["azimuth_range"] = (0, 2 * math.pi)
             p["elev_range"] = (-1.2788, 1.1291)  # (-73.27, 64.69) [deg].
+
+    elif dataset_name in ["denstereo"]:
+        if "train" in split:
+            pass
+
+        p["im_size"] = (640,480)
 
     else:
         raise ValueError("Unknown BOP dataset.")
