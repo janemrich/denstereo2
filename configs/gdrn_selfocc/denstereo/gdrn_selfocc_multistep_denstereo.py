@@ -187,7 +187,7 @@ MODEL = dict(
         ),
     ),
 )
-
+'''
 VAL = dict(
     DATASET_NAME="denstereo",
     SPLIT_TYPE="",
@@ -196,6 +196,7 @@ VAL = dict(
     ERROR_TYPES="AUCadd,AUCadi,AUCad,ad,ABSadd,ABSadi,ABSad",
     USE_BOP=True,  # whether to use bop toolkit
 )
+'''
 
 
 TEST = dict(EVAL_PERIOD=0, VIS=False, TEST_BBOX_TYPE="est")  # gt | est
