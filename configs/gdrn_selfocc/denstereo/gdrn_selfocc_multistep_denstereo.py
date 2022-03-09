@@ -26,7 +26,7 @@ INPUT = dict(
 )
 
 SOLVER = dict(
-    IMS_PER_BATCH=256,
+    IMS_PER_BATCH=225,
     TOTAL_EPOCHS=120,
     LR_SCHEDULER_NAME="flat_and_anneal",
     ANNEAL_METHOD="cosine",  # "cosine"
