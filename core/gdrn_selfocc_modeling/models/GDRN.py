@@ -296,8 +296,13 @@ class GDRN(nn.Module):
             }
             if E_step is not None:
                 if E_step > self.epoch_flag:
-                    print("training loss: ",  "mean_re: ", self.meanre_save / self.epoch_count, " mean_te",
-                          self.meante_save / self.epoch_count)
+                    if self.epoch_count == 0:
+                        print("training loss: ",  "mean_re: ", mean_re, " mean_te", mean_te)
+                    else:
+                        print("training loss: ",
+                            "mean_re: ", self.meanre_save / self.epoch_count,
+                            " mean_te", self.meante_save / self.epoch_count
+                            )
                     self.epoch_flag = E_step
                     self.epoch_count = 0
                     self.meante_save = 0
