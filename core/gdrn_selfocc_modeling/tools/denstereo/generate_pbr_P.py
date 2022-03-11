@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 os.environ["PYOPENGL_PLATFORM"] = "egl"
 import os.path as osp
@@ -197,6 +198,9 @@ class XyzGen(object):
             scene_id = int(scene_id)
             print("split: {} scene: {}".format(split, scene_id))
             scene_root = osp.join(self.dataset_root, f"{scene_id:06d}")
+
+            xyz_scene_path = Path(self.new_xyz_root, f"{scene_id:06d}")
+            xyz_scene_path.mkdir(parents=True, exist_ok=True)
 
             gt_dict = mmcv.load(osp.join(scene_root, "scene_gt.json"))
 
