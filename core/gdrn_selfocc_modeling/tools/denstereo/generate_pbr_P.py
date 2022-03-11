@@ -256,17 +256,18 @@ if __name__ == "__main__":
     import torch
 
     parser = argparse.ArgumentParser(description="gen denstereo train_pbr xyz")
+    parser.add_argument("--bop_path", type=str, default="/opt/spool/jemrich/BOP_DATSASETS")
     parser.add_argument("--dataset", type=str, default="denstereo-test", help="dataset")
     parser.add_argument("--split", type=str, default="train", help="split")
     parser.add_argument("--scene", type=str, default="all", help="scene id")
     parser.add_argument("--xyz_name", type=str, default="xyz_crop_hd", help="xyz high fidelity output folder name")
-    parser.add_argument("--threads", type=int, default=50, help="number of threads")
+    parser.add_argument("--threads", type=int, default=1, help="number of threads")
     args = parser.parse_args()
 
     height = IM_H
     width = IM_W
 
-    base_dir = "/opt/spool/jemrich/BOP_DATASETS/"
+    base_dir = args.bop_path
     # base_dir = "/home/jemrich/datasets/BOP_DATASETS"
     # base_dir = "/igd/a4/homestud/jemrich/datasets/BOP_DATASETS"
     model_dir = osp.join(base_dir, args.dataset, "models")
