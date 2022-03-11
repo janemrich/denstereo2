@@ -99,7 +99,23 @@ def pointintriangle(A, B, C, P):  # Judging whether a point is in the interior o
         return False
 
 @jit(nopython=True)
-def calc_xy_crop(vert_id, vert, camK, R, t, norm_d, height, width, camK_inv, pixellist, mask, xyxy):
+def calc_xy_crop(
+        vert_id,
+        vert,
+        camK,
+        R,
+        t,
+        norm_d,
+        height,
+        width,
+        camK_inv,
+        pixellist,
+        mask,
+        x1,
+        y1,
+        x2,
+        y2
+    ):
     for i in range(vert_id.shape[0]):  # 行数
         P1 = transformer(vert[vert_id[i][0], :].T.copy(), R, t)
         P2 = transformer(vert[vert_id[i][1], :].T.copy(), R, t)
@@ -107,7 +123,7 @@ def calc_xy_crop(vert_id, vert, camK, R, t, norm_d, height, width, camK_inv, pix
         p1 = projector(P1, camK, R, t)
         p2 = projector(P2, camK, R, t)  # col first
         p3 = projector(P3, camK, R, t)
-        planenormal = norm_d[vert_id[i][0], :]
+        planenormal = norm_d[vert_id[i][0], :].copy()
         planenormal = np.expand_dims(planenormal, 1)
         planenormal = R @ planenormal
         # Calculatep 1, p2, p3 Integer point in the triangle and initialize one for them candidate
@@ -132,7 +148,6 @@ def calc_xy_crop(vert_id, vert, camK, R, t, norm_d, height, width, camK_inv, pix
     # 生成P0的图， 之前只存储了Zp， 现在计算值
     # pixellist is the result
     P0_output = np.zeros((height, width, 3), dtype=np.float32)
-    x1, y1, x2, y2 = xyxy
     for i in range(y1, y2+1):
         for j in range(x1, x2+1):
             if mask[i][j] < 1 or pixellist[i, j] > 30:
@@ -235,6 +250,7 @@ class XyzGen(object):
                         vert_id = self.model[str(obj_id)]["vert_id"]
 
                         pixellist = np.full([height, width], 100, dtype=np.float32)
+                        x1, y1, x2, y2 = xyz["xyxy"]
                         xyz_crop = calc_xy_crop(
                             vert_id,
                             vert, camK,
@@ -246,7 +262,10 @@ class XyzGen(object):
                             camK_inv,
                             pixellist,
                             mask,
-                            xyz["xyxy"]
+                            x1,
+                            y1,
+                            x2,
+                            y2,
                             )
                         xyxy = xyz["xyxy"]
                     np.savez_compressed(outpath, xyz_crop=xyz_crop, xyxy=xyxy)
