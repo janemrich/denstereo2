@@ -146,7 +146,7 @@ class Q0_generator():
 
                 for anno_i, anno in enumerate(gt_dict[str_im_id]):
                     print("processing seq:{:06d} image:{:06d}".format(scene_id, int_im_id))
-                    outpath = os.path.join(Q0_path, "{:06d}_{:06d}-Q0.pkl".format(int_im_id, anno_i))
+                    outpath = os.path.join(Q0_path, "{:06d}_{:06d}-Q0.npz".format(int_im_id, anno_i))
                     if osp.exists(outpath):
                         continue
                     R = np.array(anno["cam_R_m2c"], dtype="float32").reshape(3, 3)
@@ -165,9 +165,9 @@ class Q0_generator():
                     plt.imshow(mask)
                     plt.show()
                     '''
-                    xyz_path = osp.join(self.xyz_root, f"{scene_id:06d}/{int_im_id:06d}_{anno_i:06d}-xyz.pkl")
+                    xyz_path = osp.join(self.xyz_root, f"{scene_id:06d}/{int_im_id:06d}_{anno_i:06d}-xyz.npz")
                     assert osp.exists(xyz_path), xyz_path
-                    xyz = mmcv.load(xyz_path)
+                    xyz = np.load(xyz_path)
                     x1, y1, x2, y2 = xyz["xyxy"]
                     model_info_path = osp.join(self.modeldir, "models_info.json")
                     diameter, xmin, x_size, ymin, y_size, zmin, z_size = read_rec(model_info_path, str(12))

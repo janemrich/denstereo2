@@ -177,15 +177,15 @@ def get_time_delta(sec):
     return delta_time_str
 
 class XyzGen(object):
-    def __init__(self, root_dir, model_dir, xyz_root_new, split="train", scene="all"):
+    def __init__(self, root_dir, model_dir, xyz_root_in, xyz_root_out, split="train", scene="all"):
         self.dataset_root = root_dir
         self.modeldir = model_dir
         self.split = split
         self.scene = scene
         cls_indexes = sorted(idx2class.keys())
         self.model = modelload(model_dir, cls_indexes)
-        self.xyz_root = osp.join(self.dataset_root, "xyz_crop")
-        self.new_xyz_root = xyz_root_new
+        self.xyz_root_in = xyz_root_in
+        self.xyz_root_out = xyz_root_out
 
     def main(self):
         split = self.split
@@ -199,7 +199,7 @@ class XyzGen(object):
             print("split: {} scene: {}".format(split, scene_id))
             scene_root = osp.join(self.dataset_root, f"{scene_id:06d}")
 
-            xyz_scene_path = Path(self.new_xyz_root, f"{scene_id:06d}")
+            xyz_scene_path = Path(self.xyz_root_out, f"{scene_id:06d}")
             xyz_scene_path.mkdir(parents=True, exist_ok=True)
 
             gt_dict = mmcv.load(osp.join(scene_root, "scene_gt.json"))
@@ -209,7 +209,7 @@ class XyzGen(object):
 
                 for anno_i, anno in enumerate(gt_dict[str_im_id]):
                     obj_id = anno["obj_id"]
-                    outpath = osp.join(self.new_xyz_root, f"{scene_id:06d}/{int_im_id:06d}_{anno_i:06d}-xyz.pkl")
+                    outpath = osp.join(self.xyz_root_out, f"{scene_id:06d}/{int_im_id:06d}_{anno_i:06d}-xyz.npz")
                     if osp.exists(outpath):
                         continue
                     R = np.array(anno["cam_R_m2c"], dtype="float32").reshape(3, 3)
@@ -226,7 +226,7 @@ class XyzGen(object):
 
                     else:
 
-                        xyz_path = osp.join(self.xyz_root, f"{scene_id:06d}/{int_im_id:06d}_{anno_i:06d}-xyz.pkl")
+                        xyz_path = osp.join(self.xyz_root_in, f"{scene_id:06d}/{int_im_id:06d}_{anno_i:06d}-xyz.pkl")
                         assert osp.exists(xyz_path), xyz_path
                         xyz = mmcv.load(xyz_path)
                         # begin to estimate new xyz
@@ -257,14 +257,14 @@ if __name__ == "__main__":
     import time
 
     import setproctitle
-    import torch
 
     parser = argparse.ArgumentParser(description="gen denstereo train_pbr xyz")
     parser.add_argument("--bop_path", type=str, default="/opt/spool/jemrich/BOP_DATSASETS")
     parser.add_argument("--dataset", type=str, default="denstereo-test", help="dataset")
     parser.add_argument("--split", type=str, default="train", help="split")
     parser.add_argument("--scene", type=str, default="all", help="scene id")
-    parser.add_argument("--xyz_name", type=str, default="xyz_crop_hd", help="xyz high fidelity output folder name")
+    parser.add_argument("--xyz_in", type=str, default="xyz_crop", help="xyz low fidelity input folder name")
+    parser.add_argument("--xyz_out", type=str, default="xyz_crop_hd", help="xyz high fidelity output folder name")
     parser.add_argument("--threads", type=int, default=1, help="number of threads")
     args = parser.parse_args()
 
@@ -276,12 +276,13 @@ if __name__ == "__main__":
     # base_dir = "/igd/a4/homestud/jemrich/datasets/BOP_DATASETS"
     model_dir = osp.join(base_dir, args.dataset, "models")
     root_dir = osp.join(base_dir, args.dataset, args.split)
-    xyz_root_new = osp.join(root_dir, args.xyz_name)
+    xyz_root_in = osp.join(root_dir, args.xyz_in)
+    xyz_root_out = osp.join(root_dir, args.xyz_out)
 
     def gen_P(scenes):
         T_begin = time.perf_counter()
         setproctitle.setproctitle(f"gen_xyz_{args.dataset}_{args.split}_{args.scene}")
-        xyz_gen = XyzGen(root_dir, model_dir, xyz_root_new, args.split, scenes)
+        xyz_gen = XyzGen(root_dir, model_dir, xyz_root_in, xyz_root_out, args.split, scenes)
         xyz_gen.main()
         T_end = time.perf_counter() - T_begin
         print("split", args.split, "scene", args.scene, "total time: ", get_time_delta(T_end))
