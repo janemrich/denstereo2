@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 os.environ["PYOPENGL_PLATFORM"] = "egl"
 import os.path as osp
@@ -198,6 +199,9 @@ class XyzGen(object):
             print("split: {} scene: {}".format(split, scene_id))
             scene_root = osp.join(self.dataset_root, f"{scene_id:06d}")
 
+            xyz_scene_path = Path(self.new_xyz_root, f"{scene_id:06d}")
+            xyz_scene_path.mkdir(parents=True, exist_ok=True)
+
             gt_dict = mmcv.load(osp.join(scene_root, "scene_gt.json"))
 
             for str_im_id in tqdm(gt_dict, postfix=f"{scene_id}"):
@@ -244,8 +248,8 @@ class XyzGen(object):
                             mask,
                             xyz["xyxy"]
                             )
-                        x1, y1, x2, y2 = xyz["xyxy"]
-                    np.savez_compressed(outpath, xyz_crop=xyz_crop, xyxy=[x1, y1, x2, y2])
+                        xyxy = xyz["xyxy"]
+                    np.savez_compressed(outpath, xyz_crop=xyz_crop, xyxy=xyxy)
 
 
 if __name__ == "__main__":
