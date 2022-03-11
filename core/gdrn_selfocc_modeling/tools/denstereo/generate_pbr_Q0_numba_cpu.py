@@ -239,14 +239,14 @@ class Q0_generator():
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="gen lm train_pbr xyz")
+    parser.add_argument("--bop_path", type=str, default="/opt/spool/jemrich/BOP_DATASETS")
     parser.add_argument("--dataset", type=str, default="lm", help="dataset")
     parser.add_argument("--split", type=str, default="train_pbr", help="split")
     parser.add_argument("--xyz_name", type=str, default="xyz_crop_hd", help="xyz folder name")
     parser.add_argument("--threads", type=int, default=50, help="number of threads")
     args = parser.parse_args()
 
-    base_dir = "/opt/spool/jemrich/BOP_DATASETS/"
-    # base_dir = "/home/jemrich/datasets/BOP_DATASETS"
+    base_dir = args.bop_path
     model_dir = osp.join(base_dir, args.dataset, "models")
     root_dir = osp.join(base_dir, args.dataset, args.split)
     xyz_root = osp.join(root_dir, args.xyz_name)
