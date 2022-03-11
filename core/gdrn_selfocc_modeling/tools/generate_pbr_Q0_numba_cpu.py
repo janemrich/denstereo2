@@ -235,12 +235,10 @@ class Q0_generator():
                     Q0 = np.concatenate((Q0_x[1:, :, :], Q0_y[0:1, :, :], Q0_y[2:, :, :], Q0_z[:2, :, :]), axis=0)
                     # 维度变一下CHW -  HWC
                     Q0 = Q0.transpose((1, 2, 0))
-                    Q0 = {
-                        "occ_crop": Q0[y1:y2 + 1, x1:x2 + 1, :],
-                        "xyxy": [x1, y1, x2, y2],
-                    }
+                    occ_crop = Q0[y1:y2 + 1, x1:x2 + 1, :]
+                    xyxy = [x1, y1, x2, y2],
                     #  存储 Q0的坐标
-                    mmcv.dump(Q0, outpath)
+                    np.savez_compressed(outpath, occ_crop=occ_crop, xyxy=xyxy)
 
 
 if __name__ == "__main__":

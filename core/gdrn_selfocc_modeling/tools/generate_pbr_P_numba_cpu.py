@@ -212,10 +212,8 @@ class estimate_coor_P0():
                         mask = mmcv.imread(mask_visib_file, "unchanged")
                         mask = mask.astype(bool).astype(float)
                         if mask.sum() == 0:
-                            P = {
-                                "xyz_crop": np.zeros((height, width, 3), dtype=np.float16),
-                                "xyxy": [0, 0, width - 1, height - 1],
-                            }
+                            xyz_crop = np.zeros((height, width, 3), dtype=np.float16)
+                            xyxy = [0, 0, width - 1, height - 1]
 
                         else:
 
@@ -237,12 +235,9 @@ class estimate_coor_P0():
                             xyz_crop = calc_xy_crop(vert_id, vert, camK, R, t, norm_d, height, width, camK_inv, pixellist, mask, xyz["xyxy"])
                             print(time.time() - start)
                             x1, y1, x2, y2 = xyz["xyxy"]
-                            P =  {
-                                "xyz_crop": xyz_crop,
-                                "xyxy": [x1, y1, x2, y2],
-                            }
+                            xyxy = [x1, y1, x2, y2]
 
-                        mmcv.dump(P, outpath)
+                        np.savez_compressed(outpath, xyxy=xyxy, xyz_crop=xyz_crop)
 
 
 if __name__ == "__main__":

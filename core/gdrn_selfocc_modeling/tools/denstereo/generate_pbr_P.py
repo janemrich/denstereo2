@@ -217,10 +217,8 @@ class XyzGen(object):
                     mask = mmcv.imread(mask_visib_file, "unchanged")
                     mask = mask.astype(bool).astype(float)
                     if np.sum(mask) == 0:
-                        P = {
-                            "xyz_crop": np.zeros((height, width, 3), dtype=np.float16),
-                            "xyxy": [0, 0, width - 1, height - 1],
-                        }
+                        xyz_crop = np.zeros((height, width, 3), dtype=np.float16)
+                        xyxy = [0, 0, width - 1, height - 1]
 
                     else:
 
@@ -233,13 +231,22 @@ class XyzGen(object):
                         vert_id = self.model[str(obj_id)]["vert_id"]
 
                         pixellist = np.full([height, width], 100, dtype=np.float32)
-                        xyz_crop = calc_xy_crop(vert_id, vert, camK, R, t, norm_d, height, width, camK_inv, pixellist, mask, xyz["xyxy"])
+                        xyz_crop = calc_xy_crop(
+                            vert_id,
+                            vert, camK,
+                            R,
+                            t,
+                            norm_d,
+                            height,
+                            width,
+                            camK_inv,
+                            pixellist,
+                            mask,
+                            xyz["xyxy"]
+                            )
                         x1, y1, x2, y2 = xyz["xyxy"]
-                        P = {
-                            "xyz_crop": xyz_crop,
-                            "xyxy": [x1, y1, x2, y2],
-                        }
-                    mmcv.dump(P, outpath)
+                    np.savez_compressed(outpath, xyz_crop=xyz_crop, xyxy=[x1, y1, x2, y2])
+
 
 if __name__ == "__main__":
     import argparse
