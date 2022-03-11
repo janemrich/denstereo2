@@ -244,8 +244,8 @@ class XyzGen(object):
                             mask,
                             xyz["xyxy"]
                             )
-                        x1, y1, x2, y2 = xyz["xyxy"]
-                    np.savez_compressed(outpath, xyz_crop=xyz_crop, xyxy=[x1, y1, x2, y2])
+                        xyxy = xyz["xyxy"]
+                    np.savez_compressed(outpath, xyz_crop=xyz_crop, xyxy=xyxy)
 
 
 if __name__ == "__main__":
