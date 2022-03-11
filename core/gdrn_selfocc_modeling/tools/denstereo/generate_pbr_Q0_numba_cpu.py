@@ -159,7 +159,7 @@ class Q0_generator():
                     assert osp.exists(mask_visib_file), mask_visib_file
                     # load mask visib  TODO: load both mask_visib and mask_full
                     mask = mmcv.imread(mask_visib_file, "unchanged")
-                    mask = mask.astype(np.bool).astype(np.float)
+                    mask = mask.astype(bool).astype(np.float32)
                     '''
                     show mask
                     plt.imshow(mask)
