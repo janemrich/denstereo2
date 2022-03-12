@@ -461,10 +461,7 @@ class GDRN_DatasetFromList(Base_DatasetFromList):
         dataset_dict["roi_extent"] = torch.tensor(roi_extent, dtype=torch.float32)
 
         # load xyz =======================================================
-        try:
-            xyz_info = np.load(inst_infos["xyz_path"])
-        except FileNotFoundError:
-            xyz_info = mmcv.load(inst_infos["xyz_path"])
+        xyz_info = np.load(inst_infos["xyz_path"]) # also load npz files
         x1, y1, x2, y2 = xyz_info["xyxy"]
         # float16 does not affect performance (classification/regresion)
         xyz_crop = xyz_info["xyz_crop"]
