@@ -475,7 +475,10 @@ class GDRN_DatasetFromList(Base_DatasetFromList):
             xyz = self.smooth_xyz(xyz)
 
         # load Q0
-        occ_info = mmcv.load(inst_infos["occ_path"])
+        try:
+            occ_info = np.load(inst_infos["occ_path"])
+        except FileNotFoundError:
+            occ_info = mmcv.load(inst_infos["occ_path"])
         occ_crop = occ_info["occ_crop"]
         Q0 = np.zeros((im_H, im_W, 6), dtype=np.float32)
         Q0[y1: y2 + 1, x1: x2 + 1, :] = occ_crop.astype(np.float32)

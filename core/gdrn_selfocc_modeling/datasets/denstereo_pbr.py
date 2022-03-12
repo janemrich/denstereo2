@@ -180,9 +180,9 @@ class DENSTEREO_PBR_Dataset:
 
                     mask_rle = binary_mask_to_rle(mask_single, compressed=True)
 
-                    xyz_path = osp.join(self.xyz_root, f"{scene_id:06d}/{int_im_id:06d}_{anno_i:06d}-xyz.pkl")
+                    xyz_path = osp.join(self.xyz_root, f"{scene_id:06d}/{int_im_id:06d}_{anno_i:06d}-xyz.npz")
                     assert osp.exists(xyz_path), xyz_path
-                    occ_path = osp.join(self.occ_root, f"{scene_id:06d}/{int_im_id:06d}_{anno_i:06d}-Q0.pkl")
+                    occ_path = osp.join(self.occ_root, f"{scene_id:06d}/{int_im_id:06d}_{anno_i:06d}-Q0.npz")
                     inst = {
                         "category_id": cur_label,  # 0-based label
                         "bbox": bbox_visib,  # TODO: load both bbox_obj and bbox_visib
