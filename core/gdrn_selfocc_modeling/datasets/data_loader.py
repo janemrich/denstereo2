@@ -643,7 +643,10 @@ class GDRN_DatasetFromList(Base_DatasetFromList):
         dataset_dict["im_H"] = torch.as_tensor(im_H, dtype=torch.float32)
         dataset_dict["bbox"] = anno["bbox"]  # NOTE: original bbox
         dataset_dict["roi_wh"] = torch.as_tensor(np.array([bw, bh], dtype=np.float32))
-        dataset_dict["resize_ratio"] = resize_ratio = out_res / scale
+        try:
+            dataset_dict["resize_ratio"] = resize_ratio = out_res / scale
+        except ZeroDivisionError as e:
+            return e, im_W, im_H, bbox_xyxy 
         z_ratio = inst_infos["trans"][2] / resize_ratio
         obj_center = anno["centroid_2d"]
         delta_c = obj_center - bbox_center
