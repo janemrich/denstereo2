@@ -644,7 +644,7 @@ class GDRN_DatasetFromList(Base_DatasetFromList):
         dataset_dict["bbox"] = anno["bbox"]  # NOTE: original bbox
         dataset_dict["roi_wh"] = torch.as_tensor(np.array([bw, bh], dtype=np.float32))
         if scale == 0:
-            return ValueError(bbox_xyxy, im_W, im_H, dataset_dict['scene_im_id'], dataset_dict['annotations'])
+            return ValueError, bbox_xyxy, im_W, im_H, dataset_dict['scene_im_id'], dataset_dict['annotations']
         dataset_dict["resize_ratio"] = resize_ratio = out_res / scale
         z_ratio = inst_infos["trans"][2] / resize_ratio
         obj_center = anno["centroid_2d"]
