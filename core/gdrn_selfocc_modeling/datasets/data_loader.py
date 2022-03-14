@@ -651,7 +651,7 @@ class GDRN_DatasetFromList(Base_DatasetFromList):
         delta_c = obj_center - bbox_center
         dataset_dict["trans_ratio"] = torch.as_tensor([delta_c[0] / bw, delta_c[1] / bh, z_ratio]).to(torch.float32)
         if isinstance(dataset_dict, tuple):
-            print(dataset_dict)
+            return TypeError, dataset_dict
         return dataset_dict
 
     def smooth_xyz(self, xyz):
