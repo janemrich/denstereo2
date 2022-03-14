@@ -3,6 +3,7 @@ import copy
 import logging
 import os.path as osp
 import pickle
+import warnings
 
 import cv2
 import mmcv
@@ -645,8 +646,8 @@ class GDRN_DatasetFromList(Base_DatasetFromList):
         dataset_dict["roi_wh"] = torch.as_tensor(np.array([bw, bh], dtype=np.float32))
         try:
             dataset_dict["resize_ratio"] = resize_ratio = out_res / scale
-        except ZeroDivisionError as e:
-            return e, im_W, im_H, bbox_xyxy 
+        except Warning as e:
+            return ZeroDivisionError, e, im_W, im_H, bbox_xyxy 
         z_ratio = inst_infos["trans"][2] / resize_ratio
         obj_center = anno["centroid_2d"]
         delta_c = obj_center - bbox_center
