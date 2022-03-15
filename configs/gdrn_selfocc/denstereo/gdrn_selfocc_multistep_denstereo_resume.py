@@ -26,7 +26,7 @@ INPUT = dict(
 )
 
 SOLVER = dict(
-    IMS_PER_BATCH=64,
+    IMS_PER_BATCH=225,
     TOTAL_EPOCHS=500,
     LR_SCHEDULER_NAME="flat_and_anneal",
     ANNEAL_METHOD="cosine",  # "cosine"
@@ -34,7 +34,7 @@ SOLVER = dict(
     # REL_STEPS=(0.3125, 0.625, 0.9375),
     OPTIMIZER_CFG=dict(_delete_=True, type="Ranger", lr=1e-4, weight_decay=0),
     WEIGHT_DECAY=0.0,
-    WARMUP_FACTOR=0.001,
+    # WARMUP_FACTOR=0.001,
     # WARMUP_ITERS=1000,
     CHECKPOINT_PERIOD=1,
     AMP=dict(ENABLED=True),
@@ -87,7 +87,7 @@ MODEL = dict(
 DATALOADER = dict(
     # Number of data loading threads
     NUM_WORKERS=12,
-    FILTER_VISIB_THR=0.2,
+    FILTER_VISIB_THR=0.0,
 )
 
 
