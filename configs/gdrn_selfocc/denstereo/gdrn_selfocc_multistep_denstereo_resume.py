@@ -30,7 +30,7 @@ SOLVER = dict(
     TOTAL_EPOCHS=700,
     LR_SCHEDULER_NAME="flat_and_anneal",
     ANNEAL_METHOD="cosine",  # "cosine"
-    ANNEAL_POINT=0.90,
+    ANNEAL_POINT=0.80,
     # REL_STEPS=(0.3125, 0.625, 0.9375),
     OPTIMIZER_CFG=dict(_delete_=True, type="Ranger", lr=1e-4, weight_decay=0),
     WEIGHT_DECAY=0.0,
