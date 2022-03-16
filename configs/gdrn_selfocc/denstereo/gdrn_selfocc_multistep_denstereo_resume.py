@@ -27,15 +27,15 @@ INPUT = dict(
 
 SOLVER = dict(
     IMS_PER_BATCH=225,
-    TOTAL_EPOCHS=350,
+    TOTAL_EPOCHS=700,
     LR_SCHEDULER_NAME="flat_and_anneal",
     ANNEAL_METHOD="cosine",  # "cosine"
-    ANNEAL_POINT=0.72,
+    ANNEAL_POINT=0.90,
     # REL_STEPS=(0.3125, 0.625, 0.9375),
     OPTIMIZER_CFG=dict(_delete_=True, type="Ranger", lr=1e-4, weight_decay=0),
     WEIGHT_DECAY=0.0,
-    # WARMUP_FACTOR=0.001,
-    # WARMUP_ITERS=1000,
+    WARMUP_FACTOR=0.001,
+    WARMUP_ITERS=1000,
     CHECKPOINT_PERIOD=1,
     AMP=dict(ENABLED=True),
 )
