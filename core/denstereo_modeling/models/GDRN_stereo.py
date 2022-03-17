@@ -76,6 +76,7 @@ class GDRN(nn.Module):
     def forward(
         self,
         x,
+        x_r,
         gt_xyz=None,
         gt_xyz_bin=None,
         gt_mask_trunc=None,
