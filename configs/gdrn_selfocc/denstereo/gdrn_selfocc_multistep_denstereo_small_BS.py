@@ -1,7 +1,7 @@
 # about 3 days
 _base_ = ["../../_base_/gdrn_base.py"]
 
-OUTPUT_DIR = "output/gdrn_selfocc/denstereo/3_16-long-lr2e"
+OUTPUT_DIR = "output/gdrn_selfocc/denstereo/3_19_smallBS-lr1e"
 INPUT = dict(
     DZI_PAD_SCALE=1.5,
     TRUNCATE_FG=True,
