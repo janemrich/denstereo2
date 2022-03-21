@@ -7,7 +7,7 @@ if __name__ == "__main__":
     xyz = mmcv.load(test_path)
     t=1
     '''
-    from core.gdrn_selfocc_modeling.tools.ycbv.generate_real_Q_gpu import run_real_one
-    from core.gdrn_selfocc_modeling.tools.ycbv.generate_pbr_Q_gpu import run_this_one
+    from core.denstereo_modeling.tools.ycbv.generate_real_Q_gpu import run_real_one
+    from core.denstereo_modeling.tools.ycbv.generate_pbr_Q_gpu import run_this_one
     run_real_one()
     run_this_one()

@@ -101,7 +101,7 @@ class CT_loss_projection(nn.Module):
                     q0_n_x = q0_pro_x[:, 0:2] / q0_x_norm
                     loss_x_pq = p0_n_x - q0_n_x  # m, 2
                     loss_x_qu = q0_n_x - u_x  # m, 2
-                    if self.loss_type is "L1":
+                    if self.loss_type == "L1":
                         loss_x = torch.sum(torch.abs(loss_x_qu)) + torch.sum(torch.abs(loss_x_pq))
                     else:   # L2
                         loss_x = torch.sum(torch.norm(loss_x_pq, dim=1)) + torch.sum(torch.norm(loss_x_qu, dim=1))
@@ -126,7 +126,7 @@ class CT_loss_projection(nn.Module):
                     q0_n_y = q0_pro_y[:, 0:2] / q0_y_norm
                     loss_y_pq = p0_n_y - q0_n_y  # m, 2
                     loss_y_qu = q0_n_y - u_y  # m, 2
-                    if self.loss_type is "L1":
+                    if self.loss_type == "L1":
                         loss_y = torch.sum(torch.abs(loss_y_qu)) + torch.sum(torch.abs(loss_y_pq))
                     else:   # L2
                         loss_y = torch.sum(torch.norm(loss_y_pq, dim=1)) + torch.sum(torch.norm(loss_y_qu, dim=1))
@@ -151,7 +151,7 @@ class CT_loss_projection(nn.Module):
                     q0_n_z = q0_pro_z[:, 0:2] / q0_z_norm
                     loss_z_pq = p0_n_z - q0_n_z  # m, 2
                     loss_z_qu = q0_n_z - u_z  # m, 2
-                    if self.loss_type is "L1":
+                    if self.loss_type == "L1":
                         loss_z = torch.sum(torch.abs(loss_z_qu)) + torch.sum(torch.abs(loss_z_pq))
                     else:  # L2
                         loss_z = torch.sum(torch.norm(loss_z_pq, dim=1)) + torch.sum(torch.norm(loss_z_qu, dim=1))

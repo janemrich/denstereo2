@@ -134,14 +134,14 @@ class GDRN(nn.Module):
         save_gt_mask = gt_mask_visib.detach().cpu().numpy()
         save_gt_occmask = gt_occmask.detach().cpu().numpy()
         save_pred_mask = mask.detach().cpu().numpy()
-        outpath = "/home/yan/gdnr_selfocc/core/gdrn_selfocc_modeling/output/gdrn_selfocc/ycbv/x.pkl"
-        outpath2 = "/home/yan/gdnr_selfocc/core/gdrn_selfocc_modeling/output/gdrn_selfocc/ycbv/coor.pkl"
-        outpath3 = "/home/yan/gdnr_selfocc/core/gdrn_selfocc_modeling/output/gdrn_selfocc/ycbv/occ.pkl"
-        outpath4 = "/home/yan/gdnr_selfocc/core/gdrn_selfocc_modeling/output/gdrn_selfocc/ycbv/gt_occ.pkl"
-        outpath5 = "/home/yan/gdnr_selfocc/core/gdrn_selfocc_modeling/output/gdrn_selfocc/ycbv/gt_coor.pkl"
-        outpath6 = "/home/yan/gdnr_selfocc/core/gdrn_selfocc_modeling/output/gdrn_selfocc/ycbv/gt_mask.pkl"
-        outpath7 = "/home/yan/gdnr_selfocc/core/gdrn_selfocc_modeling/output/gdrn_selfocc/ycbv/gt_occmask.pkl"
-        outpath8 = "/home/yan/gdnr_selfocc/core/gdrn_selfocc_modeling/output/gdrn_selfocc/ycbv/pred_mask.pkl"
+        outpath = "/home/yan/gdnr_selfocc/core/denstereo_modeling/output/gdrn_selfocc/ycbv/x.pkl"
+        outpath2 = "/home/yan/gdnr_selfocc/core/denstereo_modeling/output/gdrn_selfocc/ycbv/coor.pkl"
+        outpath3 = "/home/yan/gdnr_selfocc/core/denstereo_modeling/output/gdrn_selfocc/ycbv/occ.pkl"
+        outpath4 = "/home/yan/gdnr_selfocc/core/denstereo_modeling/output/gdrn_selfocc/ycbv/gt_occ.pkl"
+        outpath5 = "/home/yan/gdnr_selfocc/core/denstereo_modeling/output/gdrn_selfocc/ycbv/gt_coor.pkl"
+        outpath6 = "/home/yan/gdnr_selfocc/core/denstereo_modeling/output/gdrn_selfocc/ycbv/gt_mask.pkl"
+        outpath7 = "/home/yan/gdnr_selfocc/core/denstereo_modeling/output/gdrn_selfocc/ycbv/gt_occmask.pkl"
+        outpath8 = "/home/yan/gdnr_selfocc/core/denstereo_modeling/output/gdrn_selfocc/ycbv/pred_mask.pkl"
         mmcv.dump(save_x, outpath)
         mmcv.dump(save_coor, outpath2)
         mmcv.dump(save_occ, outpath3)

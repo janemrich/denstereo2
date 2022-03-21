@@ -70,7 +70,7 @@ class Q_def_loss(nn.Module):
                 q0_x_norm = (Q_x[:, 2, :][z_mask]).view(-1, 1)  # m, 1
                 q0_n_x = q0_pro_x[:, 0:2] / q0_x_norm
                 loss_x_qu = q0_n_x - u_x  # m, 2
-                if self.loss_type is "L1":
+                if self.loss_type == "L1":
                     loss_x = torch.mean(torch.abs(loss_x_qu))
                 else:  # L2
                     loss_x = torch.mean(torch.norm(loss_x_qu, dim=1))
@@ -90,7 +90,7 @@ class Q_def_loss(nn.Module):
                 q0_y_norm = (Q_y[:, 2, :][z_mask]).view(-1, 1)  # m, 1
                 q0_n_y = q0_pro_y[:, 0:2] / q0_y_norm
                 loss_y_qu = q0_n_y - u_y  # m, 2
-                if self.loss_type is "L1":
+                if self.loss_type == "L1":
                     loss_y = torch.mean(torch.abs(loss_y_qu))
                 else:  # L2
                     loss_y = torch.mean(torch.norm(loss_y_qu, dim=1))
@@ -111,7 +111,7 @@ class Q_def_loss(nn.Module):
                 q0_z_norm = (Q_z[:, 2, :][z_mask]).view(-1, 1)  # m, 1
                 q0_n_z = q0_pro_z[:, 0:2] / q0_z_norm
                 loss_z_qu = q0_n_z - u_z  # m, 2
-                if self.loss_type is "L1":
+                if self.loss_type == "L1":
                     loss_z = torch.mean(torch.abs(loss_z_qu))
                 else:  # L2
                     loss_z = torch.mean(torch.norm(loss_z_qu, dim=1))

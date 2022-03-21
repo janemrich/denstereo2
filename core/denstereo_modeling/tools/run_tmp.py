@@ -1,7 +1,7 @@
 import numpy as np
 import mmcv
-from core.gdrn_selfocc_modeling.tools.generate_pbr_Q0 import Q0_generator
-from core.gdrn_selfocc_modeling.tools.generate_pbr_Q0_fast import Q0_generator_fast
+from core.denstereo_modeling.tools.generate_pbr_Q0 import Q0_generator
+from core.denstereo_modeling.tools.generate_pbr_Q0_fast import Q0_generator_fast
 
 if __name__ == "__main__":
     '''

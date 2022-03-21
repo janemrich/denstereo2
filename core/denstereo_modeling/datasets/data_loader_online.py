@@ -10,7 +10,7 @@ import numpy as np
 import ref
 import torch
 from core.base_data_loader import Base_DatasetFromList
-from core.gdrn_selfocc_modeling.tools.data_utils import crop_resize_by_warp_affine, get_2d_coord_np, read_image_mmcv, xyz_to_region
+from core.denstereo_modeling.tools.data_utils import crop_resize_by_warp_affine, get_2d_coord_np, read_image_mmcv, xyz_to_region
 from core.utils.dataset_utils import flat_dataset_dicts
 
 from core.utils.ssd_color_transform import ColorAugSSDTransform

@@ -3,9 +3,9 @@ import torch
 import numpy as np
 from lib.pysixd.pose_error import re, te
 from core.utils.pose_utils import quat2mat_torch
-from core.gdrn_selfocc_modeling.tools.rot_reps import rot6d_to_mat_batch
+from core.denstereo_modeling.tools.rot_reps import rot6d_to_mat_batch
 from core.utils import lie_algebra, quaternion_lf
-from core.gdrn_selfocc_modeling.models.net_factory import NECKS, HEADS
+from core.denstereo_modeling.models.net_factory import NECKS, HEADS
 
 
 def get_xyz_mask_region_out_dim(cfg):

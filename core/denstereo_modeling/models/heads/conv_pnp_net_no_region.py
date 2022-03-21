@@ -2,8 +2,8 @@ import torch
 from torch import nn
 from torch.nn.modules.batchnorm import _BatchNorm
 from mmcv.cnn import normal_init, constant_init
-from core.gdrn_selfocc_modeling.tools.layers.layer_utils import get_norm, get_nn_act_func
-from core.gdrn_selfocc_modeling.tools.layers.dropblock import DropBlock2D, LinearScheduler
+from core.denstereo_modeling.tools.layers.layer_utils import get_norm, get_nn_act_func
+from core.denstereo_modeling.tools.layers.dropblock import DropBlock2D, LinearScheduler
 
 
 class ConvPnPNetNoRegion(nn.Module):

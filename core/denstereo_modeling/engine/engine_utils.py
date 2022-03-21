@@ -3,8 +3,8 @@ import torch
 import numpy as np
 import itertools
 # from lib.egl_renderer.egl_renderer_v3 import EGLRenderer
-from core.gdrn_selfocc_modeling.tools.camera_geometry import get_K_crop_resize
-from core.gdrn_selfocc_modeling.tools.data_utils import xyz_to_region_batch
+from core.denstereo_modeling.tools.camera_geometry import get_K_crop_resize
+from core.denstereo_modeling.tools.data_utils import xyz_to_region_batch
 from lib.vis_utils.image import grid_show
 from core.utils.utils import get_emb_show
 

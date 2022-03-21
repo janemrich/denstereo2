@@ -27,16 +27,16 @@ from detectron2.data import MetadataCatalog
 
 from lib.utils.utils import dprint
 from lib.vis_utils.image import grid_show, vis_bbox_opencv
-from core.gdrn_selfocc_modeling.tools.torch_utils import ModelEMA
+from core.denstereo_modeling.tools.torch_utils import ModelEMA
 from core.utils import solver_utils
-import core.gdrn_selfocc_modeling.tools.my_comm as comm
+import core.denstereo_modeling.tools.my_comm as comm
 from core.utils.my_checkpoint import MyCheckpointer
 from core.utils.my_writer import MyCommonMetricPrinter, MyJSONWriter, MyTensorboardXWriter
 from core.utils.utils import get_emb_show
 from core.utils.data_utils import denormalize_image
-from core.gdrn_selfocc_modeling.datasets.data_loader import build_gdrn_train_loader, build_gdrn_test_loader
-from core.gdrn_selfocc_modeling.losses.crosstask_loss import CT_loss
-from core.gdrn_selfocc_modeling.losses.crosstask_projection_loss import CT_loss_projection
+from core.denstereo_modeling.datasets.data_loader import build_gdrn_train_loader, build_gdrn_test_loader
+from core.denstereo_modeling.losses.crosstask_loss import CT_loss
+from core.denstereo_modeling.losses.crosstask_projection_loss import CT_loss_projection
 
 from .engine_utils import batch_data, get_out_coor, get_out_mask
 from .gdrn_evaluator import gdrn_inference_on_dataset, GDRN_Evaluator
@@ -285,6 +285,7 @@ def do_train(cfg, args, model, optimizer, renderer=None, resume=False):
             with autocast(enabled=AMP_ON):
                 out_dict, loss_dict = model(
                     batch["roi_img"],
+                    batch["roi_img"], #TODO denstereo change to other img
                     gt_xyz=batch.get("roi_xyz", None),
                     gt_xyz_bin=batch.get("roi_xyz_bin", None),
                     gt_mask_trunc=batch["roi_mask_trunc"],

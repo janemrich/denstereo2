@@ -21,20 +21,20 @@ cv2.ocl.setUseOpenCL(False)
 
 cur_dir = osp.dirname(osp.abspath(__file__))
 sys.path.insert(0, osp.join(cur_dir, "../../"))
-from core.gdrn_selfocc_modeling.tools.default_args_setup import my_default_argument_parser, my_default_setup
-from core.gdrn_selfocc_modeling.tools.my_setup import setup_for_distributed
-from core.gdrn_selfocc_modeling.tools.my_checkpoint import MyCheckpointer
-from core.gdrn_selfocc_modeling.tools import my_comm as comm
+from core.denstereo_modeling.tools.default_args_setup import my_default_argument_parser, my_default_setup
+from core.denstereo_modeling.tools.my_setup import setup_for_distributed
+from core.denstereo_modeling.tools.my_checkpoint import MyCheckpointer
+from core.denstereo_modeling.tools import my_comm as comm
 
 from lib.utils.utils import iprint
 from lib.utils.setup_logger import setup_my_logger
 from lib.utils.time_utils import get_time_str
 import ref
 
-from core.gdrn_selfocc_modeling.datasets.dataset_factory import register_datasets_in_cfg
-#from core.gdrn_selfocc_modeling.engine.engine_utils import get_renderer
-from core.gdrn_selfocc_modeling.engine.engine import do_test, do_train
-from core.gdrn_selfocc_modeling.models import GDRN, GDRN_no_region, GDRN_cls, GDRN_cls2reg  # noqa
+from core.denstereo_modeling.datasets.dataset_factory import register_datasets_in_cfg
+#from core.denstereo_modeling.engine.engine_utils import get_renderer
+from core.denstereo_modeling.engine.engine import do_test, do_train
+from core.denstereo_modeling.models import GDRN, GDRN_stereo # noqa
 
 
 logger = logging.getLogger("detectron2")
