@@ -14,7 +14,7 @@ CKPT=$3
 NCCL_DEBUG=INFO
 OMP_NUM_THREADS=1
 MKL_NUM_THREADS=1
-CUDA_VISIBLE_DEVICES=$2 python core/gdrn_selfocc_modeling/main_gdrn.py \
+CUDA_VISIBLE_DEVICES=$2 python core/denstereo_modeling/main_gdrn.py \
     --config-file $CFG --num-gpus $NGPU --eval-only \
     --opts MODEL.WEIGHTS=$CKPT \
     ${@:4}

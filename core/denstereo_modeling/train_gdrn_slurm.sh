@@ -21,5 +21,5 @@ ln -s /opt/spool/jemrich datasets
 
 echo train_gdrn.sh: python core/gdrn_selffocc_modeling/main_gdrn.py --config-file $CFG --num-gpus $NGPU ${@:3}
 
-python core/gdrn_selfocc_modeling/main_gdrn.py \
+python core/denstereo_modeling/main_gdrn.py \
     --config-file $CFG --num-gpus $NGPU  ${@:3}
