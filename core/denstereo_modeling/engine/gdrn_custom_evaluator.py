@@ -722,7 +722,7 @@ class GDRN_EvaluatorCustom(DatasetEvaluator):
             for obj_name in obj_names:
                 res = errors[obj_name][error_name]
                 if len(res) > 0:
-                    line.append(f"{np.mean(res):.2f}")
+                    line.append(f"{np.mean(res):.3f}")
                     this_line_res.append(np.mean(res))
                 else:
                     line.append(float("nan"))
