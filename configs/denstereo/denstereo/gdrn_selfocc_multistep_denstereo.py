@@ -1,7 +1,7 @@
 # about 3 days
 _base_ = ["../../_base_/gdrn_base.py"]
 
-OUTPUT_DIR = "output/gdrn_selfocc/denstereo/pbr_13e"
+OUTPUT_DIR = "output/denstereo/denstereo/first"
 INPUT = dict(
     DZI_PAD_SCALE=1.5,
     TRUNCATE_FG=True,
@@ -26,8 +26,8 @@ INPUT = dict(
 )
 
 SOLVER = dict(
-    IMS_PER_BATCH=8,
-    TOTAL_EPOCHS=240,
+    IMS_PER_BATCH=100,
+    TOTAL_EPOCHS=800,
     LR_SCHEDULER_NAME="flat_and_anneal",
     ANNEAL_METHOD="cosine",  # "cosine"
     ANNEAL_POINT=0.72,
