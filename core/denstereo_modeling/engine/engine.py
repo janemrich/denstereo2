@@ -285,15 +285,14 @@ def do_train(cfg, args, model, optimizer, renderer=None, resume=False):
             with autocast(enabled=AMP_ON):
                 out_dict, loss_dict = model(
                     batch["roi_img"],
-                    batch["roi_img"], #TODO denstereo change to other img
                     gt_xyz=batch.get("roi_xyz", None),
-                    gt_xyz_bin=batch.get("roi_xyz_bin", None),
                     gt_mask_trunc=batch["roi_mask_trunc"],
                     gt_mask_visib=batch["roi_mask_visib"],
                     gt_mask_obj=batch["roi_mask_obj"],
                     gt_mask_erode=batch.get("roi_mask_erode", None),
                     gt_region=batch.get("roi_region", None),
                     gt_ego_rot=batch.get("ego_rot", None),
+                    baseline=batch.get("baseline", None),
                     gt_trans=batch.get("trans", None),
                     gt_trans_ratio=batch["roi_trans_ratio"],
                     gt_points=batch.get("roi_points", None),

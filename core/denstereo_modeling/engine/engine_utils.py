@@ -33,6 +33,7 @@ def batch_data(cfg, data, renderer=None, device="cuda", phase="train"):
     batch["roi_wh"] = torch.stack([d["roi_wh"] for d in data], dim=0).to(device, non_blocking=True)
     batch["im_W"] = torch.stack([d["im_W"] for d in data], dim=0).to(device, non_blocking=True)
     batch["im_H"] = torch.stack([d["im_H"] for d in data], dim=0).to(device, non_blocking=True)
+    batch["baseline"] = torch.stack([d["baseline"] for d in data], dim=0).to(device, non_blocking=True)
     batch["resize_ratio"] = torch.tensor([d["resize_ratio"] for d in data]).to(
         device=device, dtype=torch.float32, non_blocking=True
     )

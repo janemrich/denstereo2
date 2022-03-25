@@ -3,6 +3,7 @@ import logging
 import os
 import os.path as osp
 import sys
+import json
 
 # from lib.vis_utils.colormap import W
 
@@ -39,10 +40,19 @@ class DENSTEREO_PBR_Dataset:
 
         self.objs = data_cfg["objs"]  # selected objects
 
-        self.dataset_root = data_cfg.get("dataset_root", osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/"))
-        self.xyz_root = data_cfg.get("xyz_root", osp.join(self.dataset_root, "xyz_crop_hd"))
-        self.occ_root = data_cfg.get("occ_root", osp.join(self.dataset_root, "Q0"))
-        assert osp.exists(self.dataset_root), self.dataset_root
+        self.dataset_root_l = data_cfg.get(
+            "dataset_root",
+            osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/train_pbr_left")
+        )
+        self.dataset_root_r = data_cfg.get(
+            "dataset_root_right",
+            osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/train_pbr_right")
+        )
+        self.xyz_root_l = data_cfg.get("xyz_root", osp.join(self.dataset_root_l, "xyz_crop_hd"))
+        self.xyz_root_r = data_cfg.get("xyz_root_right", osp.join(self.dataset_root_r, "xyz_crop_hd"))
+        self.occ_root_l = data_cfg.get("occ_root", osp.join(self.dataset_root_l, "Q0"))
+        self.occ_root_r = data_cfg.get("occ_root", osp.join(self.dataset_root_r, "Q0"))
+        assert osp.exists(self.dataset_root_l), self.dataset_root_l
         self.models_root = data_cfg["models_root"]  # BOP_DATASETS/ycbv/models
         self.scale_to_meter = data_cfg["scale_to_meter"]  # 0.001
 
@@ -70,6 +80,10 @@ class DENSTEREO_PBR_Dataset:
         self.debug_im_id = data_cfg.get("debug_im_id", None)
         self.max_im = data_cfg.get("max_im", None)
 
+        cam_path = osp.join(DATASETS_ROOT, 'BOP_DATASETS/denstereo/camera.json')
+        with open(cam_path, 'r') as cam_file:
+            self.baseline = np.array(json.load(cam_file)['baseline'], dtype=np.float32)
+
     def __call__(self):
         """Load light-weight instance annotations of all images into a list of
         dicts in Detectron2 format.
@@ -82,7 +96,7 @@ class DENSTEREO_PBR_Dataset:
             (
                 "".join([str(fn) for fn in self.objs])
                 + "dataset_dicts_{}_{}_{}_{}_{}".format(
-                    self.name, self.dataset_root, self.with_masks, self.with_depth, __name__
+                    self.name, self.dataset_root_l, self.with_masks, self.with_depth, __name__
                 )
             ).encode("utf-8")
         ).hexdigest()
@@ -101,43 +115,54 @@ class DENSTEREO_PBR_Dataset:
         # it is slow because of loading and converting masks to rle
         for scene in tqdm(self.scenes):
             scene_id = int(scene)
-            scene_root = osp.join(self.dataset_root, scene)
+            scene_root_l = osp.join(self.dataset_root_l, scene)
+            scene_root_r = osp.join(self.dataset_root_r, scene)
 
-            gt_dict = mmcv.load(osp.join(scene_root, "scene_gt.json"))
-            gt_info_dict = mmcv.load(osp.join(scene_root, "scene_gt_info.json"))
-            cam_dict = mmcv.load(osp.join(scene_root, "scene_camera.json"))
+            gt_dict_l = mmcv.load(osp.join(scene_root_l, "scene_gt.json"))
+            gt_dict_r = mmcv.load(osp.join(scene_root_r, "scene_gt.json"))
+            gt_info_dict_l = mmcv.load(osp.join(scene_root_l, "scene_gt_info.json"))
+            gt_info_dict_r = mmcv.load(osp.join(scene_root_r, "scene_gt_info.json"))
+            cam_dict_l = mmcv.load(osp.join(scene_root_l, "scene_camera.json"))
+            cam_dict_r = mmcv.load(osp.join(scene_root_r, "scene_camera.json"))
 
-            for str_im_id in tqdm(gt_dict, postfix=f"{scene_id}"):
+            for str_im_id in tqdm(gt_dict_l, postfix=f"{scene_id}"):
                 int_im_id = int(str_im_id)
                 if self.max_im is not None:
                     if self.max_im < int_im_id:
                         continue
 
-                rgb_path = osp.join(scene_root, "rgb/{:06d}.jpg").format(int_im_id)
-                assert osp.exists(rgb_path), rgb_path
+                rgb_path_l = osp.join(scene_root_l, "rgb/{:06d}.jpg").format(int_im_id)
+                rgb_path_r = osp.join(scene_root_r, "rgb/{:06d}.jpg").format(int_im_id)
+                assert osp.exists(rgb_path_l), rgb_path_l
+                assert osp.exists(rgb_path_r), rgb_path_r
 
-                depth_path = osp.join(scene_root, "depth/{:06d}.png".format(int_im_id))
+                depth_path_l = osp.join(scene_root, "depth/{:06d}.png".format(int_im_id))
+                depth_path_r = osp.join(scene_root, "depth/{:06d}.png".format(int_im_id))
 
                 scene_im_id = f"{scene_id}/{int_im_id}"
 
-                K = np.array(cam_dict[str_im_id]["cam_K"], dtype=np.float32).reshape(3, 3)
-                depth_factor = 1000.0 / cam_dict[str_im_id]["depth_scale"]  # 10000
+                K = np.array(cam_dict_l[str_im_id]["cam_K"], dtype=np.float32).reshape(3, 3)
+                depth_factor = 1000.0 / cam_dict_l[str_im_id]["depth_scale"]  # 10000
 
                 record = {
                     "dataset_name": self.name,
-                    "file_name": rgb_path,
-                    "depth_file": depth_path,
+                    "file_name_l": rgb_path_l,
+                    "file_name_r": rgb_path_r,
+                    "depth_file_l": depth_path_l,
+                    "depth_file_r": depth_path_r,
                     "height": self.height,
                     "width": self.width,
                     "image_id": int_im_id,
                     "scene_im_id": scene_im_id,  # for evaluation
                     "cam": K,
+                    "baseline": self.baseline,
                     "depth_factor": depth_factor,
                     "img_type": "syn_pbr",  # NOTE: has background
                 }
                 insts = []
-                for anno_i, anno in enumerate(gt_dict[str_im_id]):
-                    obj_id = anno["obj_id"]
+                for anno_i, anno_l in enumerate(gt_dict_l[str_im_id]):
+                    anno_r = gt_dict_r[str_im_id][anno_i]
+                    obj_id = anno_l["obj_id"]
                     if obj_id not in self.cat_ids:
                         continue
 
@@ -147,55 +172,90 @@ class DENSTEREO_PBR_Dataset:
                             continue
                     
                     cur_label = self.cat2label[obj_id]  # 0-based label
-                    R = np.array(anno["cam_R_m2c"], dtype="float32").reshape(3, 3)
-                    t = np.array(anno["cam_t_m2c"], dtype="float32") / 1000.0
-                    pose = np.hstack([R, t.reshape(3, 1)])
-                    quat = mat2quat(R).astype("float32")
+                    R_l = np.array(anno_l["cam_R_m2c"], dtype="float32").reshape(3, 3)
+                    R_r = np.array(anno_r["cam_R_m2c"], dtype="float32").reshape(3, 3)
+                    t_l = np.array(anno_l["cam_t_m2c"], dtype="float32") / 1000.0
+                    t_r = np.array(anno_r["cam_t_m2c"], dtype="float32") / 1000.0
+                    pose_l = np.hstack([R_l, t_l.reshape(3, 1)])
+                    pose_r = np.hstack([R_r, t_r.reshape(3, 1)])
+                    quat_l = mat2quat(R_l).astype("float32")
+                    quat_r = mat2quat(R_r).astype("float32")
 
-                    proj = (record["cam"] @ t.T).T
-                    proj = proj[:2] / proj[2]
+                    proj_l = (record["cam"] @ t_l.T).T
+                    proj_r = (record["cam"] @ t_r.T).T
+                    proj_l = proj_l[:2] / proj_l[2]
+                    proj_r = proj_r[:2] / proj_r[2]
 
-                    bbox_visib = gt_info_dict[str_im_id][anno_i]["bbox_visib"]
-                    bbox_obj = gt_info_dict[str_im_id][anno_i]["bbox_obj"]
-                    x1, y1, w, h = bbox_visib
+                    bbox_visib_l = gt_info_dict_l[str_im_id][anno_i]["bbox_visib"]
+                    bbox_visib_r = gt_info_dict_r[str_im_id][anno_i]["bbox_visib"]
+                    bbox_obj_l = gt_info_dict_l[str_im_id][anno_i]["bbox_obj"]
+                    bbox_obj_r = gt_info_dict_r[str_im_id][anno_i]["bbox_obj"]
+                    x1, y1, w, h = bbox_visib_l
+                    if self.filter_invalid:
+                        if h <= 1 or w <= 1:
+                            self.num_instances_without_valid_box += 1
+                            continue
+                    x1, y1, w, h = bbox_visib_r
                     if self.filter_invalid:
                         if h <= 1 or w <= 1:
                             self.num_instances_without_valid_box += 1
                             continue
 
-                    mask_file = osp.join(scene_root, "mask/{:06d}_{:06d}.png".format(int_im_id, anno_i))
-                    mask_visib_file = osp.join(scene_root, "mask_visib/{:06d}_{:06d}.png".format(int_im_id, anno_i))
-                    assert osp.exists(mask_file), mask_file
-                    assert osp.exists(mask_visib_file), mask_visib_file
+                    mask_file_l = osp.join(scene_root_l, "mask/{:06d}_{:06d}.png".format(int_im_id, anno_i))
+                    mask_file_r = osp.join(scene_root_r, "mask/{:06d}_{:06d}.png".format(int_im_id, anno_i))
+                    mask_visib_file_l = osp.join(scene_root_l, "mask_visib/{:06d}_{:06d}.png".format(int_im_id, anno_i))
+                    mask_visib_file_r = osp.join(scene_root_r, "mask_visib/{:06d}_{:06d}.png".format(int_im_id, anno_i))
+                    assert osp.exists(mask_file_l), mask_file_l
+                    assert osp.exists(mask_file_r), mask_file_r
+                    assert osp.exists(mask_visib_file_l), mask_visib_file_l
+                    assert osp.exists(mask_visib_file_r), mask_visib_file_r
                     # load mask visib  TODO: load both mask_visib and mask_full
-                    mask_single = mmcv.imread(mask_visib_file, "unchanged")
-                    mask_single = mask_single.astype(np.bool).astype(np.int)
-                    mask_single_erode = scin.binary_erosion(mask_single.astype(np.int))
-                    area = mask_single_erode.sum()
-                    if area <= 64:  # filter out too small or nearly invisible instances
+                    mask_single_l = mmcv.imread(mask_visib_file_l, "unchanged")
+                    mask_single_r = mmcv.imread(mask_visib_file_r, "unchanged")
+                    mask_single_l = mask_single_l.astype(np.bool).astype(np.int)
+                    mask_single_r = mask_single_r.astype(np.bool).astype(np.int)
+                    mask_single_erode_l = scin.binary_erosion(mask_single_l.astype(np.int))
+                    mask_single_erode_r = scin.binary_erosion(mask_single_r.astype(np.int))
+                    area_l = mask_single_erode_l.sum()
+                    area_r = mask_single_erode_r.sum()
+                    if (area_l <= 64) or (area_r <= 64):  # filter out too small or nearly invisible instances
                         self.num_instances_without_valid_segmentation += 1
                         continue
 
-                    visib_fract = gt_info_dict[str_im_id][anno_i].get("visib_fract", 1.0)
+                    visib_fract_l = gt_info_dict_l[str_im_id][anno_i].get("visib_fract", 1.0)
+                    visib_fract_r = gt_info_dict_r[str_im_id][anno_i].get("visib_fract", 1.0)
 
-                    mask_rle = binary_mask_to_rle(mask_single, compressed=True)
+                    mask_rle_l = binary_mask_to_rle(mask_single_l, compressed=True)
+                    mask_rle_r = binary_mask_to_rle(mask_single_r, compressed=True)
 
-                    xyz_path = osp.join(self.xyz_root, f"{scene_id:06d}/{int_im_id:06d}_{anno_i:06d}-xyz.npz")
-                    assert osp.exists(xyz_path), xyz_path
-                    occ_path = osp.join(self.occ_root, f"{scene_id:06d}/{int_im_id:06d}_{anno_i:06d}-Q0.npz")
+                    xyz_path_l = osp.join(self.xyz_root_l, f"{scene_id:06d}/{int_im_id:06d}_{anno_i:06d}-xyz.npz")
+                    xyz_path_r = osp.join(self.xyz_root_r, f"{scene_id:06d}/{int_im_id:06d}_{anno_i:06d}-xyz.npz")
+                    assert osp.exists(xyz_path_l), xyz_path_l
+                    assert osp.exists(xyz_path_r), xyz_path_r
+                    occ_path_l = osp.join(self.occ_root_l, f"{scene_id:06d}/{int_im_id:06d}_{anno_i:06d}-Q0.npz")
+                    occ_path_r = osp.join(self.occ_root_r, f"{scene_id:06d}/{int_im_id:06d}_{anno_i:06d}-Q0.npz")
                     inst = {
                         "category_id": cur_label,  # 0-based label
-                        "bbox": bbox_visib,  # TODO: load both bbox_obj and bbox_visib
+                        "bbox_l": bbox_visib_l,  # TODO: load both bbox_obj and bbox_visib
+                        "bbox_r": bbox_visib_r,  # TODO: load both bbox_obj and bbox_visib
                         "bbox_mode": BoxMode.XYWH_ABS,
-                        "pose": pose,
-                        "quat": quat,
-                        "trans": t,
-                        "centroid_2d": proj,  # absolute (cx, cy)
-                        "segmentation": mask_rle,
-                        "mask_full_file": mask_file,  # TODO: load as mask_full, rle
-                        "visib_fract": visib_fract,
-                        "xyz_path": xyz_path,
-                        "occ_path": occ_path,
+                        "pose_l": pose_l,
+                        "pose_r": pose_r,
+                        "quat_l": quat_l,
+                        "quat_r": quat_r,
+                        "trans_l": t_l,
+                        "trans_r": t_r,
+                        "centroid_2d_l": proj_l,  # absolute (cx, cy)
+                        "centroid_2d_r": proj_r,  # absolute (cx, cy)
+                        "segmentation_l": mask_rle_l,
+                        "segmentation_r": mask_rle_r,
+                        "mask_full_file_l": mask_file_l,  # TODO: load as mask_full, rle
+                        "mask_full_file_r": mask_file_r,  # TODO: load as mask_full, rle
+                        "visib_fract": (visib_fract_l + visib_fract_r) / 2,
+                        "xyz_path_l": xyz_path_l,
+                        "xyz_path_r": xyz_path_r,
+                        "occ_path_l": occ_path_l,
+                        "occ_path_r": occ_path_r,
                     }
 
                     model_info = self.models_info[str(obj_id)]

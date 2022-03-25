@@ -59,24 +59,33 @@ def transform_instance_annotations(annotation, transforms, image_size, *, keypoi
             The "bbox_mode" field will be set to XYXY_ABS.
     """
     im_H, im_W = image_size
-    bbox = BoxMode.convert(annotation["bbox"], annotation["bbox_mode"], BoxMode.XYXY_ABS)
+    bbox_l = BoxMode.convert(annotation["bbox_l"], annotation["bbox_mode"], BoxMode.XYXY_ABS)
+    bbox_r = BoxMode.convert(annotation["bbox_r"], annotation["bbox_mode"], BoxMode.XYXY_ABS)
     # Note that bbox is 1d (per-instance bounding box)
-    annotation["bbox"] = np.array(transforms.apply_box([bbox])[0])
+    annotation["bbox_l"] = np.array(transforms.apply_box([bbox_l])[0])
+    annotation["bbox_r"] = np.array(transforms.apply_box([bbox_r])[0])
     annotation["bbox_mode"] = BoxMode.XYXY_ABS
 
-    if "segmentation" in annotation:
+    if "segmentation_l" in annotation:
         # NOTE: here we transform segms to binary masks (interp is nearest by default)
-        mask = transforms.apply_segmentation(cocosegm2mask(annotation["segmentation"], h=im_H, w=im_W))
-        annotation["segmentation"] = mask
+        mask_l = transforms.apply_segmentation(cocosegm2mask(annotation["segmentation_l"], h=im_H, w=im_W))
+        mask_r = transforms.apply_segmentation(cocosegm2mask(annotation["segmentation_r"], h=im_H, w=im_W))
+        annotation["segmentation_l"] = mask_l
+        annotation["segmentation_r"] = mask_r
 
-    if "keypoints" in annotation:
-        keypoints = utils.transform_keypoint_annotations(
-            annotation["keypoints"], transforms, image_size, keypoint_hflip_indices
+    if "keypoints_l" in annotation:
+        keypoints_l = utils.transform_keypoint_annotations(
+            annotation["keypoints_l"], transforms, image_size, keypoint_hflip_indices
         )
-        annotation["keypoints"] = keypoints
+        keypoints_r = utils.transform_keypoint_annotations(
+            annotation["keypoints_r"], transforms, image_size, keypoint_hflip_indices
+        )
+        annotation["keypoints_l"] = keypoints_l
+        annotation["keypoints_r"] = keypoints_r
 
-    if "centroid_2d" in annotation:
-        annotation["centroid_2d"] = transforms.apply_coords(np.array(annotation["centroid_2d"]).reshape(1, 2)).flatten()
+    if "centroid_2d_l" in annotation:
+        annotation["centroid_2d_l"] = transforms.apply_coords(np.array(annotation["centroid_2d_l"]).reshape(1, 2)).flatten()
+        annotation["centroid_2d_r"] = transforms.apply_coords(np.array(annotation["centroid_2d_r"]).reshape(1, 2)).flatten()
 
     return annotation
 
@@ -305,10 +314,12 @@ class GDRN_DatasetFromList(Base_DatasetFromList):
 
         dataset_name = dataset_dict["dataset_name"]
 
-        image = read_image_mmcv(dataset_dict["file_name"], format=self.img_format)
+        image_l = read_image_mmcv(dataset_dict["file_name_l"], format=self.img_format)
+        image_r = read_image_mmcv(dataset_dict["file_name_r"], format=self.img_format)
         # should be consistent with the size in dataset_dict
-        utils.check_image_size(dataset_dict, image)
-        im_H_ori, im_W_ori = image.shape[:2]
+        utils.check_image_size(dataset_dict, image_l)
+        utils.check_image_size(dataset_dict, image_r)
+        im_H_ori, im_W_ori = image_l.shape[:2]
 
         # currently only replace bg for train ###############################
         if self.split == "train":
@@ -316,34 +327,48 @@ class GDRN_DatasetFromList(Base_DatasetFromList):
             img_type = dataset_dict.get("img_type", "real")
             if img_type == "syn":
                 log_first_n(logging.WARNING, "replace bg", n=10)
-                assert "segmentation" in dataset_dict["inst_infos"]
-                mask = cocosegm2mask(dataset_dict["inst_infos"]["segmentation"], im_H_ori, im_W_ori)
-                image, mask_trunc = self.replace_bg(
-                    image.copy(), mask, return_mask=True, truncate_fg=cfg.INPUT.get("TRUNCATE_FG", False)
+                assert "segmentation_l" in dataset_dict["inst_infos"]
+                assert "segmentation_r" in dataset_dict["inst_infos"]
+                mask_l = cocosegm2mask(dataset_dict["inst_infos"]["segmentation_l"], im_H_ori, im_W_ori)
+                mask_r = cocosegm2mask(dataset_dict["inst_infos"]["segmentation_r"], im_H_ori, im_W_ori)
+                image_l, mask_trunc_l = self.replace_bg(
+                    image_l.copy(), mask_l, return_mask=True, truncate_fg=cfg.INPUT.get("TRUNCATE_FG", False)
+                )
+                image_r, mask_trunc_r = self.replace_bg(
+                    image_r.copy(), mask_r, return_mask=True, truncate_fg=cfg.INPUT.get("TRUNCATE_FG", False)
                 )
             else:  # real image
                 if np.random.rand() < cfg.INPUT.CHANGE_BG_PROB:
                     log_first_n(logging.WARNING, "replace bg for real", n=10)
-                    assert "segmentation" in dataset_dict["inst_infos"]
-                    mask = cocosegm2mask(dataset_dict["inst_infos"]["segmentation"], im_H_ori, im_W_ori)
-                    image, mask_trunc = self.replace_bg(
-                        image.copy(), mask, return_mask=True, truncate_fg=cfg.INPUT.get("TRUNCATE_FG", False)
+                    assert "segmentation_l" in dataset_dict["inst_infos"]
+                    assert "segmentation_r" in dataset_dict["inst_infos"]
+                    mask_l = cocosegm2mask(dataset_dict["inst_infos"]["segmentation_l"], im_H_ori, im_W_ori)
+                    mask_r = cocosegm2mask(dataset_dict["inst_infos"]["segmentation_r"], im_H_ori, im_W_ori)
+                    image_l, mask_trunc_l = self.replace_bg(
+                        image_l.copy(), mask_l, return_mask=True, truncate_fg=cfg.INPUT.get("TRUNCATE_FG", False)
+                    )
+                    image_r, mask_trunc_r = self.replace_bg(
+                        image_r.copy(), mask_r, return_mask=True, truncate_fg=cfg.INPUT.get("TRUNCATE_FG", False)
                     )
                 else:
-                    mask_trunc = None
+                    mask_trunc_l = None
+                    mask_trunc_r = None
 
         # NOTE: maybe add or change color augment here ===================================
         if self.split == "train" and self.color_aug_prob > 0 and self.color_augmentor is not None:
             if np.random.rand() < self.color_aug_prob:
                 if cfg.INPUT.COLOR_AUG_SYN_ONLY and img_type not in ["real"]:
-                    image = self._color_aug(image, self.color_aug_type)
+                    image_l = self._color_aug(image_l, self.color_aug_type)
+                    image_r = self._color_aug(image_r, self.color_aug_type)
                 else:
-                    image = self._color_aug(image, self.color_aug_type)
+                    image_l = self._color_aug(image_l, self.color_aug_type)
+                    image_r = self._color_aug(image_r, self.color_aug_type)
 
         # other transforms (mainly geometric ones);
         # for 6d pose task, flip is not allowed in general except for some 2d keypoints methods
-        image, transforms = T.apply_augmentations(self.augmentation, image)
-        im_H, im_W = image_shape = image.shape[:2]  # h, w
+        image_l, transforms = T.apply_augmentations(self.augmentation, image_l)
+        image_r, transforms = T.apply_augmentations(self.augmentation, image_r)
+        im_H, im_W = image_shape = image_l.shape[:2] # h, w
 
         # NOTE: scale camera intrinsic if necessary ================================
         scale_x = im_W / im_W_ori
@@ -359,7 +384,8 @@ class GDRN_DatasetFromList(Base_DatasetFromList):
         out_res = cfg.MODEL.POSE_NET.OUTPUT_RES
 
         # CHW -> HWC
-        coord_2d = get_2d_coord_np(im_W, im_H, low=0, high=1).transpose(1, 2, 0)
+        coord_2d_l = get_2d_coord_np(im_W, im_H, low=0, high=1).transpose(1, 2, 0)
+        coord_2d_r = get_2d_coord_np(im_W, im_H, low=0, high=1).transpose(1, 2, 0)
 
         #################################################################################
         if self.split != "train":
@@ -367,17 +393,38 @@ class GDRN_DatasetFromList(Base_DatasetFromList):
             test_bbox_type = cfg.TEST.TEST_BBOX_TYPE
             if test_bbox_type == "gt":
                 bbox_key = "bbox"
+                bbox_key_l = "bbox_l"
+                bbox_key_r = "bbox_r"
             else:
                 bbox_key = f"bbox_{test_bbox_type}"
+                bbox_key_l = f"bbox_l_{test_bbox_type}"
+                bbox_key_r = f"bbox_r_{test_bbox_type}"
             assert not self.flatten, "Do not use flattened dicts for test!"
             # here get batched rois
             roi_infos = {}
             # yapf: disable
-            roi_keys = ["scene_im_id", "file_name", "cam", "im_H", "im_W",
-                        "roi_img", "inst_id", "roi_coord_2d", "roi_cls", "score", "roi_extent",
-                         bbox_key, "bbox_mode", "bbox_center", "roi_wh",
-                         "scale", "resize_ratio", "model_info",
-                        ]
+            roi_keys = [
+                "scene_im_id",
+                "file_name_l",
+                "file_name_r",
+                "cam",
+                "baseline",
+                "im_H",
+                "im_W",
+                "roi_img",
+                "inst_id",
+                "roi_coord_2d",
+                "roi_cls",
+                "score",
+                "roi_extent",
+                bbox_key,
+                "bbox_mode",
+                "bbox_center",
+                "roi_wh",
+                "scale",
+                "resize_ratio",
+                "model_info",
+            ]
             for _key in roi_keys:
                 roi_infos[_key] = []
             # yapf: enable
@@ -387,10 +434,12 @@ class GDRN_DatasetFromList(Base_DatasetFromList):
             for inst_i, inst_infos in enumerate(dataset_dict["annotations"]):
                 # inherent image-level infos
                 roi_infos["scene_im_id"].append(dataset_dict["scene_im_id"])
-                roi_infos["file_name"].append(dataset_dict["file_name"])
+                roi_infos["file_name_l"].append(dataset_dict["file_name_l"])
+                roi_infos["file_name_r"].append(dataset_dict["file_name_r"])
                 roi_infos["im_H"].append(im_H)
                 roi_infos["im_W"].append(im_W)
                 roi_infos["cam"].append(dataset_dict["cam"].cpu().numpy())
+                roi_infos["baseline"].append(dataset_dict["baseline"])
 
                 # roi-level infos
                 roi_infos["inst_id"].append(inst_i)
@@ -404,43 +453,77 @@ class GDRN_DatasetFromList(Base_DatasetFromList):
                 roi_extent = self._get_extents(dataset_name)[roi_cls]
                 roi_infos["roi_extent"].append(roi_extent)
 
-                bbox = BoxMode.convert(inst_infos[bbox_key], inst_infos["bbox_mode"], BoxMode.XYXY_ABS)
-                bbox = np.array(transforms.apply_box([bbox])[0])
-                roi_infos[bbox_key].append(bbox)
+                bbox_l = BoxMode.convert(
+                    inst_infos[bbox_key_l],
+                    inst_infos["bbox_mode"],
+                    BoxMode.XYXY_ABS
+                )
+                bbox_r = BoxMode.convert(
+                    inst_infos[bbox_key_r],
+                    inst_infos["bbox_mode"],
+                    BoxMode.XYXY_ABS
+                )
+                bbox_l = np.array(transforms.apply_box([bbox_l])[0])
+                bbox_r = np.array(transforms.apply_box([bbox_r])[0])
+                roi_infos[bbox_key].append(np.stack([bbox_l, bbox_r], axis=0))
                 roi_infos["bbox_mode"].append(BoxMode.XYXY_ABS)
-                x1, y1, x2, y2 = bbox
-                bbox_center = np.array([0.5 * (x1 + x2), 0.5 * (y1 + y2)])
-                bw = max(x2 - x1, 1)
-                bh = max(y2 - y1, 1)
-                scale = max(bh, bw) * cfg.INPUT.DZI_PAD_SCALE
-                scale = min(scale, max(im_H, im_W)) * 1.0
 
-                roi_infos["bbox_center"].append(bbox_center.astype("float32"))
-                roi_infos["scale"].append(scale)
-                roi_infos["roi_wh"].append(np.array([bw, bh], dtype=np.float32))
-                roi_infos["resize_ratio"].append(out_res / scale)
+                x1, y1, x2, y2 = bbox_l
+                bbox_center_l = np.array([0.5 * (x1 + x2), 0.5 * (y1 + y2)], dtype=np.float32)
+                bw_l = max(x2 - x1, 1)
+                bh_l = max(y2 - y1, 1)
+                scale_l = max(bh_l, bw_l) * cfg.INPUT.DZI_PAD_SCALE
+                scale_l = min(scale_l, max(im_H, im_W)) * 1.0
+
+                x1, y1, x2, y2 = bbox_r
+                bbox_center_r = np.array([0.5 * (x1 + x2), 0.5 * (y1 + y2)], dtype=np.float32)
+                bw_r = max(x2 - x1, 1)
+                bh_r = max(y2 - y1, 1)
+                scale_r = max(bh_r, bw_r) * cfg.INPUT.DZI_PAD_SCALE
+                scale_r = min(scale_r, max(im_H, im_W)) * 1.0
+                roi_infos["bbox_center"].append(
+                    np.stack([bbox_center_l, bbox_center_r], axis=0)
+                )
+                roi_infos["scale"].append([scale_l, scale_r])
+                roi_infos["roi_wh"].append(
+                    np.array([[bw_l, bh_l], [bw_r, bh_r]], dtype=np.float32)
+                )
+                roi_infos["resize_ratio"].append([out_res / scale_l, out_res / scale_r])
 
                 # CHW, float32 tensor
                 # roi_image
-                roi_img = crop_resize_by_warp_affine(
-                    image, bbox_center, scale, input_res, interpolation=cv2.INTER_LINEAR
+                roi_img_l = crop_resize_by_warp_affine(
+                    image_l, bbox_center_l, scale_l, input_res, interpolation=cv2.INTER_LINEAR
+                ).transpose(2, 0, 1)
+                roi_img_r = crop_resize_by_warp_affine(
+                    image_r, bbox_center_r, scale_r, input_res, interpolation=cv2.INTER_LINEAR
                 ).transpose(2, 0, 1)
 
-                roi_img = self.normalize_image(cfg, roi_img)
-                roi_infos["roi_img"].append(roi_img.astype("float32"))
+                roi_img_l = self.normalize_image(cfg, roi_img_l)
+                roi_img_r = self.normalize_image(cfg, roi_img_r)
+                roi_infos["roi_img"].append(
+                    np.stack([roi_img_l, roi_img_r], axis=0).astype("float32")
+                )
 
                 # roi_coord_2d
-                roi_coord_2d = crop_resize_by_warp_affine(
-                    coord_2d, bbox_center, scale, out_res, interpolation=cv2.INTER_LINEAR
+                roi_coord_2d_l = crop_resize_by_warp_affine(
+                    coord_2d_l, bbox_center_l, scale_l, out_res, interpolation=cv2.INTER_LINEAR
                 ).transpose(
                     2, 0, 1
                 )  # HWC -> CHW
-                roi_infos["roi_coord_2d"].append(roi_coord_2d.astype("float32"))
+                roi_coord_2d_r = crop_resize_by_warp_affine(
+                    coord_2d_r, bbox_center_r, scale_r, out_res, interpolation=cv2.INTER_LINEAR
+                ).transpose(
+                    2, 0, 1
+                )  # HWC -> CHW
+                roi_infos["roi_coord_2d"].append(
+                    np.stack([roi_coord_2d_l, roi_coord_2d_r], axis=0).astype("float32")
+                )
 
             for _key in roi_keys:
                 if _key in ["roi_img", "roi_coord_2d"]:
                     dataset_dict[_key] = torch.as_tensor(roi_infos[_key]).contiguous()
-                elif _key in ["model_info", "scene_im_id", "file_name"]:  # "im_H", "im_W"
+                elif _key in ["model_info", "scene_im_id", "file_name_l", "file_name_r"]:  # "im_H", "im_W"
                     # can not convert to tensor
                     dataset_dict[_key] = roi_infos[_key]
                 else:
@@ -458,39 +541,73 @@ class GDRN_DatasetFromList(Base_DatasetFromList):
         dataset_dict["roi_extent"] = torch.tensor(roi_extent, dtype=torch.float32)
 
         # load xyz =======================================================
-        xyz_info = np.load(inst_infos["xyz_path"]) # also load npz files
-        x1, y1, x2, y2 = xyz_info["xyxy"]
-        # float16 does not affect performance (classification/regresion)
-        xyz_crop = xyz_info["xyz_crop"]
-        xyz = np.zeros((im_H, im_W, 3), dtype=np.float32)
-        xyz[y1 : y2 + 1, x1 : x2 + 1, :] = xyz_crop
-        # NOTE: full mask
-        mask_obj = ((xyz[:, :, 0] != 0) | (xyz[:, :, 1] != 0) | (xyz[:, :, 2] != 0)).astype(np.bool).astype(np.float32)
+        xyz_info_l = np.load(inst_infos["xyz_path_l"]) # also load npz files
+        xyz_info_r = np.load(inst_infos["xyz_path_r"]) # also load npz files
 
-        mask_obj_erode = scin.binary_erosion(mask_obj.astype(np.int)).astype(np.float32)
+        x1, y1, x2, y2 = xyz_info_l["xyxy"]
+        # float16 does not affect performance (classification/regresion)
+        xyz_crop = xyz_info_l["xyz_crop"]
+        xyz_l = np.zeros((im_H, im_W, 3), dtype=np.float32)
+        xyz_l[y1 : y2 + 1, x1 : x2 + 1, :] = xyz_crop
+
+        x1, y1, x2, y2 = xyz_info_r["xyxy"]
+        # float16 does not affect performance (classification/regresion)
+        xyz_crop = xyz_info_r["xyz_crop"]
+        xyz_r = np.zeros((im_H, im_W, 3), dtype=np.float32)
+        xyz_r[y1 : y2 + 1, x1 : x2 + 1, :] = xyz_crop
+
+        # NOTE: full mask
+        mask_obj_l = ((xyz_l[:, :, 0] != 0) | (xyz_l[:, :, 1] != 0) | (xyz_l[:, :, 2] != 0)).astype(np.bool).astype(np.float32)
+        mask_obj_r = ((xyz_r[:, :, 0] != 0) | (xyz_r[:, :, 1] != 0) | (xyz_r[:, :, 2] != 0)).astype(np.bool).astype(np.float32)
+
+        mask_obj_erode_l = scin.binary_erosion(mask_obj_l.astype(np.int)).astype(np.float32)
+        mask_obj_erode_r = scin.binary_erosion(mask_obj_r.astype(np.int)).astype(np.float32)
         if cfg.INPUT.SMOOTH_XYZ:
-            xyz = self.smooth_xyz(xyz)
+            xyz_l = self.smooth_xyz(xyz_l)
+            xyz_r = self.smooth_xyz(xyz_r)
 
         if cfg.TRAIN.VIS:
-            xyz = self.smooth_xyz(xyz)
+            xyz_l = self.smooth_xyz(xyz_l)
+            xyz_r = self.smooth_xyz(xyz_r)
 
         # load Q0
-        occ_info = np.load(inst_infos["occ_path"])
-        occ_crop = occ_info["occ_crop"]
-        Q0 = np.zeros((im_H, im_W, 6), dtype=np.float32)
-        Q0[y1: y2 + 1, x1: x2 + 1, :] = occ_crop.astype(np.float32)
-        occmask_x = (
-            (((Q0[:, :, 0] != 0) | (Q0[:, :, 1] != 0)) & (mask_obj_erode != 0)).astype(np.bool).astype(np.float32)
+        occ_info_l = np.load(inst_infos["occ_path_l"])
+        occ_info_r = np.load(inst_infos["occ_path_r"])
+        occ_crop_l = occ_info_l["occ_crop"]
+        occ_crop_r = occ_info_r["occ_crop"]
+        Q0_l = np.zeros((im_H, im_W, 6), dtype=np.float32)
+        Q0_r = np.zeros((im_H, im_W, 6), dtype=np.float32)
+
+        x1, y1, x2, y2 = occ_info_l['xyxy']
+        # override bbox info using xyz_infos
+        inst_infos["bbox_l"] = [x1, y1, x2, y2]
+
+        Q0_l[y1: y2 + 1, x1: x2 + 1, :] = occ_crop_l.astype(np.float32)
+        occmask_x_l = (
+            (((Q0_l[:, :, 0] != 0) | (Q0_l[:, :, 1] != 0)) & (mask_obj_erode_l != 0)).astype(np.bool).astype(np.float32)
         )
-        occmask_y = (
-            (((Q0[:, :, 2] != 0) | (Q0[:, :, 3] != 0)) & (mask_obj_erode != 0)).astype(np.bool).astype(np.float32)
+        occmask_y_l = (
+            (((Q0_l[:, :, 2] != 0) | (Q0_l[:, :, 3] != 0)) & (mask_obj_erode_l != 0)).astype(np.bool).astype(np.float32)
         )
-        occmask_z = (
-            (((Q0[:, :, 4] != 0) | (Q0[:, :, 5] != 0)) & (mask_obj_erode != 0)).astype(np.bool).astype(np.float32)
+        occmask_z_l = (
+            (((Q0_l[:, :, 4] != 0) | (Q0_l[:, :, 5] != 0)) & (mask_obj_erode_l != 0)).astype(np.bool).astype(np.float32)
         )
 
+        x1, y1, x2, y2 = occ_info_r['xyxy']
         # override bbox info using xyz_infos
-        inst_infos["bbox"] = [x1, y1, x2, y2]
+        inst_infos["bbox_r"] = [x1, y1, x2, y2]
+
+        Q0_r[y1: y2 + 1, x1: x2 + 1, :] = occ_crop_r.astype(np.float32)
+        occmask_x_r = (
+            (((Q0_r[:, :, 0] != 0) | (Q0_r[:, :, 1] != 0)) & (mask_obj_erode_r != 0)).astype(np.bool).astype(np.float32)
+        )
+        occmask_y_r = (
+            (((Q0_r[:, :, 2] != 0) | (Q0_r[:, :, 3] != 0)) & (mask_obj_erode_r != 0)).astype(np.bool).astype(np.float32)
+        )
+        occmask_z_r = (
+            (((Q0_r[:, :, 4] != 0) | (Q0_r[:, :, 5] != 0)) & (mask_obj_erode_r != 0)).astype(np.bool).astype(np.float32)
+        )
+
         inst_infos["bbox_mode"] = BoxMode.XYXY_ABS
 
         # USER: Implement additional transformations if you have other types of data
@@ -498,31 +615,45 @@ class GDRN_DatasetFromList(Base_DatasetFromList):
         anno = transform_instance_annotations(inst_infos, transforms, image_shape, keypoint_hflip_indices=None)
 
         # augment bbox ===================================================
-        bbox_xyxy = anno["bbox"]
-        bbox_center, scale = self.aug_bbox_DZI(cfg, bbox_xyxy, im_H, im_W)
-        bw = max(bbox_xyxy[2] - bbox_xyxy[0], 1)
-        bh = max(bbox_xyxy[3] - bbox_xyxy[1], 1)
+        bbox_xyxy_l = anno["bbox_l"]
+        bbox_xyxy_r = anno["bbox_r"]
+        bbox_center_l, scale_l = self.aug_bbox_DZI(cfg, bbox_xyxy_l, im_H, im_W)
+        bbox_center_r, scale_r = self.aug_bbox_DZI(cfg, bbox_xyxy_r, im_H, im_W)
+        bw_l = max(bbox_xyxy_l[2] - bbox_xyxy_l[0], 1)
+        bw_r = max(bbox_xyxy_r[2] - bbox_xyxy_r[0], 1)
+        bh_l = max(bbox_xyxy_l[3] - bbox_xyxy_l[1], 1)
+        bh_r = max(bbox_xyxy_r[3] - bbox_xyxy_r[1], 1)
 
         # CHW, float32 tensor
         ## roi_image ------------------------------------
-        roi_img = crop_resize_by_warp_affine(
-            image, bbox_center, scale, input_res, interpolation=cv2.INTER_LINEAR
+        roi_img_l = crop_resize_by_warp_affine(
+            image_l, bbox_center_l, scale_l, input_res, interpolation=cv2.INTER_LINEAR
+        ).transpose(2, 0, 1)
+        roi_img_r = crop_resize_by_warp_affine(
+            image_r, bbox_center_r, scale_r, input_res, interpolation=cv2.INTER_LINEAR
         ).transpose(2, 0, 1)
 
-        roi_img = self.normalize_image(cfg, roi_img)
+        roi_img_l = self.normalize_image(cfg, roi_img_l)
+        roi_img_r = self.normalize_image(cfg, roi_img_r)
 
         # roi_coord_2d ----------------------------------------------------
-        roi_coord_2d = crop_resize_by_warp_affine(
-            coord_2d, bbox_center, scale, out_res, interpolation=cv2.INTER_NEAREST
+        roi_coord_2d_l = crop_resize_by_warp_affine(
+            coord_2d_l, bbox_center_l, scale_l, out_res, interpolation=cv2.INTER_NEAREST
+        ).transpose(2, 0, 1)
+        roi_coord_2d_r = crop_resize_by_warp_affine(
+            coord_2d_r, bbox_center_r, scale_r, out_res, interpolation=cv2.INTER_NEAREST
         ).transpose(2, 0, 1)
 
         ## roi_mask ---------------------------------------
         # (mask_trunc < mask_visib < mask_obj)
-        mask_visib = anno["segmentation"].astype("float32") * mask_obj
-        if mask_trunc is None:
-            mask_trunc = mask_visib
+        mask_visib_l = anno["segmentation_l"].astype("float32") * mask_obj_l
+        mask_visib_r = anno["segmentation_r"].astype("float32") * mask_obj_r
+        if mask_trunc_l is None:
+            mask_trunc_l = mask_visib_l
+            mask_trunc_r = mask_visib_r
         else:
-            mask_trunc = mask_visib * mask_trunc.astype("float32")
+            mask_trunc_l = mask_visib_l * mask_trunc_l.astype("float32")
+            mask_trunc_r = mask_visib_r * mask_trunc_r.astype("float32")
 
         if cfg.TRAIN.VIS:
             mask_xyz_interp = cv2.INTER_LINEAR
@@ -530,130 +661,230 @@ class GDRN_DatasetFromList(Base_DatasetFromList):
             mask_xyz_interp = cv2.INTER_NEAREST
 
         # maybe truncated mask (true mask for rgb)
-        roi_mask_trunc = crop_resize_by_warp_affine(
-            mask_trunc[:, :, None], bbox_center, scale, out_res, interpolation=mask_xyz_interp
+        roi_mask_trunc_l = crop_resize_by_warp_affine(
+            mask_trunc_l[:, :, None], bbox_center_l, scale_l, out_res, interpolation=mask_xyz_interp
+        )
+        roi_mask_trunc_r = crop_resize_by_warp_affine(
+            mask_trunc_r[:, :, None], bbox_center_r, scale_r, out_res, interpolation=mask_xyz_interp
         )
 
         # use original visible mask to calculate xyz loss (try full obj mask?)
-        roi_mask_visib = crop_resize_by_warp_affine(
-            mask_visib[:, :, None], bbox_center, scale, out_res, interpolation=mask_xyz_interp
+        roi_mask_visib_l = crop_resize_by_warp_affine(
+            mask_visib_l[:, :, None], bbox_center_l, scale_l, out_res, interpolation=mask_xyz_interp
+        )
+        roi_mask_visib_r = crop_resize_by_warp_affine(
+            mask_visib_r[:, :, None], bbox_center_r, scale_r, out_res, interpolation=mask_xyz_interp
         )
 
-        roi_mask_obj = crop_resize_by_warp_affine(
-            mask_obj[:, :, None], bbox_center, scale, out_res, interpolation=mask_xyz_interp
+        roi_mask_obj_l = crop_resize_by_warp_affine(
+            mask_obj_l[:, :, None], bbox_center_l, scale_l, out_res, interpolation=mask_xyz_interp
+        )
+        roi_mask_obj_r = crop_resize_by_warp_affine(
+            mask_obj_r[:, :, None], bbox_center_r, scale_r, out_res, interpolation=mask_xyz_interp
         )
 
-        roi_mask_obj_erode = crop_resize_by_warp_affine(
-            mask_obj_erode[:, :, None], bbox_center, scale, out_res, interpolation=mask_xyz_interp
+        roi_mask_obj_erode_l = crop_resize_by_warp_affine(
+            mask_obj_erode_l[:, :, None], bbox_center_l, scale_l, out_res, interpolation=mask_xyz_interp
+        )
+        roi_mask_obj_erode_r = crop_resize_by_warp_affine(
+            mask_obj_erode_r[:, :, None], bbox_center_r, scale_r, out_res, interpolation=mask_xyz_interp
         )
         # process occmask
-        roi_occmask_x = crop_resize_by_warp_affine(
-            occmask_x[:, :, None], bbox_center, scale, out_res, interpolation=mask_xyz_interp
+        roi_occmask_x_l = crop_resize_by_warp_affine(
+            occmask_x_l[:, :, None], bbox_center_l, scale_l, out_res, interpolation=mask_xyz_interp
         )
-        roi_occmask_y = crop_resize_by_warp_affine(
-            occmask_y[:, :, None], bbox_center, scale, out_res, interpolation=mask_xyz_interp
+        roi_occmask_x_r = crop_resize_by_warp_affine(
+            occmask_x_r[:, :, None], bbox_center_r, scale_r, out_res, interpolation=mask_xyz_interp
         )
-        roi_occmask_z = crop_resize_by_warp_affine(
-            occmask_z[:, :, None], bbox_center, scale, out_res, interpolation=mask_xyz_interp
+        roi_occmask_y_l = crop_resize_by_warp_affine(
+            occmask_y_l[:, :, None], bbox_center_l, scale_l, out_res, interpolation=mask_xyz_interp
         )
-        roi_occmask = np.dstack([roi_occmask_x, roi_occmask_y, roi_occmask_z])
-        roi_occmask = roi_occmask.transpose(2, 0, 1)
+        roi_occmask_y_r = crop_resize_by_warp_affine(
+            occmask_y_r[:, :, None], bbox_center_r, scale_l, out_res, interpolation=mask_xyz_interp
+        )
+        roi_occmask_z_l = crop_resize_by_warp_affine(
+            occmask_z_l[:, :, None], bbox_center_l, scale_l, out_res, interpolation=mask_xyz_interp
+        )
+        roi_occmask_z_r = crop_resize_by_warp_affine(
+            occmask_z_r[:, :, None], bbox_center_r, scale_r, out_res, interpolation=mask_xyz_interp
+        )
+        roi_occmask_l = np.dstack([roi_occmask_x_l, roi_occmask_y_l, roi_occmask_z_l])
+        roi_occmask_r = np.dstack([roi_occmask_x_r, roi_occmask_y_r, roi_occmask_z_r])
+        roi_occmask_l = roi_occmask_l.transpose(2, 0, 1)
+        roi_occmask_r = roi_occmask_r.transpose(2, 0, 1)
 
         ## roi_xyz ----------------------------------------------------
-        roi_xyz = crop_resize_by_warp_affine(xyz, bbox_center, scale, out_res, interpolation=mask_xyz_interp)
-        roi_Q0 = crop_resize_by_warp_affine(Q0, bbox_center, scale, out_res, interpolation=mask_xyz_interp)
+        roi_xyz_l = crop_resize_by_warp_affine(xyz_l, bbox_center_l, scale_l, out_res, interpolation=mask_xyz_interp)
+        roi_xyz_r = crop_resize_by_warp_affine(xyz_r, bbox_center_r, scale_r, out_res, interpolation=mask_xyz_interp)
+        roi_Q0_l = crop_resize_by_warp_affine(Q0_l, bbox_center_l, scale_l, out_res, interpolation=mask_xyz_interp)
+        roi_Q0_r = crop_resize_by_warp_affine(Q0_r, bbox_center_r, scale_r, out_res, interpolation=mask_xyz_interp)
         # region label
         if g_head_cfg.NUM_REGIONS > 1:
             fps_points = self._get_fps_points(dataset_name)[roi_cls]
-            roi_region = xyz_to_region(roi_xyz, fps_points)  # HW
-            dataset_dict["roi_region"] = torch.as_tensor(roi_region.astype(np.int32)).contiguous()
+            roi_region_l = xyz_to_region(roi_xyz_l, fps_points)  # HW
+            roi_region_r = xyz_to_region(roi_xyz_r, fps_points)  # HW
+            dataset_dict["roi_region"] = torch.as_tensor(
+                np.stack([roi_region_l, roi_region_r], axis=0),
+                dtype=torch.int32
+            ).contiguous()
 
-        roi_xyz = roi_xyz.transpose(2, 0, 1)  # HWC-->CHW
+        roi_xyz_l = roi_xyz_l.transpose(2, 0, 1)  # HWC-->CHW
+        roi_xyz_r = roi_xyz_r.transpose(2, 0, 1)  # HWC-->CHW
         # normalize xyz to [0, 1] using extent
-        roi_xyz[0] = roi_xyz[0] / roi_extent[0] + 0.5
-        roi_xyz[1] = roi_xyz[1] / roi_extent[1] + 0.5
-        roi_xyz[2] = roi_xyz[2] / roi_extent[2] + 0.5
+        roi_xyz_l[0] = roi_xyz_l[0] / roi_extent[0] + 0.5
+        roi_xyz_r[1] = roi_xyz_r[1] / roi_extent[1] + 0.5
+        roi_xyz_l[2] = roi_xyz_l[2] / roi_extent[2] + 0.5
+        roi_xyz_r[2] = roi_xyz_r[2] / roi_extent[2] + 0.5
 
-        roi_Q0 = roi_Q0.transpose(2, 0, 1)  # HWC-->CHW
-        roi_Q0[0] = roi_Q0[0] / roi_extent[1] + 0.5
-        roi_Q0[1] = roi_Q0[1] / roi_extent[2] + 0.5
-        roi_Q0[2] = roi_Q0[2] / roi_extent[0] + 0.5
-        roi_Q0[3] = roi_Q0[3] / roi_extent[2] + 0.5
-        roi_Q0[4] = roi_Q0[4] / roi_extent[0] + 0.5
-        roi_Q0[5] = roi_Q0[5] / roi_extent[1] + 0.5
+        roi_Q0_l = roi_Q0_l.transpose(2, 0, 1)  # HWC-->CHW
+        roi_Q0_r = roi_Q0_r.transpose(2, 0, 1)  # HWC-->CHW
+        roi_Q0_l[0] = roi_Q0_l[0] / roi_extent[1] + 0.5
+        roi_Q0_r[0] = roi_Q0_r[0] / roi_extent[1] + 0.5
+        roi_Q0_l[1] = roi_Q0_l[1] / roi_extent[2] + 0.5
+        roi_Q0_r[1] = roi_Q0_r[1] / roi_extent[2] + 0.5
+        roi_Q0_l[2] = roi_Q0_l[2] / roi_extent[0] + 0.5
+        roi_Q0_r[2] = roi_Q0_r[2] / roi_extent[0] + 0.5
+        roi_Q0_l[3] = roi_Q0_l[3] / roi_extent[2] + 0.5
+        roi_Q0_r[3] = roi_Q0_r[3] / roi_extent[2] + 0.5
+        roi_Q0_l[4] = roi_Q0_l[4] / roi_extent[0] + 0.5
+        roi_Q0_r[4] = roi_Q0_r[4] / roi_extent[0] + 0.5
+        roi_Q0_l[5] = roi_Q0_l[5] / roi_extent[1] + 0.5
+        roi_Q0_r[5] = roi_Q0_r[5] / roi_extent[1] + 0.5
 
         xyz_loss_type = loss_cfg.XYZ_LOSS_TYPE
         if ("CE" in xyz_loss_type) or ("cls" in cfg.MODEL.POSE_NET.NAME):  # convert target to int for cls
             n_xyz_bin = g_head_cfg.XYZ_BIN
             # assume roi_xyz has been normalized in [0, 1]
-            roi_xyz_bin = np.zeros_like(roi_xyz)
-            roi_x_norm = roi_xyz[0]
-            roi_x_norm[roi_x_norm < 0] = 0  # clip
-            roi_x_norm[roi_x_norm > 0.999999] = 0.999999
+            roi_xyz_bin_l = np.zeros_like(roi_xyz_l)
+            roi_xyz_bin_r = np.zeros_like(roi_xyz_r)
+            roi_x_norm_l = roi_xyz_l[0]
+            roi_x_norm_r = roi_xyz_r[0]
+            roi_x_norm_l[roi_x_norm_l < 0] = 0  # clip
+            roi_x_norm_r[roi_x_norm_r < 0] = 0  # clip
+            roi_x_norm_l[roi_x_norm_l > 0.999999] = 0.999999
+            roi_x_norm_r[roi_x_norm_r > 0.999999] = 0.999999
             # [0, BIN-1]
-            roi_xyz_bin[0] = np.asarray(roi_x_norm * n_xyz_bin, dtype=np.uint8)
+            roi_xyz_bin_l[0] = np.asarray(roi_x_norm_l * n_xyz_bin, dtype=np.uint8)
+            roi_xyz_bin_r[0] = np.asarray(roi_x_norm_r * n_xyz_bin, dtype=np.uint8)
 
-            roi_y_norm = roi_xyz[1]
-            roi_y_norm[roi_y_norm < 0] = 0
-            roi_y_norm[roi_y_norm > 0.999999] = 0.999999
-            roi_xyz_bin[1] = np.asarray(roi_y_norm * n_xyz_bin, dtype=np.uint8)
+            roi_y_norm_l = roi_xyz_l[1]
+            roi_y_norm_r = roi_xyz_r[1]
+            roi_y_norm_l[roi_y_norm_l < 0] = 0
+            roi_y_norm_r[roi_y_norm_r < 0] = 0
+            roi_y_norm_l[roi_y_norm_l > 0.999999] = 0.999999
+            roi_y_norm_r[roi_y_norm_r > 0.999999] = 0.999999
+            roi_xyz_bin_l[1] = np.asarray(roi_y_norm_l * n_xyz_bin, dtype=np.uint8)
+            roi_xyz_bin_r[1] = np.asarray(roi_y_norm_r * n_xyz_bin, dtype=np.uint8)
 
-            roi_z_norm = roi_xyz[2]
-            roi_z_norm[roi_z_norm < 0] = 0
-            roi_z_norm[roi_z_norm > 0.999999] = 0.999999
-            roi_xyz_bin[2] = np.asarray(roi_z_norm * n_xyz_bin, dtype=np.uint8)
+            roi_z_norm_l = roi_xyz_l[2]
+            roi_z_norm_r = roi_xyz_r[2]
+            roi_z_norm_l[roi_z_norm_l < 0] = 0
+            roi_z_norm_r[roi_z_norm_r < 0] = 0
+            roi_z_norm_l[roi_z_norm_l > 0.999999] = 0.999999
+            roi_z_norm_r[roi_z_norm_r > 0.999999] = 0.999999
+            roi_xyz_bin_l[2] = np.asarray(roi_z_norm_l * n_xyz_bin, dtype=np.uint8)
+            roi_xyz_bin_r[2] = np.asarray(roi_z_norm_r * n_xyz_bin, dtype=np.uint8)
 
             # the last bin is for bg
-            roi_masks = {"trunc": roi_mask_trunc, "visib": roi_mask_visib, "obj": roi_mask_obj}
-            roi_mask_xyz = roi_masks[loss_cfg.XYZ_LOSS_MASK_GT]
-            roi_xyz_bin[0][roi_mask_xyz == 0] = n_xyz_bin
-            roi_xyz_bin[1][roi_mask_xyz == 0] = n_xyz_bin
-            roi_xyz_bin[2][roi_mask_xyz == 0] = n_xyz_bin
+            roi_masks_l = {"trunc": roi_mask_trunc_l, "visib": roi_mask_visib_l, "obj": roi_mask_obj_l}
+            roi_masks_r = {"trunc": roi_mask_trunc_r, "visib": roi_mask_visib_r, "obj": roi_mask_obj_r}
+            roi_mask_xyz_l = roi_masks_l[loss_cfg.XYZ_LOSS_MASK_GT]
+            roi_mask_xyz_r = roi_masks_r[loss_cfg.XYZ_LOSS_MASK_GT]
+            roi_xyz_bin_l[0][roi_mask_xyz_l == 0] = n_xyz_bin
+            roi_xyz_bin_r[0][roi_mask_xyz_r == 0] = n_xyz_bin
+            roi_xyz_bin_l[1][roi_mask_xyz_l == 0] = n_xyz_bin
+            roi_xyz_bin_r[1][roi_mask_xyz_r == 0] = n_xyz_bin
+            roi_xyz_bin_l[2][roi_mask_xyz_l == 0] = n_xyz_bin
+            roi_xyz_bin_r[2][roi_mask_xyz_r == 0] = n_xyz_bin
 
             if "CE" in xyz_loss_type:
-                dataset_dict["roi_xyz_bin"] = torch.as_tensor(roi_xyz_bin.astype("uint8")).contiguous()
+                dataset_dict["roi_xyz_bin"] = torch.as_tensor(
+                    np.stack([roi_xyz_bin_l, roi_xyz_bin_r], axis=0),
+                    dtype=torch.uint8
+                ).contiguous()
             if "/" in xyz_loss_type and len(xyz_loss_type.split("/")[1]) > 0:
-                dataset_dict["roi_xyz"] = torch.as_tensor(roi_xyz.astype("float32")).contiguous()
+                dataset_dict["roi_xyz"] = torch.as_tensor(
+                    np.stack([roi_xyz_l, roi_xyz_r], axis=0),
+                    dtype=torch.float32
+                ).contiguous()
         else:
-            dataset_dict["roi_xyz"] = torch.as_tensor(roi_xyz.astype("float32")).contiguous()
+            dataset_dict["roi_xyz"] = torch.as_tensor(
+                np.stack([roi_xyz_l, roi_xyz_r], axis=0),
+                dtype=torch.float32
+            ).contiguous()
 
         # collect Q0
-        dataset_dict["roi_Q0"] = torch.as_tensor(roi_Q0.astype("float32")).contiguous()
+        dataset_dict["roi_Q0"] = torch.as_tensor(
+            np.stack([roi_Q0_l, roi_Q0_r], axis=0),
+            dtype=torch.float32
+        ).contiguous()
 
         # pose targets ----------------------------------------------------------------------
-        pose = inst_infos["pose"]
-        dataset_dict["ego_rot"] = torch.as_tensor(pose[:3, :3].astype("float32"))
-        dataset_dict["trans"] = torch.as_tensor(inst_infos["trans"].astype("float32"))
+        pose_l = inst_infos["pose_l"]
+        pose_r = inst_infos["pose_r"]
+        dataset_dict["ego_rot"] = torch.as_tensor(
+            np.stack([pose_l[:3, :3], pose_r[:3, :3]], axis=0).astype("float32")
+        )
+        dataset_dict["trans"] = torch.as_tensor(
+            np.stack([inst_infos["trans_l"], inst_infos["trans_r"]], axis=0).astype("float32")
+        )
 
-        dataset_dict["roi_points"] = torch.as_tensor(self._get_model_points(dataset_name)[roi_cls].astype("float32"))
+        dataset_dict["roi_points"] = torch.as_tensor(
+            self._get_model_points(dataset_name)[roi_cls].astype("float32")
+        )
         dataset_dict["sym_info"] = self._get_sym_infos(dataset_name)[roi_cls]
 
-        dataset_dict["roi_img"] = torch.as_tensor(roi_img.astype("float32")).contiguous()
-        dataset_dict["roi_coord_2d"] = torch.as_tensor(roi_coord_2d.astype("float32")).contiguous()
+        dataset_dict["roi_img"] = torch.as_tensor(
+            np.stack([roi_img_l, roi_img_r], axis=0).astype("float32")
+        ).contiguous()
+        dataset_dict["roi_coord_2d"] = torch.as_tensor(
+            np.stack([roi_coord_2d_l, roi_coord_2d_r], axis=0).astype("float32")
+        ).contiguous()
 
-        dataset_dict["roi_mask_trunc"] = torch.as_tensor(roi_mask_trunc.astype("float32")).contiguous()
-        dataset_dict["roi_mask_visib"] = torch.as_tensor(roi_mask_visib.astype("float32")).contiguous()
-        dataset_dict["roi_mask_obj"] = torch.as_tensor(roi_mask_obj.astype("float32")).contiguous()
-        dataset_dict["roi_mask_erode"] = torch.as_tensor(roi_mask_obj_erode.astype("float32")).contiguous()
-        dataset_dict["occmask"] = torch.as_tensor(roi_occmask.astype("float32")).contiguous()
+        dataset_dict["roi_mask_trunc"] = torch.as_tensor(
+            np.stack([roi_mask_trunc_l, roi_mask_trunc_r], axis=0).astype("float32")
+        ).contiguous()
+        dataset_dict["roi_mask_visib"] = torch.as_tensor(
+            np.stack([roi_mask_visib_l, roi_mask_visib_r], axis=0).astype("float32")
+        ).contiguous()
+        dataset_dict["roi_mask_obj"] = torch.as_tensor(
+            np.stack([roi_mask_obj_l, roi_mask_obj_r], axis=0).astype("float32")
+        ).contiguous()
+        dataset_dict["roi_mask_erode"] = torch.as_tensor(
+            np.stack([roi_mask_obj_erode_l, roi_mask_obj_erode_r], axis=0).astype("float32")
+        ).contiguous()
+        dataset_dict["occmask"] = torch.as_tensor(
+            np.stack([roi_occmask_l, roi_occmask_r], axis=0).astype("float32")
+        ).contiguous()
 
-        dataset_dict["bbox_center"] = torch.as_tensor(bbox_center, dtype=torch.float32)
-        dataset_dict["scale"] = scale
+        dataset_dict["bbox_center"] = torch.as_tensor(
+            np.stack([bbox_center_l, bbox_center_r], axis=0), dtype=torch.float32
+        )
+        dataset_dict["scale"] = [scale_l, scale_r]
         dataset_dict["im_W"] = torch.as_tensor(im_W, dtype=torch.float32)
         dataset_dict["im_H"] = torch.as_tensor(im_H, dtype=torch.float32)
-        dataset_dict["bbox"] = anno["bbox"]  # NOTE: original bbox
-        dataset_dict["roi_wh"] = torch.as_tensor(np.array([bw, bh], dtype=np.float32))
-        if scale == 0:
-            return ValueError, bbox_xyxy, im_W, im_H, dataset_dict['scene_im_id'], inst_infos
-        dataset_dict["resize_ratio"] = resize_ratio = out_res / scale
-        z_ratio = inst_infos["trans"][2] / resize_ratio
-        obj_center = anno["centroid_2d"]
-        delta_c = obj_center - bbox_center
-        dataset_dict["trans_ratio"] = torch.as_tensor([delta_c[0] / bw, delta_c[1] / bh, z_ratio]).to(torch.float32)
-        if dataset_dict['scene_im_id'] == [0, 50, 0, 50]:
-            raise ValueError
-        if isinstance(dataset_dict, tuple):
-            raise TypeError(dataset_dict)
+        baseline = dataset_dict["baseline"]
+        dataset_dict["baseline"] = torch.as_tensor(baseline, dtype=torch.float32)
+        dataset_dict["bbox"] = [anno["bbox_l"], anno["bbox_r"]]  # NOTE: original bbox
+        dataset_dict["roi_wh"] = torch.as_tensor(
+            np.array([[bw_l, bh_l], [bw_r, bh_r]], dtype=np.float32)
+        )
+        if scale_l == 0:
+            return ValueError(bbox_xyxy_l, im_W, im_H, dataset_dict['scene_im_id'], inst_infos, 'left')
+        if scale_r == 0:
+            return ValueError(bbox_xyxy_r, im_W, im_H, dataset_dict['scene_im_id'], inst_infos, 'right')
+        resize_ratio_l = out_res / scale_l
+        resize_ratio_r = out_res / scale_r
+        dataset_dict["resize_ratio"] = [resize_ratio_l, resize_ratio_r]
+        z_ratio_l = inst_infos["trans_l"][2] / resize_ratio_l
+        z_ratio_r = inst_infos["trans_r"][2] / resize_ratio_r
+        obj_center_l = anno["centroid_2d_l"]
+        obj_center_r = anno["centroid_2d_r"]
+        delta_c_l = obj_center_l - bbox_center_l
+        delta_c_r = obj_center_r - bbox_center_r
+        trans_ratio_l = torch.as_tensor([delta_c_l[0] / bw_l, delta_c_l[1] / bh_l, z_ratio_l]).to(torch.float32)
+        trans_ratio_r = torch.as_tensor([delta_c_r[0] / bw_r, delta_c_r[1] / bh_r, z_ratio_r]).to(torch.float32)
+        dataset_dict["trans_ratio"] = torch.stack([trans_ratio_l, trans_ratio_r], dim=0)
         return dataset_dict
 
     def smooth_xyz(self, xyz):

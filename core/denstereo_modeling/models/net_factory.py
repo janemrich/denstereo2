@@ -16,6 +16,7 @@ from .heads.fpn_mask_xyz_region_head import FPNMaskXyzRegionHead
 from .heads.top_down_mask_xyz_region_head import TopDownMaskXyzRegionHead
 from .heads.conv_mask_xyz_region_head import ConvMaskXyzRegionHead
 from .heads.conv_pnp_net import ConvPnPNet
+from .heads.conv_pnp_net_stereo import ConvPnPNetStereo
 from .heads.conv_pnp_net_no_region import ConvPnPNetNoRegion
 from .heads.conv_pnp_net_cls import ConvPnPNetCls
 from .heads.point_pnp_net import SimplePointPnPNet
@@ -65,6 +66,7 @@ HEADS = {
     "FPNMaskXyzRegionHead": FPNMaskXyzRegionHead,
     # pnp net
     "ConvPnPNet": ConvPnPNet,
+    "ConvPnPNetStereo": ConvPnPNetStereo,
     "ConvPnPNetNoRegion": ConvPnPNetNoRegion,
     "ConvPnPNetCls": ConvPnPNetCls,
     "SimplePointPnPNet": SimplePointPnPNet,

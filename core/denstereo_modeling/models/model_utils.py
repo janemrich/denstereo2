@@ -212,7 +212,7 @@ def get_pnp_net(cfg):
     pnp_net_init_cfg = copy.deepcopy(pnp_net_cfg.INIT_CFG)
     pnp_head_type = pnp_net_init_cfg.pop("type")
 
-    if pnp_head_type in ["ConvPnPNet", "ConvPnPNetCls"]:
+    if pnp_head_type in ["ConvPnPNet", "ConvPnPNetCls", "ConvPnPNetStereo"]:
         pnp_net_init_cfg.update(
             nIn=pnp_net_in_channel,
             rot_dim=rot_dim,
