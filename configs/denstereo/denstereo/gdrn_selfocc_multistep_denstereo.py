@@ -96,7 +96,7 @@ MODEL = dict(
     PIXEL_MEAN=[0.0, 0.0, 0.0],
     PIXEL_STD=[255.0, 255.0, 255.0],
     POSE_NET=dict(
-        NAME="GDRN",
+        NAME="GDRN_stereo",
         BACKBONE=dict(
             FREEZE=False,
             PRETRAINED="timm",
@@ -143,7 +143,7 @@ MODEL = dict(
             MASK_THR_TEST=0.5,
         ),
         PNP_NET=dict(
-            INIT_CFG=dict(type="ConvPnPNet", norm="GN", act="gelu"),
+            INIT_CFG=dict(type="ConvPnPNetStereo", norm="GN", act="gelu"),
             REGION_ATTENTION=True,
             WITH_2D_COORD=True,
             ROT_TYPE="allo_rot6d",
