@@ -870,9 +870,9 @@ class GDRN_DatasetFromList(Base_DatasetFromList):
             np.array([[bw_l, bh_l], [bw_r, bh_r]], dtype=np.float32)
         )
         if scale_l == 0:
-            return ValueError(bbox_xyxy_l, im_W, im_H, dataset_dict['scene_im_id'], inst_infos, 'left')
+            raise ValueError(bbox_xyxy_l, im_W, im_H, dataset_dict['scene_im_id'], inst_infos, 'left')
         if scale_r == 0:
-            return ValueError(bbox_xyxy_r, im_W, im_H, dataset_dict['scene_im_id'], inst_infos, 'right')
+            raise ValueError(bbox_xyxy_r, im_W, im_H, dataset_dict['scene_im_id'], inst_infos, 'right')
         resize_ratio_l = out_res / scale_l
         resize_ratio_r = out_res / scale_r
         dataset_dict["resize_ratio"] = [resize_ratio_l, resize_ratio_r]
