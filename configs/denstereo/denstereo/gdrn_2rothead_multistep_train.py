@@ -34,7 +34,8 @@ SOLVER = dict(
 
 DATASETS = dict(
     TRAIN=(
-        'denstereo_035_power_drill_train_pbr',
+        'denstereo_002_master_chef_can_train_pbr',
+        # 'denstereo_035_power_drill_train_pbr',
         # 'denstereo_debug_train_pbr_left',
         ),
     # TRAIN2=("denstereo_imgn_13_train_1k_per_obj",),
