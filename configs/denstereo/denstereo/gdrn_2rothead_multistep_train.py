@@ -1,6 +1,6 @@
 _base_ = ["../../_base_/gdrn_base.py"]
 
-OUTPUT_DIR = "output/denstereo/denstero/first"
+OUTPUT_DIR = "output/denstereo/denstereo/first"
 INPUT = dict(
     DZI_PAD_SCALE=1.5,
     COLOR_AUG_PROB=0.0,
@@ -21,7 +21,7 @@ INPUT = dict(
 
 SOLVER = dict(
     IMS_PER_BATCH=80,
-    TOTAL_EPOCHS=700,
+    TOTAL_EPOCHS=100,
     LR_SCHEDULER_NAME="flat_and_anneal",
     ANNEAL_METHOD="cosine",  # "cosine"
     ANNEAL_POINT=0.72,
@@ -34,7 +34,7 @@ SOLVER = dict(
 
 DATASETS = dict(
     TRAIN=(
-        'denstereo_002_master_chef_can_train_pbr',
+        'denstereo_035_power_drill_train_pbr',
         # 'denstereo_debug_train_pbr_left',
         ),
     # TRAIN2=("denstereo_imgn_13_train_1k_per_obj",),
@@ -45,7 +45,7 @@ DATASETS = dict(
         # 'denstereo_single_0_0_1_train_pbr_left',
         # "denstereo_single_0_3_1_train_pbr_left",
         ),
-    DET_FILES_TEST=("datasets/BOP_DATASETS/denstereo/train_pbr_left/bbox.json",),)
+    DET_FILES_TEST=("datasets/BOP_DATASETS/denstereo/test_bboxes/test_pbr_left.json",),)
 
 MODEL = dict(
     LOAD_DETS_TEST=True,
@@ -118,7 +118,7 @@ MODEL = dict(
             # region loss -------------------------
             REGION_LOSS_TYPE="CE",  # CE
             REGION_LOSS_MASK_GT="visib",  # trunc | visib | obj
-            REGION_LW=1.0,
+            REGION_LW=0.0,
             # pm loss --------------
             PM_R_ONLY=True,  # only do R loss in PM
             PM_LW=1.0,
