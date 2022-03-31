@@ -728,7 +728,7 @@ class GDRN(nn.Module):
             region_loss_type = loss_cfg.REGION_LOSS_TYPE
             gt_mask_region = gt_masks[loss_cfg.REGION_LOSS_MASK_GT]
             if region_loss_type == "CE":
-                gt_region = gt_region.long()
+                flat_gt_region = flat_gt_region.long()
                 loss_func = nn.CrossEntropyLoss(reduction="sum", weight=None)  # g_head_cfg.XYZ_BIN+1
                 loss_dict["loss_region"] = loss_func(
                     flat_region * gt_mask_region[:, None], flat_gt_region * gt_mask_region.long()
@@ -783,15 +783,15 @@ class GDRN(nn.Module):
 
             if loss_cfg.CENTROID_LOSS_TYPE == "L1":
                 loss_dict["loss_centroid"] = nn.L1Loss(reduction="mean")(
-                    out_centroid.repeat_interleave(2, dim=0), flat_gt_trans_ratio[:, :2]
+                    out_centroid, gt_trans_ratio[:, gt_id, :2]
                 )
             elif loss_cfg.CENTROID_LOSS_TYPE == "L2":
                 loss_dict["loss_centroid"] = L2Loss(reduction="mean")(
-                    out_centroid.repeat_interleave(2, dim=0), flat_gt_trans_ratio[:, :2]
+                    out_centroid, gt_trans_ratio[:, gt_id, :2]
                 )
             elif loss_cfg.CENTROID_LOSS_TYPE == "MSE":
                 loss_dict["loss_centroid"] = nn.MSELoss(reduction="mean")(
-                    out_centroid.repeat_interleave(2, dim=0), flat_gt_trans_ratio[:, :2]
+                    out_centroid, gt_trans_ratio[:, gt_id, :2]
                 )
             else:
                 raise ValueError(f"Unknown centroid loss type: {loss_cfg.CENTROID_LOSS_TYPE}")
