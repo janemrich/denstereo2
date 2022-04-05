@@ -1,6 +1,6 @@
 _base_ = ["../../_base_/gdrn_base.py"]
 
-OUTPUT_DIR = "output/denstereo/denstereo/first"
+OUTPUT_DIR = "output/denstereo/denstereo/low_region_lr"
 INPUT = dict(
     DZI_PAD_SCALE=1.5,
     COLOR_AUG_PROB=0.0,
@@ -21,7 +21,7 @@ INPUT = dict(
 
 SOLVER = dict(
     IMS_PER_BATCH=80,
-    TOTAL_EPOCHS=50,
+    TOTAL_EPOCHS=100,
     LR_SCHEDULER_NAME="flat_and_anneal",
     ANNEAL_METHOD="cosine",  # "cosine"
     ANNEAL_POINT=0.72,
@@ -119,7 +119,7 @@ MODEL = dict(
             # region loss -------------------------
             REGION_LOSS_TYPE="CE",  # CE
             REGION_LOSS_MASK_GT="visib",  # trunc | visib | obj
-            REGION_LW=1.0,
+            REGION_LW=0.005,
             # pm loss --------------
             PM_R_ONLY=True,  # only do R loss in PM
             PM_LW=1.0,
