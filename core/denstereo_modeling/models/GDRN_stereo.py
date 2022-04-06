@@ -732,13 +732,13 @@ class GDRN(nn.Module):
         # roi region loss --------------------
         if not g_head_cfg.FREEZE:
             region_loss_type = loss_cfg.REGION_LOSS_TYPE
-            gt_mask_region = unflat_gt_masks[loss_cfg.REGION_LOSS_MASK_GT]
+            gt_mask_region = gt_masks[loss_cfg.REGION_LOSS_MASK_GT]
             if region_loss_type == "CE":
-                gt_region = gt_region.long()
+                flat_gt_region = flat_gt_region.long()
                 loss_func = nn.CrossEntropyLoss(reduction="sum", weight=None)  # g_head_cfg.XYZ_BIN+1
                 loss_dict["loss_region"] = loss_func(
-                    flat_region[::2] * gt_mask_region[:, gt_id, None], gt_region[:, gt_id] * gt_mask_region[:, gt_id].long()
-                ) / (gt_mask_region[:, gt_id].sum().float().clamp(min=1.0) * out_region.shape[0] * out_region.shape[-1])
+                    flat_region * gt_mask_region[:, None], flat_gt_region * gt_mask_region.long()
+                ) / (gt_mask_region.sum().float().clamp(min=1.0) * flat_region.shape[0] * flat_region.shape[-1])
             else:
                 raise NotImplementedError(f"unknown region loss type: {region_loss_type}")
             loss_dict["loss_region"] *= loss_cfg.REGION_LW
