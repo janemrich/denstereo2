@@ -732,22 +732,30 @@ class GDRN_DatasetFromList(Base_DatasetFromList):
         roi_xyz_r = roi_xyz_r.transpose(2, 0, 1)  # HWC-->CHW
         # normalize xyz to [0, 1] using extent
         roi_xyz_l[0] = roi_xyz_l[0] / roi_extent[0] + 0.5
-        roi_xyz_r[1] = roi_xyz_r[1] / roi_extent[1] + 0.5
+        roi_xyz_l[1] = roi_xyz_l[1] / roi_extent[1] + 0.5
         roi_xyz_l[2] = roi_xyz_l[2] / roi_extent[2] + 0.5
+
+        roi_xyz_r[0] = roi_xyz_r[0] / roi_extent[0] + 0.5
+        roi_xyz_r[1] = roi_xyz_r[1] / roi_extent[1] + 0.5
         roi_xyz_r[2] = roi_xyz_r[2] / roi_extent[2] + 0.5
 
         roi_Q0_l = roi_Q0_l.transpose(2, 0, 1)  # HWC-->CHW
         roi_Q0_r = roi_Q0_r.transpose(2, 0, 1)  # HWC-->CHW
         roi_Q0_l[0] = roi_Q0_l[0] / roi_extent[1] + 0.5
         roi_Q0_r[0] = roi_Q0_r[0] / roi_extent[1] + 0.5
+
         roi_Q0_l[1] = roi_Q0_l[1] / roi_extent[2] + 0.5
         roi_Q0_r[1] = roi_Q0_r[1] / roi_extent[2] + 0.5
+
         roi_Q0_l[2] = roi_Q0_l[2] / roi_extent[0] + 0.5
         roi_Q0_r[2] = roi_Q0_r[2] / roi_extent[0] + 0.5
+
         roi_Q0_l[3] = roi_Q0_l[3] / roi_extent[2] + 0.5
         roi_Q0_r[3] = roi_Q0_r[3] / roi_extent[2] + 0.5
+
         roi_Q0_l[4] = roi_Q0_l[4] / roi_extent[0] + 0.5
         roi_Q0_r[4] = roi_Q0_r[4] / roi_extent[0] + 0.5
+
         roi_Q0_l[5] = roi_Q0_l[5] / roi_extent[1] + 0.5
         roi_Q0_r[5] = roi_Q0_r[5] / roi_extent[1] + 0.5
 
