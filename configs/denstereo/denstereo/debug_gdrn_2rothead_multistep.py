@@ -1,6 +1,6 @@
 _base_ = ["../../_base_/gdrn_base.py"]
 
-OUTPUT_DIR = "output/gdrn_selfocc/denstero/mm_r50v1d_a6_cPnP_GN_gelu_denstereo13"
+OUTPUT_DIR = "output/denstereo/denstereo/debug"
 INPUT = dict(
     DZI_PAD_SCALE=1.5,
     COLOR_AUG_PROB=0.0,
@@ -20,8 +20,8 @@ INPUT = dict(
 )
 
 SOLVER = dict(
-    IMS_PER_BATCH=2,
-    TOTAL_EPOCHS=1,
+    IMS_PER_BATCH=3,
+    TOTAL_EPOCHS=1000,
     LR_SCHEDULER_NAME="flat_and_anneal",
     ANNEAL_METHOD="cosine",  # "cosine"
     ANNEAL_POINT=0.72,
@@ -29,12 +29,16 @@ SOLVER = dict(
     OPTIMIZER_CFG=dict(_delete_=True, type="Ranger", lr=1e-4, weight_decay=0),
     WEIGHT_DECAY=0.0,
     WARMUP_FACTOR=0.001,
-    WARMUP_ITERS=1000,
+    # WARMUP_ITERS=1000,
+    WARMUP_ITERS=1,
 )
 
 DATASETS = dict(
     TRAIN=(
-        'denstereo_002_master_chef_can_train_pbr',
+        'denstereo_single_0_0_12_stereo',
+        'denstereo_single_0_0_12_stereo',
+        'denstereo_single_0_0_12_stereo',
+        # 'denstereo_002_master_chef_can_train_pbr',
         # 'denstereo_debug_train_pbr_left',
         ),
     # TRAIN2=("denstereo_imgn_13_train_1k_per_obj",),
@@ -53,9 +57,10 @@ MODEL = dict(
     PIXEL_STD=[255.0, 255.0, 255.0],
     POSE_NET=dict(
         NAME="GDRN_stereo",
+        # NAME="GDRN",
         BACKBONE=dict(
             FREEZE=False,
-            PRETRAINED="mmcls://resnet50_v1d",
+            PRETRAINED="",
             INIT_CFG=dict(
                 _delete_=True,
                 type="mm/ResNetV1d",
@@ -99,7 +104,8 @@ MODEL = dict(
             MASK_THR_TEST=0.5,
         ),
         PNP_NET=dict(
-            INIT_CFG=dict(type="ConvPnPNet", norm="GN", act="gelu"),
+            INIT_CFG=dict(type="ConvPnPNetStereo", norm="GN", act="gelu"),
+            # INIT_CFG=dict(type="ConvPnPNet", norm="GN", act="gelu"),
             REGION_ATTENTION=True,
             WITH_2D_COORD=True,
             ROT_TYPE="allo_rot6d",
