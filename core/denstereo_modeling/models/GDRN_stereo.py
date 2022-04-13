@@ -270,9 +270,9 @@ class GDRN(nn.Module):
                 pred_centroids=pred_t_[:, :2],
                 pred_z_vals=pred_t_[:, 2:3],  # must be [B, 1]
                 roi_cams=roi_cams,
-                roi_centers=roi_centers[:, gt_id, :],
-                resize_ratios=resize_ratios[:, gt_id],
-                roi_whs=roi_whs[:, gt_id, :],
+                roi_centers=roi_centers,
+                resize_ratios=resize_ratios,
+                roi_whs=roi_whs,
                 eps=1e-4,
                 is_allo="allo" in rot_type,
                 z_type=pnp_net_cfg.Z_TYPE,
@@ -738,8 +738,7 @@ class GDRN(nn.Module):
                 loss_func = nn.CrossEntropyLoss(reduction="sum", weight=None)  # g_head_cfg.XYZ_BIN+1
                 loss_dict["loss_region"] = loss_func(
                     flat_region * gt_mask_region[:, None], flat_gt_region * gt_mask_region.long()
-                ) / (gt_mask_region.sum().float().clamp(min=1.0))
-                # ) / (gt_mask_region.sum().float().clamp(min=1.0) * flat_region.shape[0] * flat_region.shape[-1])
+                ) / (gt_mask_region.sum().float().clamp(min=1.0) * flat_region.shape[-1])
             else:
                 raise NotImplementedError(f"unknown region loss type: {region_loss_type}")
             loss_dict["loss_region"] *= loss_cfg.REGION_LW

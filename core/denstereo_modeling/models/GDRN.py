@@ -575,7 +575,7 @@ class GDRN(nn.Module):
                 loss_func = nn.CrossEntropyLoss(reduction="sum", weight=None)  # g_head_cfg.XYZ_BIN+1
                 loss_dict["loss_region"] = loss_func(
                     out_region * gt_mask_region[:, None], gt_region * gt_mask_region.long()
-                ) / (gt_mask_region.sum().float().clamp(min=1.0) * out_region.shape[0] * out_region.shape[-1])
+                ) / (gt_mask_region.sum().float().clamp(min=1.0) * out_region.shape[-1])
             else:
                 raise NotImplementedError(f"unknown region loss type: {region_loss_type}")
             loss_dict["loss_region"] *= loss_cfg.REGION_LW
