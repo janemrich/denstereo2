@@ -43,7 +43,7 @@ DATASETS = dict(
     # TRAIN2_RATIO=0.75,
     TEST=(
         # 'denstereo_debug_002_master_chef_can_train_pbr',
-        'denstereo_test_pbr_stereo',
+        'denstereo_test_pbr',
         # 'denstereo_single_0_0_1_train_pbr_left',
         # "denstereo_single_0_3_1_train_pbr_left",
         ),
