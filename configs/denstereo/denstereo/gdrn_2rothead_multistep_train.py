@@ -20,7 +20,7 @@ INPUT = dict(
 )
 
 SOLVER = dict(
-    IMS_PER_BATCH=80,
+    IMS_PER_BATCH=64,
     TOTAL_EPOCHS=100,
     LR_SCHEDULER_NAME="flat_and_anneal",
     ANNEAL_METHOD="cosine",  # "cosine"
@@ -52,11 +52,12 @@ MODEL = dict(
     LOAD_DETS_TEST=True,
     PIXEL_MEAN=[0.0, 0.0, 0.0],
     PIXEL_STD=[255.0, 255.0, 255.0],
+    STEREO=True,
     POSE_NET=dict(
         NAME="GDRN_stereo",
         BACKBONE=dict(
-            FREEZE=False,
-            PRETRAINED="",
+            FREEZE=True,
+            PRETRAINED="mmcls://resnet50_v1d",
             INIT_CFG=dict(
                 _delete_=True,
                 type="mm/ResNetV1d",
@@ -119,7 +120,7 @@ MODEL = dict(
             # region loss -------------------------
             REGION_LOSS_TYPE="CE",  # CE
             REGION_LOSS_MASK_GT="visib",  # trunc | visib | obj
-            REGION_LW=1.0,
+            REGION_LW=0.2,
             # pm loss --------------
             PM_R_ONLY=True,  # only do R loss in PM
             PM_LW=1.0,

@@ -61,9 +61,11 @@ def transform_instance_annotations(annotation, transforms, image_size, *, keypoi
     im_H, im_W = image_size
     bbox_l = BoxMode.convert(annotation["bbox_l"], annotation["bbox_mode"], BoxMode.XYXY_ABS)
     bbox_r = BoxMode.convert(annotation["bbox_r"], annotation["bbox_mode"], BoxMode.XYXY_ABS)
+    bbox = BoxMode.convert(annotation["bbox"], annotation["bbox_mode"], BoxMode.XYXY_ABS)
     # Note that bbox is 1d (per-instance bounding box)
     annotation["bbox_l"] = np.array(transforms.apply_box([bbox_l])[0])
     annotation["bbox_r"] = np.array(transforms.apply_box([bbox_r])[0])
+    annotation["bbox"] = np.array(transforms.apply_box([bbox])[0])
     annotation["bbox_mode"] = BoxMode.XYXY_ABS
 
     if "segmentation_l" in annotation:
@@ -393,12 +395,8 @@ class GDRN_DatasetFromList(Base_DatasetFromList):
             test_bbox_type = cfg.TEST.TEST_BBOX_TYPE
             if test_bbox_type == "gt":
                 bbox_key = "bbox"
-                bbox_key_l = "bbox_l"
-                bbox_key_r = "bbox_r"
             else:
                 bbox_key = f"bbox_{test_bbox_type}"
-                bbox_key_l = f"bbox_l_{test_bbox_type}"
-                bbox_key_r = f"bbox_r_{test_bbox_type}"
             assert not self.flatten, "Do not use flattened dicts for test!"
             # here get batched rois
             roi_infos = {}
@@ -453,50 +451,36 @@ class GDRN_DatasetFromList(Base_DatasetFromList):
                 roi_extent = self._get_extents(dataset_name)[roi_cls]
                 roi_infos["roi_extent"].append(roi_extent)
 
-                bbox_l = BoxMode.convert(
-                    inst_infos[bbox_key_l],
+                bbox = BoxMode.convert(
+                    inst_infos[bbox_key],
                     inst_infos["bbox_mode"],
                     BoxMode.XYXY_ABS
                 )
-                bbox_r = BoxMode.convert(
-                    inst_infos[bbox_key_r],
-                    inst_infos["bbox_mode"],
-                    BoxMode.XYXY_ABS
-                )
-                bbox_l = np.array(transforms.apply_box([bbox_l])[0])
-                bbox_r = np.array(transforms.apply_box([bbox_r])[0])
-                roi_infos[bbox_key].append(np.stack([bbox_l, bbox_r], axis=0))
+                bbox = np.array(transforms.apply_box([bbox])[0])
+                roi_infos[bbox_key].append(bbox)
                 roi_infos["bbox_mode"].append(BoxMode.XYXY_ABS)
 
-                x1, y1, x2, y2 = bbox_l
-                bbox_center_l = np.array([0.5 * (x1 + x2), 0.5 * (y1 + y2)], dtype=np.float32)
-                bw_l = max(x2 - x1, 1)
-                bh_l = max(y2 - y1, 1)
-                scale_l = max(bh_l, bw_l) * cfg.INPUT.DZI_PAD_SCALE
-                scale_l = min(scale_l, max(im_H, im_W)) * 1.0
+                x1, y1, x2, y2 = bbox
+                bbox_center = np.array([0.5 * (x1 + x2), 0.5 * (y1 + y2)], dtype=np.float32)
+                bw = max(x2 - x1, 1)
+                bh = max(y2 - y1, 1)
+                scale = max(bh, bw) * cfg.INPUT.DZI_PAD_SCALE
+                scale = min(scale, max(im_H, im_W)) * 1.0
 
-                x1, y1, x2, y2 = bbox_r
-                bbox_center_r = np.array([0.5 * (x1 + x2), 0.5 * (y1 + y2)], dtype=np.float32)
-                bw_r = max(x2 - x1, 1)
-                bh_r = max(y2 - y1, 1)
-                scale_r = max(bh_r, bw_r) * cfg.INPUT.DZI_PAD_SCALE
-                scale_r = min(scale_r, max(im_H, im_W)) * 1.0
-                roi_infos["bbox_center"].append(
-                    np.stack([bbox_center_l, bbox_center_r], axis=0)
-                )
-                roi_infos["scale"].append([scale_l, scale_r])
+                roi_infos["bbox_center"].append(bbox_center)
+                roi_infos["scale"].append(scale)
                 roi_infos["roi_wh"].append(
-                    np.array([[bw_l, bh_l], [bw_r, bh_r]], dtype=np.float32)
+                    np.array([bw, bh], dtype=np.float32)
                 )
-                roi_infos["resize_ratio"].append([out_res / scale_l, out_res / scale_r])
+                roi_infos["resize_ratio"].append(out_res / scale)
 
                 # CHW, float32 tensor
                 # roi_image
                 roi_img_l = crop_resize_by_warp_affine(
-                    image_l, bbox_center_l, scale_l, input_res, interpolation=cv2.INTER_LINEAR
+                    image_l, bbox_center, scale, input_res, interpolation=cv2.INTER_LINEAR
                 ).transpose(2, 0, 1)
                 roi_img_r = crop_resize_by_warp_affine(
-                    image_r, bbox_center_r, scale_r, input_res, interpolation=cv2.INTER_LINEAR
+                    image_r, bbox_center, scale, input_res, interpolation=cv2.INTER_LINEAR
                 ).transpose(2, 0, 1)
 
                 roi_img_l = self.normalize_image(cfg, roi_img_l)
@@ -507,12 +491,12 @@ class GDRN_DatasetFromList(Base_DatasetFromList):
 
                 # roi_coord_2d
                 roi_coord_2d_l = crop_resize_by_warp_affine(
-                    coord_2d_l, bbox_center_l, scale_l, out_res, interpolation=cv2.INTER_LINEAR
+                    coord_2d_l, bbox_center, scale, out_res, interpolation=cv2.INTER_LINEAR
                 ).transpose(
                     2, 0, 1
                 )  # HWC -> CHW
                 roi_coord_2d_r = crop_resize_by_warp_affine(
-                    coord_2d_r, bbox_center_r, scale_r, out_res, interpolation=cv2.INTER_LINEAR
+                    coord_2d_r, bbox_center, scale, out_res, interpolation=cv2.INTER_LINEAR
                 ).transpose(
                     2, 0, 1
                 )  # HWC -> CHW
@@ -578,6 +562,11 @@ class GDRN_DatasetFromList(Base_DatasetFromList):
         Q0_l = np.zeros((im_H, im_W, 6), dtype=np.float32)
         Q0_r = np.zeros((im_H, im_W, 6), dtype=np.float32)
 
+        # merge bboxes
+        x1_l, y1_l, x2_l, y2_l = occ_info_l['xyxy']
+        x1_r, y1_r, x2_r, y2_r = occ_info_r['xyxy']
+        inst_infos["bbox"] = [min(x1_l, x1_r), min(y1_l, y1_r), max(x2_l, x2_r), max(y2_l, y2_r)]
+        
         x1, y1, x2, y2 = occ_info_l['xyxy']
         # override bbox info using xyz_infos
         inst_infos["bbox_l"] = [x1, y1, x2, y2]
@@ -615,22 +604,18 @@ class GDRN_DatasetFromList(Base_DatasetFromList):
         anno = transform_instance_annotations(inst_infos, transforms, image_shape, keypoint_hflip_indices=None)
 
         # augment bbox ===================================================
-        bbox_xyxy_l = anno["bbox_l"]
-        bbox_xyxy_r = anno["bbox_r"]
-        bbox_center_l, scale_l = self.aug_bbox_DZI(cfg, bbox_xyxy_l, im_H, im_W)
-        bbox_center_r, scale_r = self.aug_bbox_DZI(cfg, bbox_xyxy_r, im_H, im_W)
-        bw_l = max(bbox_xyxy_l[2] - bbox_xyxy_l[0], 1)
-        bw_r = max(bbox_xyxy_r[2] - bbox_xyxy_r[0], 1)
-        bh_l = max(bbox_xyxy_l[3] - bbox_xyxy_l[1], 1)
-        bh_r = max(bbox_xyxy_r[3] - bbox_xyxy_r[1], 1)
+        bbox_xyxy = anno["bbox"]
+        bbox_center, scale = self.aug_bbox_DZI(cfg, bbox_xyxy, im_H, im_W)
+        bh = max(bbox_xyxy[3] - bbox_xyxy[1], 1)
+        bw = max(bbox_xyxy[2] - bbox_xyxy[0], 1)
 
         # CHW, float32 tensor
         ## roi_image ------------------------------------
         roi_img_l = crop_resize_by_warp_affine(
-            image_l, bbox_center_l, scale_l, input_res, interpolation=cv2.INTER_LINEAR
+            image_l, bbox_center, scale, input_res, interpolation=cv2.INTER_LINEAR
         ).transpose(2, 0, 1)
         roi_img_r = crop_resize_by_warp_affine(
-            image_r, bbox_center_r, scale_r, input_res, interpolation=cv2.INTER_LINEAR
+            image_r, bbox_center, scale, input_res, interpolation=cv2.INTER_LINEAR
         ).transpose(2, 0, 1)
 
         roi_img_l = self.normalize_image(cfg, roi_img_l)
@@ -638,10 +623,10 @@ class GDRN_DatasetFromList(Base_DatasetFromList):
 
         # roi_coord_2d ----------------------------------------------------
         roi_coord_2d_l = crop_resize_by_warp_affine(
-            coord_2d_l, bbox_center_l, scale_l, out_res, interpolation=cv2.INTER_NEAREST
+            coord_2d_l, bbox_center, scale, out_res, interpolation=cv2.INTER_NEAREST
         ).transpose(2, 0, 1)
         roi_coord_2d_r = crop_resize_by_warp_affine(
-            coord_2d_r, bbox_center_r, scale_r, out_res, interpolation=cv2.INTER_NEAREST
+            coord_2d_r, bbox_center, scale, out_res, interpolation=cv2.INTER_NEAREST
         ).transpose(2, 0, 1)
 
         ## roi_mask ---------------------------------------
@@ -662,51 +647,51 @@ class GDRN_DatasetFromList(Base_DatasetFromList):
 
         # maybe truncated mask (true mask for rgb)
         roi_mask_trunc_l = crop_resize_by_warp_affine(
-            mask_trunc_l[:, :, None], bbox_center_l, scale_l, out_res, interpolation=mask_xyz_interp
+            mask_trunc_l[:, :, None], bbox_center, scale, out_res, interpolation=mask_xyz_interp
         )
         roi_mask_trunc_r = crop_resize_by_warp_affine(
-            mask_trunc_r[:, :, None], bbox_center_r, scale_r, out_res, interpolation=mask_xyz_interp
+            mask_trunc_r[:, :, None], bbox_center, scale, out_res, interpolation=mask_xyz_interp
         )
 
         # use original visible mask to calculate xyz loss (try full obj mask?)
         roi_mask_visib_l = crop_resize_by_warp_affine(
-            mask_visib_l[:, :, None], bbox_center_l, scale_l, out_res, interpolation=mask_xyz_interp
+            mask_visib_l[:, :, None], bbox_center, scale, out_res, interpolation=mask_xyz_interp
         )
         roi_mask_visib_r = crop_resize_by_warp_affine(
-            mask_visib_r[:, :, None], bbox_center_r, scale_r, out_res, interpolation=mask_xyz_interp
+            mask_visib_r[:, :, None], bbox_center, scale, out_res, interpolation=mask_xyz_interp
         )
 
         roi_mask_obj_l = crop_resize_by_warp_affine(
-            mask_obj_l[:, :, None], bbox_center_l, scale_l, out_res, interpolation=mask_xyz_interp
+            mask_obj_l[:, :, None], bbox_center, scale, out_res, interpolation=mask_xyz_interp
         )
         roi_mask_obj_r = crop_resize_by_warp_affine(
-            mask_obj_r[:, :, None], bbox_center_r, scale_r, out_res, interpolation=mask_xyz_interp
+            mask_obj_r[:, :, None], bbox_center, scale, out_res, interpolation=mask_xyz_interp
         )
 
         roi_mask_obj_erode_l = crop_resize_by_warp_affine(
-            mask_obj_erode_l[:, :, None], bbox_center_l, scale_l, out_res, interpolation=mask_xyz_interp
+            mask_obj_erode_l[:, :, None], bbox_center, scale, out_res, interpolation=mask_xyz_interp
         )
         roi_mask_obj_erode_r = crop_resize_by_warp_affine(
-            mask_obj_erode_r[:, :, None], bbox_center_r, scale_r, out_res, interpolation=mask_xyz_interp
+            mask_obj_erode_r[:, :, None], bbox_center, scale, out_res, interpolation=mask_xyz_interp
         )
         # process occmask
         roi_occmask_x_l = crop_resize_by_warp_affine(
-            occmask_x_l[:, :, None], bbox_center_l, scale_l, out_res, interpolation=mask_xyz_interp
+            occmask_x_l[:, :, None], bbox_center, scale, out_res, interpolation=mask_xyz_interp
         )
         roi_occmask_x_r = crop_resize_by_warp_affine(
-            occmask_x_r[:, :, None], bbox_center_r, scale_r, out_res, interpolation=mask_xyz_interp
+            occmask_x_r[:, :, None], bbox_center, scale, out_res, interpolation=mask_xyz_interp
         )
         roi_occmask_y_l = crop_resize_by_warp_affine(
-            occmask_y_l[:, :, None], bbox_center_l, scale_l, out_res, interpolation=mask_xyz_interp
+            occmask_y_l[:, :, None], bbox_center, scale, out_res, interpolation=mask_xyz_interp
         )
         roi_occmask_y_r = crop_resize_by_warp_affine(
-            occmask_y_r[:, :, None], bbox_center_r, scale_l, out_res, interpolation=mask_xyz_interp
+            occmask_y_r[:, :, None], bbox_center, scale, out_res, interpolation=mask_xyz_interp
         )
         roi_occmask_z_l = crop_resize_by_warp_affine(
-            occmask_z_l[:, :, None], bbox_center_l, scale_l, out_res, interpolation=mask_xyz_interp
+            occmask_z_l[:, :, None], bbox_center, scale, out_res, interpolation=mask_xyz_interp
         )
         roi_occmask_z_r = crop_resize_by_warp_affine(
-            occmask_z_r[:, :, None], bbox_center_r, scale_r, out_res, interpolation=mask_xyz_interp
+            occmask_z_r[:, :, None], bbox_center, scale, out_res, interpolation=mask_xyz_interp
         )
         roi_occmask_l = np.dstack([roi_occmask_x_l, roi_occmask_y_l, roi_occmask_z_l])
         roi_occmask_r = np.dstack([roi_occmask_x_r, roi_occmask_y_r, roi_occmask_z_r])
@@ -714,10 +699,10 @@ class GDRN_DatasetFromList(Base_DatasetFromList):
         roi_occmask_r = roi_occmask_r.transpose(2, 0, 1)
 
         ## roi_xyz ----------------------------------------------------
-        roi_xyz_l = crop_resize_by_warp_affine(xyz_l, bbox_center_l, scale_l, out_res, interpolation=mask_xyz_interp)
-        roi_xyz_r = crop_resize_by_warp_affine(xyz_r, bbox_center_r, scale_r, out_res, interpolation=mask_xyz_interp)
-        roi_Q0_l = crop_resize_by_warp_affine(Q0_l, bbox_center_l, scale_l, out_res, interpolation=mask_xyz_interp)
-        roi_Q0_r = crop_resize_by_warp_affine(Q0_r, bbox_center_r, scale_r, out_res, interpolation=mask_xyz_interp)
+        roi_xyz_l = crop_resize_by_warp_affine(xyz_l, bbox_center, scale, out_res, interpolation=mask_xyz_interp)
+        roi_xyz_r = crop_resize_by_warp_affine(xyz_r, bbox_center, scale, out_res, interpolation=mask_xyz_interp)
+        roi_Q0_l = crop_resize_by_warp_affine(Q0_l, bbox_center, scale, out_res, interpolation=mask_xyz_interp)
+        roi_Q0_r = crop_resize_by_warp_affine(Q0_r, bbox_center, scale, out_res, interpolation=mask_xyz_interp)
         # region label
         if g_head_cfg.NUM_REGIONS > 1:
             fps_points = self._get_fps_points(dataset_name)[roi_cls]
@@ -865,33 +850,26 @@ class GDRN_DatasetFromList(Base_DatasetFromList):
             np.stack([roi_occmask_l, roi_occmask_r], axis=0).astype("float32")
         ).contiguous()
 
-        dataset_dict["bbox_center"] = torch.as_tensor(
-            np.stack([bbox_center_l, bbox_center_r], axis=0), dtype=torch.float32
-        )
-        dataset_dict["scale"] = [scale_l, scale_r]
+        dataset_dict["bbox_center"] = torch.as_tensor(bbox_center, dtype=torch.float32)
+        dataset_dict["scale"] = scale
         dataset_dict["im_W"] = torch.as_tensor(im_W, dtype=torch.float32)
         dataset_dict["im_H"] = torch.as_tensor(im_H, dtype=torch.float32)
         baseline = dataset_dict["baseline"]
         dataset_dict["baseline"] = torch.as_tensor(baseline, dtype=torch.float32)
         dataset_dict["bbox"] = [anno["bbox_l"], anno["bbox_r"]]  # NOTE: original bbox
-        dataset_dict["roi_wh"] = torch.as_tensor(
-            np.array([[bw_l, bh_l], [bw_r, bh_r]], dtype=np.float32)
-        )
-        if scale_l == 0:
-            raise ValueError(bbox_xyxy_l, im_W, im_H, dataset_dict['scene_im_id'], inst_infos, 'left')
-        if scale_r == 0:
-            raise ValueError(bbox_xyxy_r, im_W, im_H, dataset_dict['scene_im_id'], inst_infos, 'right')
-        resize_ratio_l = out_res / scale_l
-        resize_ratio_r = out_res / scale_r
-        dataset_dict["resize_ratio"] = [resize_ratio_l, resize_ratio_r]
-        z_ratio_l = inst_infos["trans_l"][2] / resize_ratio_l
-        z_ratio_r = inst_infos["trans_r"][2] / resize_ratio_r
+        dataset_dict["roi_wh"] = torch.as_tensor(np.array([bw, bh], dtype=np.float32))
+        if scale == 0:
+            raise ValueError(bbox_xyxy, im_W, im_H, dataset_dict['scene_im_id'], inst_infos, 'right')
+        resize_ratio = out_res / scale
+        dataset_dict["resize_ratio"] = resize_ratio
+        z_ratio_l = inst_infos["trans_l"][2] / resize_ratio
+        z_ratio_r = inst_infos["trans_r"][2] / resize_ratio
         obj_center_l = anno["centroid_2d_l"]
         obj_center_r = anno["centroid_2d_r"]
-        delta_c_l = obj_center_l - bbox_center_l
-        delta_c_r = obj_center_r - bbox_center_r
-        trans_ratio_l = torch.as_tensor([delta_c_l[0] / bw_l, delta_c_l[1] / bh_l, z_ratio_l]).to(torch.float32)
-        trans_ratio_r = torch.as_tensor([delta_c_r[0] / bw_r, delta_c_r[1] / bh_r, z_ratio_r]).to(torch.float32)
+        delta_c_l = obj_center_l - bbox_center
+        delta_c_r = obj_center_r - bbox_center
+        trans_ratio_l = torch.as_tensor([delta_c_l[0] / bw, delta_c_l[1] / bh, z_ratio_l]).to(torch.float32)
+        trans_ratio_r = torch.as_tensor([delta_c_r[0] / bw, delta_c_r[1] / bh, z_ratio_r]).to(torch.float32)
         dataset_dict["trans_ratio"] = torch.stack([trans_ratio_l, trans_ratio_r], dim=0)
         return dataset_dict
 
