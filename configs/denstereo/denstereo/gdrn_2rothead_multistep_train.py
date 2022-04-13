@@ -34,7 +34,8 @@ SOLVER = dict(
 
 DATASETS = dict(
     TRAIN=(
-        'denstereo_035_power_drill_train_pbr',
+        'denstereo_002_master_chef_can_train_pbr',
+        # 'denstereo_035_power_drill_train_pbr',
         # 'denstereo_035_power_drill_train_pbr',
         # 'denstereo_debug_train_pbr_left',
         ),
@@ -42,11 +43,11 @@ DATASETS = dict(
     # TRAIN2_RATIO=0.75,
     TEST=(
         # 'denstereo_debug_002_master_chef_can_train_pbr',
-        'denstereo_debug_train_pbr_left',
+        'denstereo_test_pbr_stereo',
         # 'denstereo_single_0_0_1_train_pbr_left',
         # "denstereo_single_0_3_1_train_pbr_left",
         ),
-    DET_FILES_TEST=("datasets/BOP_DATASETS/denstereo/test_bboxes/test_pbr_left.json",),)
+    DET_FILES_TEST=("datasets/BOP_DATASETS/denstereo/test_bboxes/test_pbr_stereo.json",),)
 
 MODEL = dict(
     LOAD_DETS_TEST=True,
