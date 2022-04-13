@@ -188,7 +188,7 @@ class GDRN_EvaluatorCustom(DatasetEvaluator):
             start_process_time = time.perf_counter()
             for inst_i in range(len(_input["roi_img"])):
                 out_i += 1
-                file_name = _input["file_name_l"][inst_i]
+                file_name = _input["file_name"][inst_i]
 
                 scene_im_id_split = _input["scene_im_id"][inst_i].split("/")
                 K = _input["cam"][inst_i].cpu().numpy().copy()
@@ -208,7 +208,7 @@ class GDRN_EvaluatorCustom(DatasetEvaluator):
 
                 if cfg.DEBUG:  # visualize pose
                     pose_est = np.hstack([rot_est, trans_est.reshape(3, 1)])
-                    file_name = _input["file_name_l"][inst_i]
+                    file_name = _input["file_name"][inst_i]
 
                     if f"{int(scene_id)}/{im_id}" != "9/499":
                         continue
@@ -572,13 +572,13 @@ class GDRN_EvaluatorCustom(DatasetEvaluator):
         dataset_dicts = DatasetCatalog.get(self.dataset_name)
         self._logger.info("load gts of {}".format(self.dataset_name))
         for im_dict in tqdm(dataset_dicts):
-            file_name = im_dict["file_name_l"]
+            file_name = im_dict["file_name"]
             annos = im_dict["annotations"]
             K = im_dict["cam"]
             for anno in annos:
-                quat = anno["quat_l"]
+                quat = anno["quat"]
                 R = quat2mat(quat)
-                trans = anno["trans_l"]
+                trans = anno["trans"]
                 obj_name = self._metadata.objs[anno["category_id"]]
                 if obj_name not in self.gts:
                     self.gts[obj_name] = OrderedDict()
