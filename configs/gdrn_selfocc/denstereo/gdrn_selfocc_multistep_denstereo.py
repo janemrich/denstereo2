@@ -4,9 +4,10 @@ _base_ = ["../../_base_/gdrn_base.py"]
 OUTPUT_DIR = "output/gdrn_selfocc/denstereo/14-4"
 INPUT = dict(
     DZI_PAD_SCALE=1.5,
-    TRUNCATE_FG=True,
-    CHANGE_BG_PROB=0.5,
-    COLOR_AUG_PROB=0.8,
+    COLOR_AUG_PROB=0.0,
+    # TRUNCATE_FG=True,
+    # CHANGE_BG_PROB=0.5,
+    # COLOR_AUG_PROB=0.8,
     COLOR_AUG_TYPE="code",
     COLOR_AUG_CODE=(
         "Sequential(["
