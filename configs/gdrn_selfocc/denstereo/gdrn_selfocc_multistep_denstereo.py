@@ -1,7 +1,7 @@
 # about 3 days
 _base_ = ["../../_base_/gdrn_base.py"]
 
-OUTPUT_DIR = "output/gdrn_selfocc/denstereo/pbr_13e"
+OUTPUT_DIR = "output/gdrn_selfocc/denstereo/14-4"
 INPUT = dict(
     DZI_PAD_SCALE=1.5,
     TRUNCATE_FG=True,
@@ -26,8 +26,8 @@ INPUT = dict(
 )
 
 SOLVER = dict(
-    IMS_PER_BATCH=8,
-    TOTAL_EPOCHS=240,
+    IMS_PER_BATCH=64,
+    TOTAL_EPOCHS=200,
     LR_SCHEDULER_NAME="flat_and_anneal",
     ANNEAL_METHOD="cosine",  # "cosine"
     ANNEAL_POINT=0.72,
@@ -98,14 +98,14 @@ MODEL = dict(
     POSE_NET=dict(
         NAME="GDRN",
         BACKBONE=dict(
-            FREEZE=False,
-            PRETRAINED="timm",
+            FREEZE=True,
+            PRETRAINED="mmcls://resnet50_v1d",
             INIT_CFG=dict(
-                type="timm/resnest50d",
-                pretrained=True,
-                in_chans=3,
-                features_only=True,
-                out_indices=(4,),
+                _delete_=True,
+                type="mm/ResNetV1d",
+                depth=50,
+                in_channels=3,
+                out_indices=(3,),
             ),
         ),
         ## geo head: Mask, XYZ, Region
@@ -161,7 +161,7 @@ MODEL = dict(
             # region loss -------------------------
             REGION_LOSS_TYPE="CE",  # CE
             REGION_LOSS_MASK_GT="erode",  # trunc | visib | obj |erode
-            REGION_LW=0.01,
+            REGION_LW=0.4,
             # pm loss --------------
             PM_R_ONLY=True,  # only do R loss in PM
             PM_LW=1.0,
@@ -181,10 +181,6 @@ MODEL = dict(
             CT_P_LW=1.0,
             # occlusion mask loss weight
             OCC_LW=0.0,
-            PM_NORM_BY_EXTENT=True,
-            PM_LOSS_SYM=True,
-            # Q direction
-            QD_LW=0.0,
             #
             HANDLE_SYM=False,
         ),
