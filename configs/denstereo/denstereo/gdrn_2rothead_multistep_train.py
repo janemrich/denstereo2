@@ -121,7 +121,7 @@ MODEL = dict(
             # region loss -------------------------
             REGION_LOSS_TYPE="CE",  # CE
             REGION_LOSS_MASK_GT="visib",  # trunc | visib | obj
-            REGION_LW=0.2,
+            REGION_LW=0.4,
             # pm loss --------------
             PM_R_ONLY=True,  # only do R loss in PM
             PM_LW=1.0,
