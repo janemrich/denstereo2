@@ -320,11 +320,11 @@ class GDRN_DatasetFromList(Base_DatasetFromList):
         image_l = read_image_mmcv(dataset_dict["file_name_l"], format=self.img_format)
         image_r = read_image_mmcv(dataset_dict["file_name_r"], format=self.img_format)
 
-        import matplotlib.pyplot as plt
+        # import matplotlib.pyplot as plt
         depth_l = imageio.imread(dataset_dict["depth_file_l"]).astype(np.float32)
         depth_r = imageio.imread(dataset_dict["depth_file_r"]).astype(np.float32)
-        plt.imshow(depth_l)
-        plt.imshow(depth_r)
+        # plt.imshow(depth_l)
+        # plt.imshow(depth_r)
         depth_l /= dataset_dict["depth_factor"]
         depth_r /= dataset_dict["depth_factor"] # unit is meter now
 

@@ -565,11 +565,11 @@ class GDRN(nn.Module):
         }
 
         loss_dict = {}
-        import matplotlib.pyplot as plt
-        fig, axs = plt.subplots(3)
-        axs[0].imshow(gt_disp[0,0].cpu().detach(), vmin=0, vmax=64)
-        axs[1].imshow(out_disp[3][0].cpu().detach(), vmin=0, vmax=64)
-        axs[2].imshow(gt_mask_visib[0,0].cpu().detach())
+        # import matplotlib.pyplot as plt
+        # fig, axs = plt.subplots(3)
+        # axs[0].imshow(gt_disp[0,0].cpu().detach(), vmin=0, vmax=64)
+        # axs[1].imshow(out_disp[3][0].cpu().detach(), vmin=0, vmax=64)
+        # axs[2].imshow(gt_mask_visib[0,0].cpu().detach())
         # plt.show()
         # disparity
         if not disp_net_cfg.FREEZE and loss_cfg.DISP_LW > 0.0:
