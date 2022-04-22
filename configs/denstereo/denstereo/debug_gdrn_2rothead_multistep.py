@@ -20,7 +20,7 @@ INPUT = dict(
 )
 
 SOLVER = dict(
-    IMS_PER_BATCH=1,
+    IMS_PER_BATCH=3,
     TOTAL_EPOCHS=10000,
     LR_SCHEDULER_NAME="flat_and_anneal",
     ANNEAL_METHOD="cosine",  # "cosine"
@@ -36,8 +36,8 @@ SOLVER = dict(
 DATASETS = dict(
     TRAIN=(
         'denstereo_single_0_3_15_stereo',
-        # 'denstereo_single_0_4_15_stereo',
-        # 'denstereo_single_0_6_15_stereo',
+        'denstereo_single_0_4_15_stereo',
+        'denstereo_single_0_6_15_stereo',
         # 'denstereo_single_0_6_15_stereo',
         # 'denstereo_single_0_6_15_stereo',
         # 'denstereo_single_0_6_15_stereo',
