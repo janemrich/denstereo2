@@ -1,6 +1,7 @@
 import copy
 import torch
 import numpy as np
+from core.denstereo_modeling.models.backbones.MSNet2D import MSNet2D
 from lib.pysixd.pose_error import re, te
 from core.utils.pose_utils import quat2mat_torch
 from core.denstereo_modeling.tools.rot_reps import rot6d_to_mat_batch
@@ -175,6 +176,30 @@ def get_selfocc_head(cfg):
         )
 
     return selfocc_head, params_lr_list
+
+
+def get_disp_net(cfg):
+    net_cfg = cfg.MODEL.POSE_NET
+    disp_net_cfg = net_cfg.DISP_NET
+    loss_cfg = net_cfg.LOSS_CFG
+
+    disp_net_init_cfg = copy.deepcopy(disp_net_cfg.INIT_CFG)
+
+    pnp_net = MSNet2D(disp_net_init_cfg.MAX_DISP)
+
+    params_lr_list = []
+    if disp_net_cfg.FREEZE:
+        for param in pnp_net.parameters():
+            with torch.no_grad():
+                param.requires_grad = False
+    else:
+        params_lr_list.append(
+            {
+                "params": filter(lambda p: p.requires_grad, pnp_net.parameters()),
+                "lr": float(cfg.SOLVER.BASE_LR),
+            }
+        )
+    return pnp_net, params_lr_list
 
 
 def get_pnp_net(cfg):
