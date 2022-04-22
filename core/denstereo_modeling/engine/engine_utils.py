@@ -43,6 +43,8 @@ def batch_data(cfg, data, renderer=None, device="cuda", phase="train"):
     )
 
     batch["roi_trans_ratio"] = torch.stack([d["trans_ratio"] for d in data], dim=0).to(device, non_blocking=True)
+
+    batch["disparity"] = torch.stack([d["disparity"] for d in data], dim=0).to(device, non_blocking=True)
     # yapf: disable
     for key in [
         "roi_xyz", "roi_xyz_bin",

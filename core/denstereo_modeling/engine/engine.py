@@ -282,38 +282,86 @@ def do_train(cfg, args, model, optimizer, renderer=None, resume=False):
 
             # forward ============================================================
             batch = batch_data(cfg, data, renderer=renderer)
+            # batch = batch_disp(cfg, data, renderer=renderer)
             with autocast(enabled=AMP_ON):
                 if cfg.MODEL.STEREO:
-                    out_dict, loss_dict = model(
-                        batch["roi_img"],
-                        gt_xyz=batch.get("roi_xyz", None),
-                        gt_mask_trunc=batch["roi_mask_trunc"],
-                        gt_mask_visib=batch["roi_mask_visib"],
-                        gt_mask_obj=batch["roi_mask_obj"],
-                        gt_mask_erode=batch.get("roi_mask_erode", None),
-                        gt_region=batch.get("roi_region", None),
-                        gt_ego_rot=batch.get("ego_rot", None),
-                        gt_points=batch.get("roi_points", None),
-                        sym_infos=batch.get("sym_info", None),
-                        baseline=batch.get("baseline", None),
-                        gt_trans=batch.get("trans", None),
-                        gt_trans_ratio=batch["roi_trans_ratio"],
-                        roi_classes=batch["roi_cls"],
-                        roi_coord_2d=batch.get("roi_coord_2d", None),
-                        roi_cams=batch["roi_cam"],
-                        roi_centers=batch["roi_center"],
-                        roi_whs=batch["roi_wh"],
-                        roi_extents=batch.get("roi_extent", None),
-                        resize_ratios=batch["resize_ratio"],
-                        do_loss=True,
-                        # selfocc parameters
-                        gt_q0=batch.get("roi_Q0", None),
-                        gt_occmask=batch.get("occmask", None),
-                        roi_extent=batch.get("roi_extent", None),  # 注意上面有一个带s的,其实是一个，重复了，懒得改了
-                        size_imW=batch.get("im_W", 640),
-                        size_imH=batch.get("im_H", 480),
-                        E_step=epoch,
-                    ) 
+                    if cfg.MODEL.POSE_NET.NAME == 'disparity_test':
+                        out_dict, loss_dict = model(
+                            batch["roi_img"],
+                            gt_mask_trunc=batch["roi_mask_trunc"],
+                            gt_mask_visib=batch["roi_mask_visib"],
+                            gt_mask_obj=batch["roi_mask_obj"],
+                            gt_mask_erode=batch.get("roi_mask_erode", None),
+                            # disparity parameters
+                            gt_disp=batch.get("depth", None),
+                            # other
+                            E_step=epoch,
+                        ) 
+                    elif cfg.MODEL.POSE_NET.DISP_NET is not None:
+                        out_dict, loss_dict = model(
+                            batch["roi_img"],
+                            gt_xyz=batch.get("roi_xyz", None),
+                            gt_mask_trunc=batch["roi_mask_trunc"],
+                            gt_mask_visib=batch["roi_mask_visib"],
+                            gt_mask_obj=batch["roi_mask_obj"],
+                            gt_mask_erode=batch.get("roi_mask_erode", None),
+                            gt_region=batch.get("roi_region", None),
+                            gt_ego_rot=batch.get("ego_rot", None),
+                            gt_points=batch.get("roi_points", None),
+                            sym_infos=batch.get("sym_info", None),
+                            baseline=batch.get("baseline", None),
+                            gt_trans=batch.get("trans", None),
+                            gt_trans_ratio=batch["roi_trans_ratio"],
+                            roi_classes=batch["roi_cls"],
+                            roi_coord_2d=batch.get("roi_coord_2d", None),
+                            roi_cams=batch["roi_cam"],
+                            roi_centers=batch["roi_center"],
+                            roi_whs=batch["roi_wh"],
+                            roi_extents=batch.get("roi_extent", None),
+                            resize_ratios=batch["resize_ratio"],
+                            do_loss=True,
+                            # selfocc parameters
+                            gt_q0=batch.get("roi_Q0", None),
+                            gt_occmask=batch.get("occmask", None),
+                            roi_extent=batch.get("roi_extent", None),  # 注意上面有一个带s的,其实是一个，重复了，懒得改了
+                            # disparity parameters
+                            gt_disp=batch.get("disparity", None),
+                            # other
+                            size_imW=batch.get("im_W", 640),
+                            size_imH=batch.get("im_H", 480),
+                            E_step=epoch,
+                        ) 
+                    else:
+                        out_dict, loss_dict = model(
+                            batch["roi_img"],
+                            gt_xyz=batch.get("roi_xyz", None),
+                            gt_mask_trunc=batch["roi_mask_trunc"],
+                            gt_mask_visib=batch["roi_mask_visib"],
+                            gt_mask_obj=batch["roi_mask_obj"],
+                            gt_mask_erode=batch.get("roi_mask_erode", None),
+                            gt_region=batch.get("roi_region", None),
+                            gt_ego_rot=batch.get("ego_rot", None),
+                            gt_points=batch.get("roi_points", None),
+                            sym_infos=batch.get("sym_info", None),
+                            baseline=batch.get("baseline", None),
+                            gt_trans=batch.get("trans", None),
+                            gt_trans_ratio=batch["roi_trans_ratio"],
+                            roi_classes=batch["roi_cls"],
+                            roi_coord_2d=batch.get("roi_coord_2d", None),
+                            roi_cams=batch["roi_cam"],
+                            roi_centers=batch["roi_center"],
+                            roi_whs=batch["roi_wh"],
+                            roi_extents=batch.get("roi_extent", None),
+                            resize_ratios=batch["resize_ratio"],
+                            do_loss=True,
+                            # selfocc parameters
+                            gt_q0=batch.get("roi_Q0", None),
+                            gt_occmask=batch.get("occmask", None),
+                            roi_extent=batch.get("roi_extent", None),  # 注意上面有一个带s的,其实是一个，重复了，懒得改了
+                            size_imW=batch.get("im_W", 640),
+                            size_imH=batch.get("im_H", 480),
+                            E_step=epoch,
+                        ) 
                 else:
                     out_dict, loss_dict = model(
                         batch["roi_img"],
