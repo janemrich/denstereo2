@@ -20,8 +20,8 @@ INPUT = dict(
 )
 
 SOLVER = dict(
-    IMS_PER_BATCH=3,
-    TOTAL_EPOCHS=1000,
+    IMS_PER_BATCH=1,
+    TOTAL_EPOCHS=10000,
     LR_SCHEDULER_NAME="flat_and_anneal",
     ANNEAL_METHOD="cosine",  # "cosine"
     ANNEAL_POINT=0.72,
@@ -35,9 +35,16 @@ SOLVER = dict(
 
 DATASETS = dict(
     TRAIN=(
-        'denstereo_single_0_0_12_stereo',
-        'denstereo_single_0_0_12_stereo',
-        'denstereo_single_0_0_12_stereo',
+        'denstereo_single_0_3_15_stereo',
+        # 'denstereo_single_0_4_15_stereo',
+        # 'denstereo_single_0_6_15_stereo',
+        # 'denstereo_single_0_6_15_stereo',
+        # 'denstereo_single_0_6_15_stereo',
+        # 'denstereo_single_0_6_15_stereo',
+        # 'denstereo_single_0_6_15_stereo',
+        # 'denstereo_035_power_drill_test_pbr',
+        # 'denstereo_single_0_0_12_stereo',
+        # 'denstereo_single_0_0_12_stereo',
         # 'denstereo_002_master_chef_can_train_pbr',
         # 'denstereo_debug_train_pbr_left',
         ),
@@ -45,21 +52,24 @@ DATASETS = dict(
     # TRAIN2_RATIO=0.75,
     TEST=(
         # 'denstereo_debug_002_master_chef_can_train_pbr',
-        'denstereo_debug_train_pbr_left',
+        'denstereo_035_power_drill_test_pbr',
+        # 'denstereo_debug_train_pbr_left',
         # 'denstereo_single_0_0_1_train_pbr_left',
         # "denstereo_single_0_3_1_train_pbr_left",
         ),
-    DET_FILES_TEST=("datasets/BOP_DATASETS/denstereo/train_pbr_left/bbox.json",),)
+    DET_FILES_TEST=("datasets/BOP_DATASETS/denstereo/test_bboxes/test_pbr_stereo.json",),)
 
 MODEL = dict(
     LOAD_DETS_TEST=True,
     PIXEL_MEAN=[0.0, 0.0, 0.0],
     PIXEL_STD=[255.0, 255.0, 255.0],
+    STEREO=True,
     POSE_NET=dict(
-        NAME="GDRN_stereo",
+        # NAME="disparity_test",
+        NAME="GDRN_stereo_disp",
         # NAME="GDRN",
         BACKBONE=dict(
-            FREEZE=False,
+            FREEZE=True,
             PRETRAINED="",
             INIT_CFG=dict(
                 _delete_=True,
@@ -67,6 +77,12 @@ MODEL = dict(
                 depth=50,
                 in_channels=3,
                 out_indices=(3,),
+            ),
+        ),
+        DISP_NET=dict(
+            FREEZE=False,
+            INIT_CFG=dict(
+                MAX_DISP=64,
             ),
         ),
         ## geo head: Mask, XYZ, Region
@@ -98,7 +114,8 @@ MODEL = dict(
                 mask_num_classes=1,
             ),
             MIN_Q0_REGION=20,
-            LR_MULT=1.0,
+            # LR_MULT=1.0,
+            LR_MULT=0.0,
 
             REGION_CLASS_AWARE=False,
             MASK_THR_TEST=0.5,
@@ -116,34 +133,46 @@ MODEL = dict(
             # xyz loss ----------------------------
             XYZ_LOSS_TYPE="L1",  # L1 | CE_coor
             XYZ_LOSS_MASK_GT="visib",  # trunc | visib | obj
-            XYZ_LW=1.0,
+            # XYZ_LW=1.0,
+            XYZ_LW=0.0,
             # mask loss ---------------------------
             MASK_LOSS_TYPE="L1",  # L1 | BCE | CE
             MASK_LOSS_GT="trunc",  # trunc | visib | gt
-            MASK_LW=1.0,
+            # MASK_LW=1.0,
+            MASK_LW=0.0,
             # region loss -------------------------
             REGION_LOSS_TYPE="CE",  # CE
             REGION_LOSS_MASK_GT="visib",  # trunc | visib | obj
-            REGION_LW=1.0,
+            # REGION_LW=0.2,
+            REGION_LW=0.0,
             # pm loss --------------
             PM_R_ONLY=True,  # only do R loss in PM
-            PM_LW=1.0,
+            # PM_LW=1.0,
+            PM_LW=0.0,
             # centroid loss -------
             CENTROID_LOSS_TYPE="L1",
-            CENTROID_LW=1.0,
+            # CENTROID_LW=1.0,
+            CENTROID_LW=0.0,
             # z loss -----------
             Z_LOSS_TYPE="L1",
-            Z_LW=1.0,
+            # Z_LW=1.0,
+            Z_LW=0.0,
             # Q0 loss ---------------------
-            Q0_DEF_LW=1.0,
+            # Q0_DEF_LW=1.0,
+            Q0_DEF_LW=0.0,
             Q0_LOSS_TYPE="L1",
             Q0_LOSS_MASK_GT="visib",  # computed from Q0
-            Q0_LW=1.0,
+            # Q0_LW=1.0,
+            Q0_LW=0.0,
             # cross-task loss -------------------
-            CT_LW=10.0,
-            CT_P_LW=1.0,
+            # CT_LW=1.0,
+            CT_LW=0.0,
+            # CT_P_LW=1.0,
+            CT_P_LW=0.0,
             # occlusion mask loss weight
             OCC_LW=0.0,
+            # disparity loss weight -------------
+            DISP_LW=1.0,
         ),
     ),
 )
