@@ -6,6 +6,7 @@ import pickle
 
 import cv2
 import mmcv
+import imageio
 import numpy as np
 import ref
 import torch
@@ -318,6 +319,15 @@ class GDRN_DatasetFromList(Base_DatasetFromList):
 
         image_l = read_image_mmcv(dataset_dict["file_name_l"], format=self.img_format)
         image_r = read_image_mmcv(dataset_dict["file_name_r"], format=self.img_format)
+
+        import matplotlib.pyplot as plt
+        depth_l = imageio.imread(dataset_dict["depth_file_l"]).astype(np.float32)
+        depth_r = imageio.imread(dataset_dict["depth_file_r"]).astype(np.float32)
+        plt.imshow(depth_l)
+        plt.imshow(depth_r)
+        depth_l /= dataset_dict["depth_factor"]
+        depth_r /= dataset_dict["depth_factor"] # unit is meter now
+
         # should be consistent with the size in dataset_dict
         utils.check_image_size(dataset_dict, image_l)
         utils.check_image_size(dataset_dict, image_r)
@@ -614,6 +624,10 @@ class GDRN_DatasetFromList(Base_DatasetFromList):
         roi_img_l = crop_resize_by_warp_affine(
             image_l, bbox_center, scale, input_res, interpolation=cv2.INTER_LINEAR
         ).transpose(2, 0, 1)
+        # import matplotlib.pyplot as plt
+        # plt.imshow(image_l)
+        # plt.imshow(roi_img_l.transpose(1,2,0))
+        # plt.show()
         roi_img_r = crop_resize_by_warp_affine(
             image_r, bbox_center, scale, input_res, interpolation=cv2.INTER_LINEAR
         ).transpose(2, 0, 1)
@@ -703,6 +717,21 @@ class GDRN_DatasetFromList(Base_DatasetFromList):
         roi_xyz_r = crop_resize_by_warp_affine(xyz_r, bbox_center, scale, out_res, interpolation=mask_xyz_interp)
         roi_Q0_l = crop_resize_by_warp_affine(Q0_l, bbox_center, scale, out_res, interpolation=mask_xyz_interp)
         roi_Q0_r = crop_resize_by_warp_affine(Q0_r, bbox_center, scale, out_res, interpolation=mask_xyz_interp)
+
+        ## depth ------------------------------------------------------
+        depth_l = crop_resize_by_warp_affine(depth_l, bbox_center, scale, out_res, interpolation=mask_xyz_interp)
+        depth_r = crop_resize_by_warp_affine(depth_r, bbox_center, scale, out_res, interpolation=mask_xyz_interp)
+
+        focal_len = dataset_dict["cam"][0][0].item() # f_x [m]
+        baseline = dataset_dict["baseline"][0] # x baseline [m]
+        resize_ratio = out_res / scale
+        zero_mask_l = (depth_l == 0.0)
+        zero_mask_r = (depth_r == 0.0)
+        depth_l[zero_mask_l] = 1
+        depth_r[zero_mask_r] = 1
+        disparity_l = (((baseline * focal_len) / (depth_l)) * resize_ratio).astype(np.uint8)
+        disparity_r = (((baseline * focal_len) / (depth_r)) * resize_ratio).astype(np.uint8)
+
         # region label
         if g_head_cfg.NUM_REGIONS > 1:
             fps_points = self._get_fps_points(dataset_name)[roi_cls]
@@ -812,6 +841,9 @@ class GDRN_DatasetFromList(Base_DatasetFromList):
             dtype=torch.float32
         ).contiguous()
 
+        # depth
+
+
         # pose targets ----------------------------------------------------------------------
         pose_l = inst_infos["pose_l"]
         pose_r = inst_infos["pose_r"]
@@ -870,6 +902,8 @@ class GDRN_DatasetFromList(Base_DatasetFromList):
         delta_c_r = obj_center_r - bbox_center
         trans_ratio_l = torch.as_tensor([delta_c_l[0] / bw, delta_c_l[1] / bh, z_ratio_l]).to(torch.float32)
         trans_ratio_r = torch.as_tensor([delta_c_r[0] / bw, delta_c_r[1] / bh, z_ratio_r]).to(torch.float32)
+        # depth
+        dataset_dict["disparity"] = torch.as_tensor(np.stack([disparity_l, disparity_r], axis=0)).contiguous()
         dataset_dict["trans_ratio"] = torch.stack([trans_ratio_l, trans_ratio_r], dim=0)
         return dataset_dict
 

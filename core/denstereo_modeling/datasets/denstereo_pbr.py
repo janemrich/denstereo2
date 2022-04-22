@@ -136,8 +136,8 @@ class DENSTEREO_PBR_Dataset:
                 assert osp.exists(rgb_path_l), rgb_path_l
                 assert osp.exists(rgb_path_r), rgb_path_r
 
-                depth_path_l = osp.join(scene_root, "depth/{:06d}.png".format(int_im_id))
-                depth_path_r = osp.join(scene_root, "depth/{:06d}.png".format(int_im_id))
+                depth_path_l = osp.join(scene_root_l, "depth/{:06d}.png".format(int_im_id))
+                depth_path_r = osp.join(scene_root_r, "depth/{:06d}.png".format(int_im_id))
 
                 scene_im_id = f"{scene_id}/{int_im_id}"
 
@@ -544,6 +544,39 @@ for obj in ref.denstereo.objects:
                 scenes=ref.denstereo.train_pbr_scenes,
                 ref_key="denstereo",
             )
+
+for obj in ref.denstereo.objects:
+    for split in ["test_pbr"]:
+        name = "denstereo_{}_{}".format(obj, split)
+        if split in ["train_pbr"]:
+            filter_invalid = True
+        elif split in ["test_pbr"]:
+            filter_invalid = True
+        elif split in ["test"]:
+            filter_invalid = False
+        else:
+            raise ValueError("{}".format(split))
+        if name not in SPLITS_DENSTEREO_PBR:
+            SPLITS_DENSTEREO_PBR[name] = dict(
+                name=name,
+                objs=[obj],  # only this obj
+                dataset_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/train_pbr_left"),
+                dataset_root_right=osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/train_pbr_right"),
+                models_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/models"),
+                xyz_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/train_pbr_left/xyz_crop_hd"),
+                xyz_root_right=osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/train_pbr_right/xyz_crop_hd"),
+                scale_to_meter=0.001,
+                with_masks=True,  # (load masks but may not use it)
+                with_depth=True,  # (load depth path here, but may not use it)
+                height=480,
+                width=640,
+                use_cache=True,
+                num_to_load=-1,
+                filter_invalid=filter_invalid,
+                scenes=ref.denstereo.test_pbr_scenes,
+                ref_key="denstereo",
+            )
+
 # ================ add single image dataset for debug =======================================
 for split in ['train_pbr_left']: # TODO add train _right 'train_pbr_right']:
     for scene in ref.denstereo.debug_pbr_scenes:
@@ -585,6 +618,55 @@ for split in ['train_pbr_left']: # TODO add train _right 'train_pbr_right']:
                         scenes = ref.denstereo.debug_pbr_scenes,
                         ref_key="denstereo",
                     )
+
+# single image stereo
+
+for scene in ref.denstereo.debug_pbr_scenes:
+    scene_root = osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/{:s}/{:06d}".format(
+            'train_pbr_left',
+            scene
+        )
+    )
+    gt_dict = mmcv.load(osp.join(scene_root, "scene_gt.json"))
+    for im_id in gt_dict.keys():
+        int_im_id = int(im_id)
+        obj_ids = [pose['obj_id'] for pose in gt_dict[im_id]]
+        for obj_id in obj_ids:
+            name = "denstereo_single_{}_{}_{}_stereo".format(scene, int_im_id, obj_id)
+            if name not in SPLITS_DENSTEREO_PBR:
+                scene_image_obj_id = "{:d}/{:d}/{:d}".format(scene, int_im_id, obj_id)
+                SPLITS_DENSTEREO_PBR[name] = dict(
+                    name=name,
+                    dataset_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/train_pbr_left"),
+                    dataset_root_right=osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/train_pbr_right"),
+                    models_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/models"),
+                    objs=ref.denstereo.objects,  # only this obj
+                    image_prefixes=[
+                        osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/train_pbr_left/{:06d}").format(scene)
+                    ],
+                    image_prefixes_right=[
+                        osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/train_pbr_right/{:06d}").format(scene)
+                    ],
+                    xyz_prefixes=[
+                        osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/train_pbr_left/xyz_crop_hd/{:06d}".format(scene))
+                    ],
+                    xyz_prefixes_right=[
+                        osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/train_pbr_right/xyz_crop_hd/{:06d}".format(scene))
+                    ],
+                    scale_to_meter=0.001,
+                    with_masks=True,  # (load masks but may not use it)
+                    with_depth=True,  # (load depth path here, but may not use it)
+                    height=480,
+                    width=640,
+                    cache_dir=osp.join(PROJ_ROOT, ".cache"),
+                    use_cache=True,
+                    num_to_load=-1,
+                    filter_invalid=False,
+                    filter_scene=True,
+                    debug_im_id = scene_image_obj_id, # NOTE: debug im id
+                    scenes = ref.denstereo.debug_pbr_scenes,
+                    ref_key="denstereo",
+                )
 
 def register_with_name_cfg(name, data_cfg=None):
     """Assume pre-defined datasets live in `./datasets`.
