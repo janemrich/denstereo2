@@ -1,6 +1,6 @@
 _base_ = ["../../_base_/gdrn_base.py"]
 
-OUTPUT_DIR = "output/denstereo/denstereo/low_region_lr"
+OUTPUT_DIR = "output/denstereo/denstereo/04-26_full-with-disp"
 INPUT = dict(
     DZI_PAD_SCALE=1.5,
     COLOR_AUG_PROB=0.0,
@@ -55,7 +55,8 @@ MODEL = dict(
     PIXEL_STD=[255.0, 255.0, 255.0],
     STEREO=True,
     POSE_NET=dict(
-        NAME="GDRN_stereo",
+        # NAME="GDRN_stereo",
+        NAME="GDRN_stereo_disp",
         BACKBONE=dict(
             FREEZE=True,
             PRETRAINED="mmcls://resnet50_v1d",
@@ -65,6 +66,12 @@ MODEL = dict(
                 depth=50,
                 in_channels=3,
                 out_indices=(3,),
+            ),
+        ),
+        DISP_NET=dict(
+            FREEZE=False,
+            INIT_CFG=dict(
+                MAX_DISP=64,
             ),
         ),
         ## geo head: Mask, XYZ, Region
@@ -141,6 +148,8 @@ MODEL = dict(
             CT_P_LW=1.0,
             # occlusion mask loss weight
             OCC_LW=0.0,
+            # disparity loss weight -------------
+            DISP_LW=1.0,
         ),
     ),
 )
