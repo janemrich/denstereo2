@@ -117,7 +117,7 @@ def setup(args):
     cfg.EXP_ID = exp_id
     cfg.RESUME = args.resume
     ####################################
-    if args.launcher != "none":
+    if (args.launcher != "none") and (args.launcher != "dataparallel"):
         comm.init_dist(args.launcher, **cfg.DIST_PARAMS)
     # cfg.freeze()
     my_default_setup(cfg, args)
