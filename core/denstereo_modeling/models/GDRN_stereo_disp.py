@@ -125,8 +125,8 @@ class GDRN(nn.Module):
 
         gt_id = 0
         # x.shape [bs, 2, 3, 256, 256]
-        import matplotlib.pyplot as plt
-        plt.imshow(x[0,0].cpu().detach().numpy().transpose(1,2,0))
+        # import matplotlib.pyplot as plt
+        # plt.imshow(x[0,0].cpu().detach().numpy().transpose(1,2,0))
 
         conv_feat = self.backbone(x.reshape((bs_virtual, c, h, w)))  # [bs_virtual, c, 8, 8]
         disps = self.disp_net(x[:, 0], x[:, 1]) # left, right
