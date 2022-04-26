@@ -208,7 +208,7 @@ if __name__ == "__main__":
     # pytorch: use pytorch launcher
     # hvd: use horovod launcher
     # bps: use byteps launcher
-    parser.add_argument("--launcher", choices=["none", "pytorch", "hvd", "bps"], default="none", help="job launcher")
+    parser.add_argument("--launcher", choices=["none", "pytorch", "hvd", "bps", "dataparallel"], default="none", help="job launcher")
     # pytorch dist options ======
     parser.add_argument("--local_rank", type=int, default=0)
     # hvd options ======
