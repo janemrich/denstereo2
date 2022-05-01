@@ -164,10 +164,10 @@ def main(args):
     if args.launcher == 'dataparallel':
         model = DataParallel(model)
 
-    # if distributed and args.launcher not in ["hvd", "bps"]:
-        # model = DistributedDataParallel(
-            # model, device_ids=[comm.get_local_rank()], broadcast_buffers=False, find_unused_parameters=True
-        # )
+    elif distributed and args.launcher not in ["hvd", "bps"]:
+        model = DistributedDataParallel(
+            model, device_ids=[comm.get_local_rank()], broadcast_buffers=False, find_unused_parameters=True
+        )
 
     do_train(cfg, args, model, optimizer, renderer=renderer, resume=args.resume)
     return do_test(cfg, model)
