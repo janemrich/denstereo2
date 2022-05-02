@@ -33,6 +33,7 @@ _USE_BPS = False
 def reduce_dict(input_dict, average=True):
     global _USE_HVD
     global _USE_BPS
+    print('WoRLD size', get_world_size())
     if _USE_HVD:
         return reduce_dict_hvd(input_dict, average=average)
     elif _USE_BPS:
