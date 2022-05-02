@@ -404,6 +404,8 @@ def do_train(cfg, args, model, optimizer, renderer=None, resume=False):
                 assert torch.isfinite(losses).all(), loss_dict
 
             print(loss_dict, flush=True)
+            for k in loss_dict.keys():
+                print(k, loss_dict[k].shape, loss_dict[k], flush=True)
             loss_dict_reduced = {k: v.item() for k, v in comm.reduce_dict(loss_dict).items()}
             losses_reduced = sum(loss for loss in loss_dict_reduced.values())
             if comm.is_main_process():
