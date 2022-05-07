@@ -34,7 +34,7 @@ import ref
 from core.denstereo_modeling.datasets.dataset_factory import register_datasets_in_cfg
 #from core.denstereo_modeling.engine.engine_utils import get_renderer
 from core.denstereo_modeling.engine.engine import do_test, do_train
-from core.denstereo_modeling.models import GDRN, GDRN_stereo, GDRN_stereo_disp # noqa
+from core.denstereo_modeling.models import GDRN, GDRN_stereo, GDRN_stereo_disp, GDRN_stereo_disp_in_pnp # noqa
 
 
 logger = logging.getLogger("detectron2")
@@ -242,7 +242,7 @@ if __name__ == "__main__":
     iprint("Command Line Args:", args)
     comm.init_dist_env_variables(args)
 
-    wandb.init(project="denstereo", entity="jemrich")
+    #wandb.init(project="denstereo", entity="jemrich")
     if args.eval_only:
         torch.multiprocessing.set_sharing_strategy("file_system")
 
