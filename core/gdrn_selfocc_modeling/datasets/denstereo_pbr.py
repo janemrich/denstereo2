@@ -155,7 +155,10 @@ class DENSTEREO_PBR_Dataset:
                     proj = (record["cam"] @ t.T).T
                     proj = proj[:2] / proj[2]
 
-                    bbox_visib = gt_info_dict[str_im_id][anno_i]["bbox_visib"]
+                    try:
+                        bbox_visib = gt_info_dict[str_im_id][anno_i]["bbox_visib"]
+                    except IndexError as e:
+                        raise IndexError('list index out of range: scene:{} str_im_id:{} anno_i:{}'.format(scene, str_im_id, anno_i)) 
                     bbox_obj = gt_info_dict[str_im_id][anno_i]["bbox_obj"]
                     x1, y1, w, h = bbox_visib
                     if self.filter_invalid:
