@@ -151,7 +151,6 @@ def main(args):
         renderer = None
     '''
 
-    wandb.init(project="denstereo", entity="jemrich")
     renderer = None
     logger.info(f"Used GDRN module name: {cfg.MODEL.POSE_NET.NAME}")
     model, optimizer = eval(cfg.MODEL.POSE_NET.NAME).build_model_optimizer(cfg, is_test=args.eval_only)
@@ -239,6 +238,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
     iprint("Command Line Args:", args)
     comm.init_dist_env_variables(args)
+
+    wandb.init(project="denstereo", entity="jemrich")
 
     if args.eval_only:
         torch.multiprocessing.set_sharing_strategy("file_system")
