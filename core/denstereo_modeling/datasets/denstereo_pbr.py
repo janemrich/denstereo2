@@ -186,7 +186,11 @@ class DENSTEREO_PBR_Dataset:
                     proj_l = proj_l[:2] / proj_l[2]
                     proj_r = proj_r[:2] / proj_r[2]
 
-                    bbox_visib_l = gt_info_dict_l[str_im_id][anno_i]["bbox_visib"]
+                    # bbox_visib_l = gt_info_dict_l[str_im_id][anno_i]["bbox_visib"]
+                    try:
+                        bbox_visib_l = gt_info_dict_l[str_im_id][anno_i]["bbox_visib"]
+                    except IndexError as e:
+                        raise IndexError('list index out of range: scene:{} str_im_id:{} anno_i:{}'.format(scene, str_im_id, anno_i)) 
                     bbox_visib_r = gt_info_dict_r[str_im_id][anno_i]["bbox_visib"]
                     bbox_obj_l = gt_info_dict_l[str_im_id][anno_i]["bbox_obj"]
                     bbox_obj_r = gt_info_dict_r[str_im_id][anno_i]["bbox_obj"]
