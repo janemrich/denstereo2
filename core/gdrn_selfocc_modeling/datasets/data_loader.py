@@ -644,14 +644,14 @@ class GDRN_DatasetFromList(Base_DatasetFromList):
         dataset_dict["bbox"] = anno["bbox"]  # NOTE: original bbox
         dataset_dict["roi_wh"] = torch.as_tensor(np.array([bw, bh], dtype=np.float32))
         if scale == 0:
-            return ValueError, bbox_xyxy, im_W, im_H, dataset_dict['scene_im_id'], inst_infos
+            raise ValueError(bbox_xyxy, im_W, im_H, dataset_dict['scene_im_id'], inst_infos)
         dataset_dict["resize_ratio"] = resize_ratio = out_res / scale
         z_ratio = inst_infos["trans"][2] / resize_ratio
         obj_center = anno["centroid_2d"]
         delta_c = obj_center - bbox_center
         dataset_dict["trans_ratio"] = torch.as_tensor([delta_c[0] / bw, delta_c[1] / bh, z_ratio]).to(torch.float32)
-        if isinstance(dataset_dict, tuple):
-            return TypeError, dataset_dict
+        if dataset_dict['scene_im_id'] == [0, 50, 0, 50]:
+            raise ValueError
         return dataset_dict
 
     def smooth_xyz(self, xyz):
