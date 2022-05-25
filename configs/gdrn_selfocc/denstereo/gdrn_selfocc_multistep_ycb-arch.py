@@ -42,7 +42,9 @@ SOLVER = dict(
 )
 
 DATASETS = dict(
-    TRAIN=("denstereo_train_pbr_left",),
+    TRAIN=(
+        "denstereo_train_pbr_left",
+    ),
     TEST=("denstereo_test_pbr_left",),
     # # AP    AP50  AR    inf.time  (faster RCNN)
     # # 75.10 93.00 81.40 25.4ms
@@ -155,6 +157,7 @@ MODEL = dict(
             TRANS_TYPE="centroid_z",
         ),
         LOSS_CFG=dict(
+            HANDLE_SYM=False,
             # xyz loss ----------------------------
             XYZ_LOSS_TYPE="L1",  # L1 | CE_coor
             XYZ_LOSS_MASK_GT="erode",  # trunc | visib | obj  | erode
@@ -177,6 +180,7 @@ MODEL = dict(
             Z_LOSS_TYPE="L1",
             Z_LW=1.0,
             # Q0 loss ---------------------
+            Q0_DEF_LW=1.0,
             Q0_LOSS_TYPE="L1",
             Q0_LOSS_MASK_GT="visib",  # computed from Q0
             Q0_LW=1.0,
