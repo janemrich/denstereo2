@@ -654,7 +654,12 @@ class GDRN_DatasetFromList(Base_DatasetFromList):
                 json.dump(scale_error, scale_file)
             print(bbox_xyxy, im_W, im_H, dataset_dict['scene_im_id'], inst_infos)
             # raise ValueError(bbox_xyxy, im_W, im_H, dataset_dict['scene_im_id'], inst_infos)
-        dataset_dict["resize_ratio"] = resize_ratio = out_res / scale
+        try:
+            dataset_dict["resize_ratio"] = resize_ratio = out_res / scale
+        except RuntimeWarning:
+            print(scale)
+            print(out_res)
+            print(dataset_dict['scene_im_id'])
         z_ratio = inst_infos["trans"][2] / resize_ratio
         obj_center = anno["centroid_2d"]
         delta_c = obj_center - bbox_center
