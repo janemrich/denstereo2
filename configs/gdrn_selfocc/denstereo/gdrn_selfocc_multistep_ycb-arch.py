@@ -43,7 +43,8 @@ SOLVER = dict(
 
 DATASETS = dict(
     TRAIN=(
-        "denstereo_train_pbr_left",
+        # "denstereo_train_pbr_left",
+        'denstereo_002_master_chef_can_train_pbr',
     ),
     TEST=("denstereo_test_pbr_left",),
     # # AP    AP50  AR    inf.time  (faster RCNN)
