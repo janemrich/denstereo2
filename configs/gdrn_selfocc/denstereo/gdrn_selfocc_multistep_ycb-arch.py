@@ -45,6 +45,26 @@ DATASETS = dict(
     TRAIN=(
         # "denstereo_train_pbr_left",
         'denstereo_002_master_chef_can_train_pbr',
+        # 'denstereo_003_cracker_box_train_pbr',
+        # 'denstereo_004_sugar_box_train_pbr',
+        # 'denstereo_005_tomato_soup_can_train_pbr',
+        # 'denstereo_006_mustard_bottle_train_pbr',
+        # 'denstereo_007_tuna_fish_can_train_pbr',
+        # 'denstereo_008_pudding_box_train_pbr',
+        # 'denstereo_009_gelatin_box_train_pbr',
+        # 'denstereo_010_potted_meat_can_train_pbr',
+        # 'denstereo_011_banana_train_pbr',
+        # 'denstereo_019_pitcher_base_train_pbr',
+        # 'denstereo_021_bleach_cleanser_train_pbr',
+        # 'denstereo_024_bowl_train_pbr',
+        # 'denstereo_025_mug_train_pbr',
+        # 'denstereo_035_power_drill_train_pbr',
+        # 'denstereo_036_wood_block_train_pbr',
+        # 'denstereo_037_scissors_train_pbr',
+        # 'denstereo_040_large_marker_train_pbr',
+        # 'denstereo_051_large_clamp_train_pbr',
+        # 'denstereo_052_extra_large_clamp_train_pbr',
+        # 'denstereo_061_foam_brick_train_pbr',
     ),
     TEST=("denstereo_test_pbr_left",),
     # # AP    AP50  AR    inf.time  (faster RCNN)
@@ -169,7 +189,8 @@ MODEL = dict(
             # region loss -------------------------
             REGION_LOSS_TYPE="CE",  # CE
             REGION_LOSS_MASK_GT="erode",  # trunc | visib | obj |erode
-            REGION_LW=0.01,
+            # REGION_LW=0.01,
+            REGION_LOSS_LW=1.0,
             # pm loss --------------
             PM_R_ONLY=True,  # only do R loss in PM
             PM_LW=1.0,
