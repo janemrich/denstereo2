@@ -1,3 +1,4 @@
+from functools import cache
 import hashlib
 import logging
 import os
@@ -237,6 +238,7 @@ class DENSTEREO_PBR_Dataset:
             dataset_dicts = dataset_dicts[: self.num_to_load]
         logger.info("loaded {} dataset dicts, using {}s".format(len(dataset_dicts), time.perf_counter() - t_start))
 
+        print(cache_path)
         if not osp.isfile(osp.dirname(cache_path)):
             mmcv.mkdir_or_exist(osp.dirname(cache_path))
         mmcv.dump(dataset_dicts, cache_path, protocol=4)
