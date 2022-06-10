@@ -190,7 +190,7 @@ MODEL = dict(
             REGION_LOSS_TYPE="CE",  # CE
             REGION_LOSS_MASK_GT="erode",  # trunc | visib | obj |erode
             # REGION_LW=0.01,
-            REGION_LOSS_LW=1.0,
+            REGION_LOSS_LW=0.1,
             # pm loss --------------
             PM_R_ONLY=True,  # only do R loss in PM
             PM_LW=1.0,
