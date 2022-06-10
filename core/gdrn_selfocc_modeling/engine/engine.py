@@ -196,6 +196,7 @@ def do_train(cfg, args, model, optimizer, renderer=None, resume=False):
         gradscaler=grad_scaler,
         save_to_disk=comm.is_main_process(),
     )
+    logger.info("resume " + str(resume))
     start_iter = checkpointer.resume_or_load(cfg.MODEL.WEIGHTS, resume=resume).get("iteration", -1) + 1
 
 
