@@ -199,6 +199,8 @@ def do_train(cfg, args, model, optimizer, renderer=None, resume=False):
     logger.info("resume " + str(resume))
     start_iter = checkpointer.resume_or_load(cfg.MODEL.WEIGHTS, resume=resume).get("iteration", -1) + 1
     logger.info("start_iter: " + str(start_iter))
+    if not resume:
+        start_iter = 0
 
 
     # Exponential moving average (NOTE: initialize ema after loading weights) ========================
