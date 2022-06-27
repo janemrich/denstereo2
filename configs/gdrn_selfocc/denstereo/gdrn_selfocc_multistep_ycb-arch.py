@@ -1,7 +1,7 @@
 # about 3 days
 _base_ = ["../../_base_/gdrn_base.py"]
 
-OUTPUT_DIR = "output/gdrn_selfocc/denstereo/pbr_13e"
+OUTPUT_DIR = "output/gdrn_selfocc/denstereo/paper"
 INPUT = dict(
     DZI_PAD_SCALE=1.5,
     TRUNCATE_FG=True,
@@ -28,7 +28,7 @@ INPUT = dict(
 SOLVER = dict(
     IMS_PER_BATCH=256,
     # IMS_PER_BATCH=2,
-    TOTAL_EPOCHS=15,
+    TOTAL_EPOCHS=700,
     LR_SCHEDULER_NAME="flat_and_anneal",
     ANNEAL_METHOD="cosine",  # "cosine"
     ANNEAL_POINT=0.72,
@@ -44,7 +44,7 @@ SOLVER = dict(
 DATASETS = dict(
     TRAIN=(
         # "denstereo_train_pbr_left",
-        'denstereo_002_master_chef_can_train_pbr',
+        # 'denstereo_002_master_chef_can_train_pbr',
         # 'denstereo_003_cracker_box_train_pbr',
         # 'denstereo_004_sugar_box_train_pbr',
         # 'denstereo_005_tomato_soup_can_train_pbr',
@@ -60,7 +60,7 @@ DATASETS = dict(
         # 'denstereo_025_mug_train_pbr',
         # 'denstereo_035_power_drill_train_pbr',
         # 'denstereo_036_wood_block_train_pbr',
-        # 'denstereo_037_scissors_train_pbr',
+        'denstereo_037_scissors_train_pbr',
         # 'denstereo_040_large_marker_train_pbr',
         # 'denstereo_051_large_clamp_train_pbr',
         # 'denstereo_052_extra_large_clamp_train_pbr',
@@ -189,8 +189,8 @@ MODEL = dict(
             # region loss -------------------------
             REGION_LOSS_TYPE="CE",  # CE
             REGION_LOSS_MASK_GT="erode",  # trunc | visib | obj |erode
-            # REGION_LW=0.01,
-            REGION_LW=0.1,
+            REGION_LW=0.01,
+            # REGION_LW=0.1,
             # pm loss --------------
             PM_R_ONLY=True,  # only do R loss in PM
             PM_LW=1.0,
@@ -201,10 +201,10 @@ MODEL = dict(
             Z_LOSS_TYPE="L1",
             Z_LW=1.0,
             # Q0 loss ---------------------
-            Q0_DEF_LW=1.0,
             Q0_LOSS_TYPE="L1",
             Q0_LOSS_MASK_GT="visib",  # computed from Q0
             Q0_LW=1.0,
+            Q0_DEF_LW=1.0, # 10?
             # cross-task loss -------------------
             CT_LW=10.0,
             CT_P_LW=1.0,
@@ -215,7 +215,7 @@ MODEL = dict(
             # Q direction
             QD_LW=0.0,
             #
-            HANDLE_SYM=True,
+            HANDLE_SYM=False,
         ),
     ),
 )
