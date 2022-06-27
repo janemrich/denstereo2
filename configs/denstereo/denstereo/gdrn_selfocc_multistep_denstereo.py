@@ -43,11 +43,12 @@ SOLVER = dict(
 DATASETS = dict(
     TRAIN=(
         # "denstereo_train_pbr_left",
-        "denstereo_002_master_chef_can_train_pbr",
+        'denstereo_037_scissors_train_pbr',
+        # "denstereo_002_master_chef_can_train_pbr",
     ),
-    TEST=("denstereo_test_pbr_left",),
+    TEST=("denstereo_test_pbr",),
     DET_FILES_TEST=(
-        "datasets/BOP_DATASETS/denstereo/test_bboxes/test_pbr_left.json",
+        "datasets/BOP_DATASETS/denstereo/test_bboxes/test_pbr_stereo.json",
     ),
     SYM_OBJS=["024_bowl", "036_wood_block", "051_large_clamp", "052_extra_large_clamp", "061_foam_brick"],  # ycb
 )
@@ -92,6 +93,8 @@ DATALOADER = dict(
 
 
 MODEL = dict(
+    STEREO=True,
+    DISP_NET=False,
     LOAD_DETS_TEST=True,
     PIXEL_MEAN=[0.0, 0.0, 0.0],
     PIXEL_STD=[255.0, 255.0, 255.0],
@@ -175,7 +178,7 @@ MODEL = dict(
             Q0_LOSS_TYPE="L1",
             Q0_LOSS_MASK_GT="visib",  # computed from Q0
             Q0_LW=1.0,
-            Q0_DEF_LW=1.0,
+            Q0_DEF_LW=1.0, # 10?
             # cross-task loss -------------------
             CT_LW=10.0,
             CT_P_LW=1.0,
