@@ -297,7 +297,7 @@ def do_train(cfg, args, model, optimizer, renderer=None, resume=False):
                             # other
                             E_step=epoch,
                         ) 
-                    elif cfg.MODEL.POSE_NET.DISP_NET is not None:
+                    elif cfg.MODEL.DISP_NET:
                         out_dict, loss_dict = model(
                             batch["roi_img"],
                             gt_xyz=batch.get("roi_xyz", None),
