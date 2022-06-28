@@ -44,7 +44,7 @@ SOLVER = dict(
 DATASETS = dict(
     TRAIN=(
         # "denstereo_train_pbr_left",
-        # 'denstereo_002_master_chef_can_train_pbr',
+        'denstereo_002_master_chef_can_train_pbr',
         # 'denstereo_003_cracker_box_train_pbr',
         # 'denstereo_004_sugar_box_train_pbr',
         # 'denstereo_005_tomato_soup_can_train_pbr',
@@ -60,7 +60,7 @@ DATASETS = dict(
         # 'denstereo_025_mug_train_pbr',
         # 'denstereo_035_power_drill_train_pbr',
         # 'denstereo_036_wood_block_train_pbr',
-        'denstereo_037_scissors_train_pbr',
+        # 'denstereo_037_scissors_train_pbr',
         # 'denstereo_040_large_marker_train_pbr',
         # 'denstereo_051_large_clamp_train_pbr',
         # 'denstereo_052_extra_large_clamp_train_pbr',
