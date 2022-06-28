@@ -242,7 +242,7 @@ if __name__ == "__main__":
     iprint("Command Line Args:", args)
     comm.init_dist_env_variables(args)
 
-    #wandb.init(project="denstereo", entity="jemrich")
+    wandb.init(project="denstereo-modeling", entity="jemrich")
     if args.eval_only:
         torch.multiprocessing.set_sharing_strategy("file_system")
 
