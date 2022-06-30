@@ -323,8 +323,11 @@ class GDRN_DatasetFromList(Base_DatasetFromList):
         # import matplotlib.pyplot as plt
         depth_l = imageio.imread(dataset_dict["depth_file_l"]).astype(np.float32)
         depth_r = imageio.imread(dataset_dict["depth_file_r"]).astype(np.float32)
-        # plt.imshow(depth_l)
-        # plt.imshow(depth_r)
+        # fig, ax = plt.subplots(2)
+        # fig.suptitle('begin read data')
+        # ax[0].imshow(image_l)
+        # ax[1].imshow(depth_l)
+        # plt.show()
         depth_l /= dataset_dict["depth_factor"]
         depth_r /= dataset_dict["depth_factor"] # unit is meter now
 
@@ -731,6 +734,8 @@ class GDRN_DatasetFromList(Base_DatasetFromList):
         depth_r[zero_mask_r] = 1
         disparity_l = (((baseline * focal_len) / (depth_l)) * resize_ratio).astype(np.uint8)
         disparity_r = (((baseline * focal_len) / (depth_r)) * resize_ratio).astype(np.uint8)
+        disparity_l[zero_mask_l] = 0
+        disparity_r[zero_mask_r] = 0
 
         # region label
         if g_head_cfg.NUM_REGIONS > 1:

@@ -221,6 +221,9 @@ def get_pnp_net(cfg):
 
     if pnp_net_cfg.REGION_ATTENTION:
         pnp_net_in_channel += g_head_cfg.NUM_REGIONS
+    
+    if pnp_net_cfg.DISPARITY:
+        pnp_net_in_channel += 1
 
     if pnp_net_cfg.MASK_ATTENTION in ["concat"]:  # do not add dim for none/mul
         pnp_net_in_channel += 1
@@ -237,7 +240,7 @@ def get_pnp_net(cfg):
     pnp_net_init_cfg = copy.deepcopy(pnp_net_cfg.INIT_CFG)
     pnp_head_type = pnp_net_init_cfg.pop("type")
 
-    if pnp_head_type in ["ConvPnPNet", "ConvPnPNetCls", "ConvPnPNetStereo"]:
+    if pnp_head_type in ["ConvPnPNet", "ConvPnPNetCls", "ConvPnPNetStereo", "ConvPnPNetStereoDisp"]:
         pnp_net_init_cfg.update(
             nIn=pnp_net_in_channel,
             rot_dim=rot_dim,

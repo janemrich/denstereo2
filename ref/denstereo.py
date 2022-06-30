@@ -26,6 +26,7 @@ train_pbr_dir = osp.join(dataset_root, "train_pbr_left")
 
 test_dir = osp.join(dataset_root, "test")
 
+pbr_scenes = [i for i in range(0, 50)]
 train_pbr_scenes = [i for i in range(0, 44 + 1)]
 test_pbr_scenes = [i for i in range(45, 49 + 1)]
 debug_pbr_scenes = [0]
@@ -83,6 +84,7 @@ zNear = 0.25
 zFar = 6.0
 center = (height / 2, width / 2)
 # default: 0000~0059 and synt
+baseline = [0.05, 0, 0]
 camera_matrix = uw_camera_matrix = np.array([[1066.778, 0.0, 312.9869], [0.0, 1067.487, 241.3109], [0.0, 0.0, 1.0]])
 # 0060~0091
 cmu_camera_matrix = np.array([[1077.836, 0.0, 323.7872], [0.0, 1078.189, 279.6921], [0.0, 0.0, 1.0]])
