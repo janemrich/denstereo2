@@ -460,8 +460,10 @@ def do_train(cfg, args, model, optimizer, renderer=None, resume=False):
             if iteration - start_iter > 5 and (
                 (iteration + 1) % cfg.TRAIN.PRINT_FREQ == 0 or iteration == max_iter - 1 or iteration < 100
             ):
-                for writer in writers:
-                    writer.write()
+
+                if comm.is_main_process():
+                    for writer in writers:
+                        writer.write()
                 # visualize some images ========================================
                 if cfg.TRAIN.VIS_IMG:
                     with torch.no_grad():
