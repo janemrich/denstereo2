@@ -162,9 +162,11 @@ def main(args):
         return do_test(cfg, model)
 
     if args.launcher == 'dataparallel':
+        print('dataparallel')
         model = DataParallel(model)
 
     elif distributed and args.launcher not in ["hvd", "bps"]:
+        print('distributed')
         model = DistributedDataParallel(
             model, device_ids=[comm.get_local_rank()], broadcast_buffers=False, find_unused_parameters=True
         )
