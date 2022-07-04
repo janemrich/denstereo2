@@ -9,6 +9,7 @@ from core.utils.solver_utils import build_optimizer_with_params
 from detectron2.utils.events import get_event_storage
 from mmcv.runner import load_checkpoint
 import mmcv
+from itertools import chain
 from ..losses.coor_cross_entropy import CrossEntropyHeatmapLoss
 from ..losses.l2_loss import L2Loss
 from ..losses.pm_loss import PyPMLoss
@@ -777,14 +778,15 @@ class GDRN(nn.Module):
             )
             out_trans_ext = out_trans.repeat_interleave(2, dim=0)
             out_trans_ext[1::2] += baseline
+            sym_infos_repeat_interleave = list(chain.from_iterable(zip(sym_infos, sym_infos)))
             loss_pm_dict = loss_func(
                 pred_rots=out_rot.repeat_interleave(2, dim=0),
                 gt_rots=flat_gt_rot,
                 points=gt_points.repeat_interleave(2, dim=0),
                 pred_transes=out_trans_ext,
                 gt_transes=flat_gt_trans,
-                extents=extents,
-                sym_infos=sym_infos,
+                extents=extents.repeat_interleave(2, dim=0),
+                sym_infos=sym_infos_repeat_interleave,
             )
             loss_dict.update(loss_pm_dict)
 
