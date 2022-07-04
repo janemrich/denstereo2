@@ -173,6 +173,6 @@ MODEL = dict(
 )
 
 TEST = dict(EVAL_PERIOD=0, VIS=False, TEST_BBOX_TYPE="est")  # gt | est
-TRAIN = dict(CT_START=0.0, CT_P_START=0.0) # we start cross task loss at maxiter*0.6
+TRAIN = dict(CT_START=0.2, CT_P_START=0.2) # we start cross task loss at maxiter*0.6
 
 
