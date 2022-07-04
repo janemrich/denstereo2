@@ -147,6 +147,7 @@ MODEL = dict(
         ),
         PNP_NET=dict(
             INIT_CFG=dict(type="ConvPnPNetStereo", norm="GN", act="gelu"),
+            DISPARITY=False,
             REGION_ATTENTION=True,
             WITH_2D_COORD=True,
             ROT_TYPE="allo_rot6d",
