@@ -240,7 +240,11 @@ class GDRN(nn.Module):
             _, c, w, h = region_softmax.shape
             region_atten = region_softmax.reshape((bs, 2, c, w, h))
 
-        final_disp_l, final_disp_r = disps_l[3], disps_r[3]
+        # MSNet2D gives back intermediate disparity maps in train mode
+        if self.training: 
+            final_disp_l, final_disp_r = disps_l[3], disps_r[3]
+        else:
+            final_disp_l, final_disp_r = disps_l[0], disps_r[0]
         disps = torch.stack((final_disp_l, final_disp_r), dim=-3)
         disps = disps.reshape((bs, 2, 1, w, h))
         pred_rot_, pred_t_ = self.pnp_net(
