@@ -737,6 +737,13 @@ class GDRN(nn.Module):
             loss_dict["loss_coor_y"] *= loss_cfg.XYZ_LW
             loss_dict["loss_coor_z"] *= loss_cfg.XYZ_LW
 
+            if not loss_dict['loss_coor_x'].isfinite().all():
+                loss_dict['loss_coor_x'] = torch.zeros((1), device='cuda')
+            if not loss_dict['loss_coor_y'].isfinite().all():
+                loss_dict['loss_coor_y'] = torch.zeros((1), device='cuda')
+            if not loss_dict['loss_coor_z'].isfinite().all():
+                loss_dict['loss_coor_z'] = torch.zeros((1), device='cuda')
+
         # mask loss ----------------------------------
         if not g_head_cfg.FREEZE:
             mask_loss_type = loss_cfg.MASK_LOSS_TYPE
