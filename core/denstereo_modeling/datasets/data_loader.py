@@ -733,7 +733,7 @@ class GDRN_DatasetFromList(Base_DatasetFromList):
             try:
                 with open(scale_error_path , 'r') as scale_file:
                     scale_error = json.load(scale_file)
-            catch:
+            except:
                 scale_error = []
 
             scale_error.append(dataset_dict['scene_im_id'])
