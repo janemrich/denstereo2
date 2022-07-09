@@ -727,6 +727,18 @@ class GDRN_DatasetFromList(Base_DatasetFromList):
 
         focal_len = dataset_dict["cam"][0][0].item() # f_x [m]
         baseline = dataset_dict["baseline"][0] # x baseline [m]
+        if scale == 0:
+            import json
+            scale_error_path = '/igd/a4/homestud/jemrich/scale_error.json'
+            with open(scale_error_path , 'r') as scale_file:
+                scale_error = json.load(scale_file)
+
+            scale_error.append(dataset_dict['scene_im_id'])
+
+            with open(scale_error_path, 'w') as scale_file:
+                json.dump(scale_error, scale_file)
+            print('scale == 0 error, scene and image id written to', scale_error_path)
+            print(bbox_xyxy, im_W, im_H, dataset_dict['scene_im_id'], inst_infos)
         resize_ratio = out_res / scale
         zero_mask_l = (depth_l == 0.0)
         zero_mask_r = (depth_r == 0.0)
