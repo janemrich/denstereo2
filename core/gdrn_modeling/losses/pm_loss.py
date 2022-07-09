@@ -170,4 +170,6 @@ class PyPMLoss(nn.Module):
                 loss = self.loss_func(weights * points_est_RT, weights * points_tgt_RT)
                 loss_dict = {"loss_PM_RT": 3 * loss * self.loss_weight}
         # NOTE: 3 is for mean reduction on the point dim
+        if not loss_dict['loss_PM_R'].isfinite().all():
+            loss_dict['loss_PM_R'] = torch.zeros((1), device='cuda')
         return loss_dict
