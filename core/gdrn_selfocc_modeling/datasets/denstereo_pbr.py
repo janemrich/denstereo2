@@ -323,7 +323,7 @@ SPLITS_DENSTEREO_PBR = dict(
         use_cache=True,
         num_to_load=-1,
         filter_invalid=True,
-        scenes=ref.denstereo.test_pbr_scenes,
+        scenes=ref.denstereo.train_pbr_scenes,
         ref_key="denstereo",
     ),
     denstereo_train_pbr_left =dict(
