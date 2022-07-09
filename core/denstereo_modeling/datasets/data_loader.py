@@ -730,8 +730,11 @@ class GDRN_DatasetFromList(Base_DatasetFromList):
         if scale == 0:
             import json
             scale_error_path = '/igd/a4/homestud/jemrich/scale_error.json'
-            with open(scale_error_path , 'r') as scale_file:
-                scale_error = json.load(scale_file)
+            try:
+                with open(scale_error_path , 'r') as scale_file:
+                    scale_error = json.load(scale_file)
+            catch:
+                scale_error = []
 
             scale_error.append(dataset_dict['scene_im_id'])
 
