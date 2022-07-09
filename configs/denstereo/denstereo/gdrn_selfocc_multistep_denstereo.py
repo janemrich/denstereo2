@@ -1,7 +1,7 @@
 # about 3 days
 _base_ = ["../../_base_/gdrn_base.py"]
 
-OUTPUT_DIR = "output/denstereo/denstereo/first"
+OUTPUT_DIR = "output/denstereo/denstereo/all"
 INPUT = dict(
     DZI_PAD_SCALE=1.5,
     TRUNCATE_FG=True,
@@ -42,7 +42,7 @@ SOLVER = dict(
 
 DATASETS = dict(
     TRAIN=(
-        "denstereo_train_pbr_left",
+        "denstereo_train_pbr",
     ),
     TEST=("denstereo_test_pbr",),
     DET_FILES_TEST=(
@@ -85,7 +85,7 @@ MODEL = dict(
 '''
 DATALOADER = dict(
     # Number of data loading threads
-    NUM_WORKERS=12,
+    NUM_WORKERS=10,
     # FILTER_VISIB_THR=0.2,
 )
 
