@@ -20,7 +20,7 @@ INPUT = dict(
 )
 
 SOLVER = dict(
-    IMS_PER_BATCH=1,
+    IMS_PER_BATCH=8,
     TOTAL_EPOCHS=10000,
     LR_SCHEDULER_NAME="flat_and_anneal",
     ANNEAL_METHOD="cosine",  # "cosine"
@@ -35,14 +35,14 @@ SOLVER = dict(
 
 DATASETS = dict(
     TRAIN=(
-        'denstereo_train_pbr',
-        # 'denstereo_single_0_3_15_stereo',
-        # 'denstereo_single_0_4_15_stereo',
-        # 'denstereo_single_0_6_15_stereo',
-        # 'denstereo_single_0_6_15_stereo',
-        # 'denstereo_single_0_6_15_stereo',
-        # 'denstereo_single_0_6_15_stereo',
-        # 'denstereo_single_0_6_15_stereo',
+        'denstereo_single_0_3_15_stereo',
+        'denstereo_single_0_4_15_stereo',
+        'denstereo_single_0_6_15_stereo',
+        'denstereo_single_0_6_15_stereo',
+        'denstereo_single_0_6_15_stereo',
+        'denstereo_single_0_6_15_stereo',
+        'denstereo_single_0_6_15_stereo',
+        'denstereo_single_0_6_15_stereo',
         # 'denstereo_035_power_drill_test_pbr',
         # 'denstereo_single_0_0_12_stereo',
         # 'denstereo_single_0_0_12_stereo',
@@ -53,11 +53,10 @@ DATASETS = dict(
     # TRAIN2_RATIO=0.75,
     TEST=(
         # 'denstereo_debug_002_master_chef_can_train_pbr',
-        # 'denstereo_035_power_drill_test_pbr',
+        'denstereo_035_power_drill_test_pbr',
         # 'denstereo_debug_train_pbr_left',
         # 'denstereo_single_0_0_1_train_pbr_left',
         # "denstereo_single_0_3_1_train_pbr_left",
-        'denstereo_test_pbr',
         ),
     DET_FILES_TEST=("datasets/BOP_DATASETS/denstereo/test_bboxes/test_pbr_stereo.json",),)
 
@@ -68,7 +67,10 @@ MODEL = dict(
     STEREO=True,
     DISP_NET=True,
     POSE_NET=dict(
-        NAME="GDRN_stereo",
+        # NAME="disparity_test",
+        # NAME="GDRN_stereo_disp",
+        NAME="GDRN_stereo_disp_in_pnp_light",
+        # NAME="GDRN",
         BACKBONE=dict(
             FREEZE=True,
             PRETRAINED="",
@@ -77,7 +79,14 @@ MODEL = dict(
                 type="mm/ResNetV1d",
                 depth=50,
                 in_channels=3,
-                out_indices=(3,),
+                out_indices=(3,1,),
+            ),
+        ),
+        DISP_NET=dict(
+            type="MSNet2Dlight",
+            FREEZE=False,
+            INIT_CFG=dict(
+                MAX_DISP=64,
             ),
         ),
         ## geo head: Mask, XYZ, Region
@@ -118,9 +127,9 @@ MODEL = dict(
         PNP_NET=dict(
             INIT_CFG=dict(type="ConvPnPNetStereo", norm="GN", act="gelu"),
             # INIT_CFG=dict(type="ConvPnPNet", norm="GN", act="gelu"),
+            DISPARITY=True,
             REGION_ATTENTION=True,
             WITH_2D_COORD=True,
-            DISPARITY=False,
             ROT_TYPE="allo_rot6d",
             TRANS_TYPE="centroid_z",
         ),
