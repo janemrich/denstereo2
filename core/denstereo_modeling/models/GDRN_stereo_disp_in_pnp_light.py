@@ -354,8 +354,8 @@ class GDRN(nn.Module):
                     self.meanre_save += mean_re
                     self.epoch_count += 1
 
-            end4 = time.time()
-            print(end4 - end3)
+            # end4 = time.time()
+            # print(end4 - end3)
             w, h = mask.shape[-2:]
             mask = mask.reshape(bs, 2, 1, w, h)
             coor_x = coor_x.reshape(bs, 2, 1, w, h)

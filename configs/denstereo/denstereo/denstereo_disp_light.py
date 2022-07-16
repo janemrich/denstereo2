@@ -1,6 +1,6 @@
 _base_ = ["../../_base_/gdrn_base.py"]
 
-OUTPUT_DIR = "output/denstereo/denstereo/debug"
+OUTPUT_DIR = "output/denstereo/denstereo/disp_all"
 INPUT = dict(
     DZI_PAD_SCALE=1.5,
     COLOR_AUG_PROB=0.0,
@@ -20,7 +20,7 @@ INPUT = dict(
 )
 
 SOLVER = dict(
-    IMS_PER_BATCH=8,
+    IMS_PER_BATCH=24,
     TOTAL_EPOCHS=10000,
     LR_SCHEDULER_NAME="flat_and_anneal",
     ANNEAL_METHOD="cosine",  # "cosine"
@@ -29,50 +29,31 @@ SOLVER = dict(
     OPTIMIZER_CFG=dict(_delete_=True, type="Ranger", lr=1e-4, weight_decay=0),
     WEIGHT_DECAY=0.0,
     WARMUP_FACTOR=0.001,
-    # WARMUP_ITERS=1000,
-    WARMUP_ITERS=1,
+    WARMUP_ITERS=1000,
+    # WARMUP_ITERS=1,
 )
 
 DATASETS = dict(
     TRAIN=(
-        'denstereo_single_0_3_15_stereo',
-        'denstereo_single_0_4_15_stereo',
-        'denstereo_single_0_6_15_stereo',
-        'denstereo_single_0_6_15_stereo',
-        'denstereo_single_0_6_15_stereo',
-        'denstereo_single_0_6_15_stereo',
-        'denstereo_single_0_6_15_stereo',
-        'denstereo_single_0_6_15_stereo',
-        # 'denstereo_035_power_drill_test_pbr',
-        # 'denstereo_single_0_0_12_stereo',
-        # 'denstereo_single_0_0_12_stereo',
-        # 'denstereo_002_master_chef_can_train_pbr',
-        # 'denstereo_debug_train_pbr_left',
+        'denstereo_train_pbr',
         ),
     # TRAIN2=("denstereo_imgn_13_train_1k_per_obj",),
     # TRAIN2_RATIO=0.75,
     TEST=(
-        # 'denstereo_debug_002_master_chef_can_train_pbr',
-        'denstereo_035_power_drill_test_pbr',
-        # 'denstereo_debug_train_pbr_left',
-        # 'denstereo_single_0_0_1_train_pbr_left',
-        # "denstereo_single_0_3_1_train_pbr_left",
+        'denstereo_test_pbr',
         ),
     DET_FILES_TEST=("datasets/BOP_DATASETS/denstereo/test_bboxes/test_pbr_stereo.json",),)
 
 MODEL = dict(
+    STEREO=True,
+    DISP_NET=True,
     LOAD_DETS_TEST=True,
     PIXEL_MEAN=[0.0, 0.0, 0.0],
     PIXEL_STD=[255.0, 255.0, 255.0],
-    STEREO=True,
-    DISP_NET=True,
     POSE_NET=dict(
-        # NAME="disparity_test",
-        # NAME="GDRN_stereo_disp",
         NAME="GDRN_stereo_disp_in_pnp_light",
-        # NAME="GDRN",
         BACKBONE=dict(
-            FREEZE=True,
+            FREEZE=False,
             PRETRAINED="timm",
             INIT_CFG=dict(
                 type="timm/resnest50d",
@@ -81,17 +62,8 @@ MODEL = dict(
                 features_only=True,
                 out_indices=(4,2,),
             ),
-            # PRETRAINED="",
-            # INIT_CFG=dict(
-                # _delete_=True,
-                # type="mm/ResNetV1d",
-                # depth=50,
-                # in_channels=3,
-                # out_indices=(3,1,),
-            # ),
         ),
         DISP_NET=dict(
-            type="MSNet2Dlight",
             FREEZE=False,
             INIT_CFG=dict(
                 MAX_DISP=64,
@@ -126,15 +98,13 @@ MODEL = dict(
                 mask_num_classes=1,
             ),
             MIN_Q0_REGION=20,
-            # LR_MULT=1.0,
-            LR_MULT=0.0,
+            LR_MULT=1.0,
 
             REGION_CLASS_AWARE=False,
             MASK_THR_TEST=0.5,
         ),
         PNP_NET=dict(
             INIT_CFG=dict(type="ConvPnPNetStereo", norm="GN", act="gelu"),
-            # INIT_CFG=dict(type="ConvPnPNet", norm="GN", act="gelu"),
             DISPARITY=True,
             REGION_ATTENTION=True,
             WITH_2D_COORD=True,
@@ -142,55 +112,47 @@ MODEL = dict(
             TRANS_TYPE="centroid_z",
         ),
         LOSS_CFG=dict(
-            HANDLE_SYM=False,
             # xyz loss ----------------------------
             XYZ_LOSS_TYPE="L1",  # L1 | CE_coor
-            XYZ_LOSS_MASK_GT="visib",  # trunc | visib | obj
-            # XYZ_LW=1.0,
-            XYZ_LW=0.0,
+            XYZ_LOSS_MASK_GT="erode",  # trunc | visib | obj | erode
+            XYZ_LW=1.0,
             # mask loss ---------------------------
             MASK_LOSS_TYPE="L1",  # L1 | BCE | CE
             MASK_LOSS_GT="trunc",  # trunc | visib | gt
-            # MASK_LW=1.0,
-            MASK_LW=0.0,
+            MASK_LW=1.0,
             # region loss -------------------------
             REGION_LOSS_TYPE="CE",  # CE
-            REGION_LOSS_MASK_GT="visib",  # trunc | visib | obj
-            # REGION_LW=0.2,
-            REGION_LW=0.0,
+            REGION_LOSS_MASK_GT="erode",  # trunc | visib | obj | erode
+            REGION_LW=0.01,
             # pm loss --------------
             PM_R_ONLY=True,  # only do R loss in PM
-            # PM_LW=1.0,
-            PM_LW=0.0,
+            PM_LW=1.0,
             # centroid loss -------
             CENTROID_LOSS_TYPE="L1",
-            # CENTROID_LW=1.0,
-            CENTROID_LW=0.0,
+            CENTROID_LW=1.0,
             # z loss -----------
             Z_LOSS_TYPE="L1",
-            # Z_LW=1.0,
-            Z_LW=0.0,
+            Z_LW=1.0,
             # Q0 loss ---------------------
-            # Q0_DEF_LW=1.0,
-            Q0_DEF_LW=0.0,
+            Q0_DEF_LW=1.0,
             Q0_LOSS_TYPE="L1",
             Q0_LOSS_MASK_GT="visib",  # computed from Q0
-            # Q0_LW=1.0,
-            Q0_LW=0.0,
+            Q0_LW=1.0,
             # cross-task loss -------------------
-            # CT_LW=1.0,
-            CT_LW=0.0,
-            # CT_P_LW=1.0,
-            CT_P_LW=0.0,
+            CT_LW=10.0,
+            CT_P_LW=1.0,
             # occlusion mask loss weight
             OCC_LW=0.0,
+            PM_NORM_BY_EXTENT=True,
+            PM_LOSS_SYM=True,
             # disparity loss weight -------------
             DISP_LW=1.0,
+            # Q direction
+            QD_LW=0.0,
+            HANDLE_SYM=False,
         ),
     ),
 )
 
 TEST = dict(EVAL_PERIOD=0, VIS=False, TEST_BBOX_TYPE="est")  # gt | est
-TRAIN = dict(CT_START=0.0, CT_P_START=0.0) # we start cross task loss at maxiter*0.6
-
-
+TRAIN = dict(CT_START=0.2, CT_P_START=0.2) # we start cross task loss at maxiter*0.6
