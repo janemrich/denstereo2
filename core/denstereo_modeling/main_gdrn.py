@@ -174,7 +174,7 @@ def main(args):
             model, device_ids=[comm.get_local_rank()], broadcast_buffers=False, find_unused_parameters=True
         )
 
-    do_train(cfg, args, model, optimizer, renderer=renderer, resume=args.resume)
+    do_train(cfg, args, model, optimizer, renderer=renderer, resume=args.resume, pretrained=args.pretrained)
     return do_test(cfg, model)
 
 
@@ -205,7 +205,8 @@ if __name__ == "__main__":
     parser.add_argument("--config-file", default="../../configs/gdrn_selfocc/lmo/gdrn_selfocc_multistep_40E.py", metavar="FILE", help="path to config file")
     # assert osp.exists("../../configs/gdrn_selfocc/lmo/gdrn_selfocc_multistep_40E.py")
     parser.add_argument(
-        "--resume", default=False, action="store_true", help="whether to attempt to resume from the checkpoint directory"
+    parser.add_argument(
+        "--pretrained", default=False, action="store_true", help="if pretrained iterations start from zero"
     )
     parser.add_argument("--eval-only", default=False, action="store_true", help="perform evaluation only")
     # distributed training launcher:

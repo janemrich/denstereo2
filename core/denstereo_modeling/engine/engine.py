@@ -138,7 +138,7 @@ def get_tbx_event_writer(out_dir, backup=False):
     return tbx_event_writer
 
 
-def do_train(cfg, args, model, optimizer, renderer=None, resume=False):
+def do_train(cfg, args, model, optimizer, renderer=None, resume=False, pretrained=False):
     model.train()
 
     # some basic settings =========================
@@ -196,7 +196,11 @@ def do_train(cfg, args, model, optimizer, renderer=None, resume=False):
         gradscaler=grad_scaler,
         save_to_disk=comm.is_main_process(),
     )
+    logger.info(f"Resume: {resume}")
     start_iter = checkpointer.resume_or_load(cfg.MODEL.WEIGHTS, resume=resume).get("iteration", -1) + 1
+    if pretrained:
+        logger.info(f"Pretrained: start from iteration 0")
+        start_iter = 0
 
 
     # Exponential moving average (NOTE: initialize ema after loading weights) ========================
