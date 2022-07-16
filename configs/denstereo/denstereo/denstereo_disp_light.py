@@ -64,6 +64,7 @@ MODEL = dict(
             ),
         ),
         DISP_NET=dict(
+            type="MSNet2Dlight",
             FREEZE=False,
             INIT_CFG=dict(
                 MAX_DISP=64,
