@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 class GDRN(nn.Module):
     def __init__(self, cfg, backbone, geo_head_net, selfocc_head_net, neck=None, pnp_net=None):
         super().__init__()
-        assert cfg.MODEL.POSE_NET.NAME == "GDRN_stereo", cfg.MODEL.POSE_NET.NAME
+        assert cfg.MODEL.POSE_NET.NAME == "GDRN_stereo_early", cfg.MODEL.POSE_NET.NAME
         self.backbone = backbone
         self.neck = neck
 
@@ -121,7 +121,16 @@ class GDRN(nn.Module):
         gt_id = 0
         # x.shape [bs, 2, 3, 256, 256]
 
-        conv_feat = self.backbone(x.reshape((bs_virtual, c, h, w)))  # [bs_virtual, c, 8, 8]
+        sep_conv_feat = self.backbone(x.reshape((bs_virtual, c, h, w)))  # [bs_virtual, c, 8, 8]
+
+        # early fusion of embeddings into single image
+        # conv_feat = torch.cat((conv_feat[::2, :(c//2)], conv_feat[1::2, :(c//2)]), dim=-3)
+
+        # early fusion of embeddings into two images
+        conv_feat = torch.empty_like(sep_conv_feat)
+        conv_feat[::2] = torch.cat((sep_conv_feat[::2, :(c//2)], sep_conv_feat[1::2, (c//2):]), dim=-3)
+        conv_feat[1::2] = torch.cat((sep_conv_feat[1::2, :(c//2)], sep_conv_feat[::2, (c//2):]), dim=-3)
+
         if self.neck is not None:
             conv_feat = self.neck(conv_feat)
         mask, coor_x, coor_y, coor_z, region = self.geo_head_net(conv_feat)
