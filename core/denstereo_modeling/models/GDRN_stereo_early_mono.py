@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 class GDRN(nn.Module):
     def __init__(self, cfg, backbone, geo_head_net, selfocc_head_net, neck=None, pnp_net=None):
         super().__init__()
-        assert cfg.MODEL.POSE_NET.NAME == "GDRN_stereo_early", cfg.MODEL.POSE_NET.NAME
+        assert cfg.MODEL.POSE_NET.NAME == "GDRN_stereo_early_mono", cfg.MODEL.POSE_NET.NAME
         self.backbone = backbone
         self.neck = neck
 
@@ -121,19 +121,19 @@ class GDRN(nn.Module):
         gt_id = 0
         # x.shape [bs, 2, 3, 256, 256]
 
-        sep_conv_feat = self.backbone(x.reshape((bs_virtual, c, h, w)))  # [bs_virtual, c, 8, 8]
+        conv_feat = self.backbone(x.reshape((bs_virtual, c, h, w)))  # [bs_virtual, c, 8, 8]
 
-        channel_half = sep_conv_feat.shape[-3] // 2
+        channel_half = conv_feat.shape[-3] // 2
+        # early fusion of embeddings into single image
+        conv_feat = torch.cat(
+            (conv_feat[::2, :channel_half], conv_feat[1::2, :channel_half]),
+            dim=-3
+            )
+
         # early fusion of embeddings into two images
-        conv_feat = torch.empty_like(sep_conv_feat)
-        conv_feat[::2] = torch.cat(
-            (sep_conv_feat[::2, :channel_half], sep_conv_feat[1::2, channel_half:]),
-            dim=-3
-            )
-        conv_feat[1::2] = torch.cat(
-            (sep_conv_feat[1::2, :channel_half], sep_conv_feat[::2, channel_half:]),
-            dim=-3
-            )
+        # conv_feat = torch.empty_like(sep_conv_feat)
+        # conv_feat[::2] = torch.cat((sep_conv_feat[::2, :(c//2)], sep_conv_feat[1::2, (c//2):]), dim=-3)
+        # conv_feat[1::2] = torch.cat((sep_conv_feat[1::2, :(c//2)], sep_conv_feat[::2, (c//2):]), dim=-3)
 
         if self.neck is not None:
             conv_feat = self.neck(conv_feat)
@@ -145,37 +145,37 @@ class GDRN(nn.Module):
 
         if g_head_cfg.XYZ_CLASS_AWARE:
             assert roi_classes is not None
-            coor_x = coor_x.view(bs_virtual, num_classes, self.xyz_out_dim // 3, out_res, out_res)
-            coor_x = coor_x[torch.arange(bs_virtual).to(device), roi_classes]
-            coor_y = coor_y.view(bs_virtual, num_classes, self.xyz_out_dim // 3, out_res, out_res)
-            coor_y = coor_y[torch.arange(bs_virtual).to(device), roi_classes]
-            coor_z = coor_z.view(bs_virtual, num_classes, self.xyz_out_dim // 3, out_res, out_res)
-            coor_z = coor_z[torch.arange(bs_virtual).to(device), roi_classes]
+            coor_x = coor_x.view(bs, num_classes, self.xyz_out_dim // 3, out_res, out_res)
+            coor_x = coor_x[torch.arange(bs).to(device), roi_classes]
+            coor_y = coor_y.view(bs, num_classes, self.xyz_out_dim // 3, out_res, out_res)
+            coor_y = coor_y[torch.arange(bs).to(device), roi_classes]
+            coor_z = coor_z.view(bs, num_classes, self.xyz_out_dim // 3, out_res, out_res)
+            coor_z = coor_z[torch.arange(bs).to(device), roi_classes]
 
         if s_head_cfg.Q0_CLASS_AWARE:
-            Q0_xy_x = Q0_xy_x.view(bs_virtual, num_classes, self.Q0_out_dim // 6, out_res, out_res)
-            Q0_xy_x = Q0_xy_x[torch.arange(bs_virtual).to(device), roi_classes]
-            Q0_xz_x = Q0_xz_x.view(bs_virtual, num_classes, self.Q0_out_dim // 6, out_res, out_res)
-            Q0_xz_x = Q0_xz_x[torch.arange(bs_virtual).to(device), roi_classes]
-            Q0_yz_y = Q0_yz_y.view(bs_virtual, num_classes, self.Q0_out_dim // 6, out_res, out_res)
-            Q0_yz_y = Q0_yz_y[torch.arange(bs_virtual).to(device), roi_classes]
+            Q0_xy_x = Q0_xy_x.view(bs, num_classes, self.Q0_out_dim // 6, out_res, out_res)
+            Q0_xy_x = Q0_xy_x[torch.arange(bs).to(device), roi_classes]
+            Q0_xz_x = Q0_xz_x.view(bs, num_classes, self.Q0_out_dim // 6, out_res, out_res)
+            Q0_xz_x = Q0_xz_x[torch.arange(bs).to(device), roi_classes]
+            Q0_yz_y = Q0_yz_y.view(bs, num_classes, self.Q0_out_dim // 6, out_res, out_res)
+            Q0_yz_y = Q0_yz_y[torch.arange(bs).to(device), roi_classes]
 
-            Q0_xy_y = Q0_xy_y.view(bs_virtual, num_classes, self.Q0_out_dim // 6, out_res, out_res)
-            Q0_xy_y = Q0_xy_y[torch.arange(bs_virtual).to(device), roi_classes]
-            Q0_xz_z = Q0_xz_z.view(bs_virtual, num_classes, self.Q0_out_dim // 6, out_res, out_res)
-            Q0_xz_z = Q0_xz_z[torch.arange(bs_virtual).to(device), roi_classes]
-            Q0_yz_z = Q0_yz_z.view(bs_virtual, num_classes, self.Q0_out_dim // 6, out_res, out_res)
-            Q0_yz_z = Q0_yz_z[torch.arange(bs_virtual).to(device), roi_classes]
+            Q0_xy_y = Q0_xy_y.view(bs, num_classes, self.Q0_out_dim // 6, out_res, out_res)
+            Q0_xy_y = Q0_xy_y[torch.arange(bs).to(device), roi_classes]
+            Q0_xz_z = Q0_xz_z.view(bs, num_classes, self.Q0_out_dim // 6, out_res, out_res)
+            Q0_xz_z = Q0_xz_z[torch.arange(bs).to(device), roi_classes]
+            Q0_yz_z = Q0_yz_z.view(bs, num_classes, self.Q0_out_dim // 6, out_res, out_res)
+            Q0_yz_z = Q0_yz_z[torch.arange(bs).to(device), roi_classes]
 
         if g_head_cfg.MASK_CLASS_AWARE:
             assert roi_classes is not None
-            mask = mask.view(bs_virtual, num_classes, self.mask_out_dim, out_res, out_res)
-            mask = mask[torch.arange(bs_virtual).to(device), roi_classes]
+            mask = mask.view(bs, num_classes, self.mask_out_dim, out_res, out_res)
+            mask = mask[torch.arange(bs).to(device), roi_classes]
 
         if g_head_cfg.REGION_CLASS_AWARE:
             assert roi_classes is not None
-            region = region.view(bs_virtual, num_classes, self.region_out_dim, out_res, out_res)
-            region = region[torch.arange(bs_virtual).to(device), roi_classes]
+            region = region.view(bs, num_classes, self.region_out_dim, out_res, out_res)
+            region = region[torch.arange(bs).to(device), roi_classes]
 
         # -----------------------------------------------
         # get rot and trans from pnp_net
@@ -219,13 +219,13 @@ class GDRN(nn.Module):
                 ],
                 dim=-3
             )
-            _, c, w, h = coor_feat.shape
-            coor_feat = coor_feat.reshape((bs, s, c, w, h))
+            # _, c, w, h = coor_feat.shape
+            # coor_feat = coor_feat.reshape((bs, s, c, w, h))
 
             # BCHW
         if pnp_net_cfg.WITH_2D_COORD:
             assert roi_coord_2d is not None
-            coor_feat = torch.cat([coor_feat, roi_coord_2d], dim=-3) # TODO coor-feat split
+            coor_feat = torch.cat([coor_feat, roi_coord_2d[:, gt_id]], dim=-3) # TODO coor-feat split
 
         # NOTE: for region, the 1st dim is bg
         region_softmax = F.softmax(region[:, 1:, :, :], dim=-3)
@@ -233,13 +233,14 @@ class GDRN(nn.Module):
         mask_atten = None
         if pnp_net_cfg.MASK_ATTENTION != "none":
             mask_atten = get_mask_prob(mask, mask_loss_type=net_cfg.LOSS_CFG.MASK_LOSS_TYPE)
-            _, s, c, w, h = mask_atten.shape
-            mask_atten = mask_atten.reshape((bs, 2, c, w, h))
+            # _, s, c, w, h = mask_atten.shape
+            # mask_atten = mask_atten.reshape((bs, 2, c, w, h))
 
         region_atten = None
         if pnp_net_cfg.REGION_ATTENTION:
-            _, c, w, h = region_softmax.shape
-            region_atten = region_softmax.reshape((bs, 2, c, w, h))
+            # _, c, w, h = region_softmax.shape
+            # region_atten = region_softmax.reshape((bs, 2, c, w, h))
+            region_atten = region_softmax
 
         pred_rot_, pred_t_ = self.pnp_net(
             coor_feat,
@@ -338,47 +339,48 @@ class GDRN(nn.Module):
                     self.meanre_save += mean_re
                     self.epoch_count += 1
 
-            w, h = mask.shape[-2:]
-            mask = mask.reshape(bs, 2, 1, w, h)
-            coor_x = coor_x.reshape(bs, 2, 1, w, h)
-            coor_y = coor_y.reshape(bs, 2, 1, w, h)
-            coor_z = coor_z.reshape(bs, 2, 1, w, h)
-            region = region.reshape(bs, 2, region.shape[-3], w, h)
-            Q0_xy_x = Q0_xy_x.reshape(bs, 2, 1, w, h)
-            Q0_xy_y = Q0_xy_y.reshape(bs, 2, 1, w, h)
-            Q0_xz_x = Q0_xz_x.reshape(bs, 2, 1, w, h)
-            Q0_xz_z = Q0_xz_z.reshape(bs, 2, 1, w, h)
-            Q0_yz_y = Q0_yz_y.reshape(bs, 2, 1, w, h)
-            Q0_yz_z = Q0_yz_z.reshape(bs, 2, 1, w, h)
+            # w, h = mask.shape[-2:]
+            # mask = mask.reshape(bs, 2, 1, w, h)
+            # coor_x = coor_x.reshape(bs, 2, 1, w, h)
+            # coor_y = coor_y.reshape(bs, 2, 1, w, h)
+            # coor_z = coor_z.reshape(bs, 2, 1, w, h)
+            # region = region.reshape(bs, 2, region.shape[-3], w, h)
+            # Q0_xy_x = Q0_xy_x.reshape(bs, 2, 1, w, h)
+            # Q0_xy_y = Q0_xy_y.reshape(bs, 2, 1, w, h)
+            # Q0_xz_x = Q0_xz_x.reshape(bs, 2, 1, w, h)
+            # Q0_xz_z = Q0_xz_z.reshape(bs, 2, 1, w, h)
+            # Q0_yz_y = Q0_yz_y.reshape(bs, 2, 1, w, h)
+            # Q0_yz_z = Q0_yz_z.reshape(bs, 2, 1, w, h)
             
+            gt_id = 0
             loss_dict = self.gdrn_loss(
                 cfg=self.cfg,
                 out_mask=mask,
-                gt_mask_trunc=gt_mask_trunc,
-                gt_mask_visib=gt_mask_visib,
-                gt_mask_obj=gt_mask_obj,
+                gt_mask_trunc=gt_mask_trunc[:, gt_id],
+                gt_mask_visib=gt_mask_visib[:, gt_id],
+                gt_mask_obj=gt_mask_obj[:, gt_id],
                 out_x=coor_x,
                 out_y=coor_y,
                 out_z=coor_z,
-                gt_xyz=gt_xyz,
+                gt_xyz=gt_xyz[:, gt_id],
                 out_region=region,
-                gt_region=gt_region,
-                gt_mask_erode=gt_mask_erode,
+                gt_region=gt_region[:, gt_id],
+                gt_mask_erode=gt_mask_erode[:, gt_id],
                 baseline=baseline,
                 out_trans=pred_trans,
-                gt_trans=gt_trans,
+                gt_trans=gt_trans[:, gt_id],
                 out_rot=pred_ego_rot,
-                gt_rot=gt_ego_rot,
+                gt_rot=gt_ego_rot[:, gt_id],
                 out_centroid=pred_t_[:, :2],  # TODO: get these from trans head
                 out_trans_z=pred_t_[:, 2],
-                gt_trans_ratio=gt_trans_ratio,
+                gt_trans_ratio=gt_trans_ratio[:, gt_id],
                 gt_points=gt_points,
                 sym_infos=sym_infos,
                 extents=roi_extents,
                 # roi_classes=roi_classes,
                 # selfocc
-                gt_occmask=gt_occmask,
-                gt_Q0=gt_q0, 
+                gt_occmask=gt_occmask[:, gt_id],
+                gt_Q0=gt_q0[:, gt_id], 
                 out_Q0_xy_x=Q0_xy_x,
                 out_Q0_xy_y=Q0_xy_y,
                 out_Q0_xz_x=Q0_xz_x,
@@ -386,7 +388,7 @@ class GDRN(nn.Module):
                 out_Q0_yz_y=Q0_yz_y,
                 out_Q0_yz_z=Q0_yz_z,
                 roi_extent=roi_extent,
-                roi_2d=roi_coord_2d,
+                roi_2d=roi_coord_2d[:, gt_id],
                 roi_cam=roi_cams,
                 sizeimH=size_imH,
                 sizeimW=size_imW,
@@ -494,6 +496,7 @@ class GDRN(nn.Module):
         gt_id = 0
 
         # cat for stereo
+        '''
         flat_gt_mask_trunc = gt_mask_trunc.flatten(0, 1)
         flat_gt_mask_visib = gt_mask_visib.flatten(0, 1)
         flat_gt_mask_obj = gt_mask_obj.flatten(0, 1)
@@ -526,7 +529,10 @@ class GDRN(nn.Module):
             "obj": flat_gt_mask_obj,
             "erode": flat_gt_mask_erode
         }
-        unflat_gt_masks = {
+        '''
+        if gt_mask_erode is None:
+            gt_mask_erode = gt_mask_visib
+        gt_masks = {
             "trunc": gt_mask_trunc,
             "visib": gt_mask_visib,
             "obj": gt_mask_obj,
@@ -534,59 +540,49 @@ class GDRN(nn.Module):
         }
 
         loss_dict = {}
-        # handle symmetric objects
+        ##handle symmetric objects
         if loss_cfg.HANDLE_SYM:
             loss_func = COOR_loss()
             gt_mask_xyz = gt_masks[loss_cfg.XYZ_LOSS_MASK_GT]
-            out_p0 = torch.cat([out_x, out_y, out_z], dim=-3)
-            out_q0 = torch.cat([out_Q0_xy_x, out_Q0_xy_y, out_Q0_xz_x, out_Q0_xz_z, out_Q0_yz_y, out_Q0_yz_z], dim=-3)
-            loss_dict_coor = loss_func(
-                out_rot.repeat_interleave(2, dim=0),
-                flat_gt_rot,
-                out_p0.flatten(0, 1),
-                flat_gt_xyz,
-                out_q0.flatten(0, 1),
-                flat_gt_Q0,
-                flat_gt_occmask,
-                gt_mask_xyz,
-                roi_extent,
-            )
+            out_p0 = torch.cat([out_x, out_y, out_z], dim=1)
+            out_q0 = torch.cat([out_Q0_xy_x, out_Q0_xy_y, out_Q0_xz_x, out_Q0_xz_z, out_Q0_yz_y, out_Q0_yz_z], dim=1)
+            loss_dict_coor = loss_func(out_rot, gt_rot,  out_p0, gt_xyz,  out_q0, gt_Q0, gt_occmask, gt_mask_xyz, roi_extent)
             loss_dict.update(loss_dict_coor)
         # Q0 loss ------------------------------------------
         if not s_head_cfg.FREEZE and loss_cfg.Q0_LW > 0.0 and (not loss_cfg.HANDLE_SYM):
             Q0_loss_type = loss_cfg.Q0_LOSS_TYPE
             loss_func = nn.L1Loss(reduction="sum")
-            occmask_x = flat_gt_occmask[:, 0, :, :]
+            occmask_x = gt_occmask[:, 0, :, :]
             if occmask_x.sum() < s_head_cfg.MIN_Q0_REGION:
                 loss_dict["loss_Q0_x"] = torch.zeros((1), device=cfg.MODEL.DEVICE)
             else:
-                loss_dict["loss_Q0_x"] = loss_func(flat_Q0_xy_x * occmask_x[:, None],
-                                                   flat_gt_Q0[:, 0:1] * occmask_x[:, None])\
+                loss_dict["loss_Q0_x"] = loss_func(out_Q0_xy_x * occmask_x[:, None],
+                                                   gt_Q0[:, 0:1] * occmask_x[:, None])\
                                          / occmask_x.sum().float().clamp(min=1.0) + \
-                                         loss_func(flat_Q0_xy_y * occmask_x[:, None],
-                                                   flat_gt_Q0[:, 1:2] * occmask_x[:, None]) \
+                                         loss_func(out_Q0_xy_y * occmask_x[:, None],
+                                                   gt_Q0[:, 1:2] * occmask_x[:, None]) \
                                          / occmask_x.sum().float().clamp(min=1.0)
 
-            occmask_y = flat_gt_occmask[:, 1, :, :]
+            occmask_y = gt_occmask[:, 1, :, :]
             if occmask_y.sum() < s_head_cfg.MIN_Q0_REGION:
                 loss_dict["loss_Q0_y"] = torch.zeros((1), device=cfg.MODEL.DEVICE)
             else:
-                loss_dict["loss_Q0_y"] = loss_func(flat_Q0_xz_x * occmask_y[:, None],
-                                                   flat_gt_Q0[:, 2:3] * occmask_y[:, None]) \
+                loss_dict["loss_Q0_y"] = loss_func(out_Q0_xz_x * occmask_y[:, None],
+                                                   gt_Q0[:, 2:3] * occmask_y[:, None]) \
                                          / occmask_y.sum().float().clamp(min=1.0) + \
-                                         loss_func(flat_Q0_xz_z * occmask_y[:, None],
-                                                   flat_gt_Q0[:, 3:4] * occmask_y[:, None]) \
+                                         loss_func(out_Q0_xz_z * occmask_y[:, None],
+                                                   gt_Q0[:, 3:4] * occmask_y[:, None]) \
                                          / occmask_y.sum().float().clamp(min=1.0)
 
-            occmask_z = flat_gt_occmask[:, 2, :, :]
+            occmask_z = gt_occmask[:, 2, :, :]
             if occmask_z.sum() < s_head_cfg.MIN_Q0_REGION:
                 loss_dict["loss_Q0_z"] = torch.zeros((1), device=cfg.MODEL.DEVICE)
             else:
-                loss_dict["loss_Q0_z"] = loss_func(flat_Q0_yz_y * occmask_z[:, None],
-                                                   flat_gt_Q0[:, 4:5] * occmask_z[:, None]) \
+                loss_dict["loss_Q0_z"] = loss_func(out_Q0_yz_y * occmask_z[:, None],
+                                                   gt_Q0[:, 4:5] * occmask_z[:, None]) \
                                          / occmask_z.sum().float().clamp(min=1.0) + \
-                                         loss_func(flat_Q0_yz_z * occmask_z[:, None],
-                                                   flat_gt_Q0[:, 5:] * occmask_z[:, None]) \
+                                         loss_func(out_Q0_yz_z * occmask_z[:, None],
+                                                   gt_Q0[:, 5:] * occmask_z[:, None]) \
                                          / occmask_z.sum().float().clamp(min=1.0)
             loss_dict["loss_Q0_x"] *= loss_cfg.Q0_LW
             loss_dict["loss_Q0_y"] *= loss_cfg.Q0_LW
@@ -594,83 +590,29 @@ class GDRN(nn.Module):
         # cross task loss
         if loss_cfg.CT_LW > 0.0 and E_step > cfg.SOLVER.TOTAL_EPOCHS * cfg.TRAIN.CT_START:
             loss_func = CT_loss(loss_type="L1", loss_weight=loss_cfg.CT_LW)
-            out_p0 = torch.cat([out_x, out_y, out_z], dim=-3)
-            out_q0 = torch.cat([out_Q0_xy_x, out_Q0_xy_y, out_Q0_xz_x, out_Q0_xz_z, out_Q0_yz_y, out_Q0_yz_z], dim=-3)
-            loss_ct = loss_func(
-                pred_rots=out_rot,
-                pred_P0=out_p0[:, 0],
-                pred_Q0=out_q0[:, 0],
-                gt_occmask=gt_occmask[:, 0],
-                roi_extent=roi_extent,
-                pred_transes=out_trans
-            )
-            loss_ct = loss_ct + loss_func(
-                pred_rots=out_rot,
-                pred_P0=out_p0[:, 1],
-                pred_Q0=out_q0[:, 1],
-                gt_occmask=gt_occmask[:, 1],
-                roi_extent=roi_extent,
-                pred_transes=out_trans + baseline
-            )
-            loss_dict["loss_ct"] = (loss_ct / 2) * loss_cfg.CT_LW
+            out_p0 = torch.cat([out_x, out_y, out_z], dim=1)
+            out_q0 = torch.cat([out_Q0_xy_x, out_Q0_xy_y, out_Q0_xz_x, out_Q0_xz_z, out_Q0_yz_y, out_Q0_yz_z], dim=1)
+            loss_dict["loss_ct"] = loss_func(pred_rots=out_rot, pred_P0=out_p0, pred_Q0=out_q0,
+                                             gt_occmask=gt_occmask, roi_extent=roi_extent, pred_transes=out_trans)
+            loss_dict["loss_ct"] *= loss_cfg.CT_LW
         # cross task projection loss
         if loss_cfg.CT_P_LW > 0.0 and E_step > cfg.SOLVER.TOTAL_EPOCHS * cfg.TRAIN.CT_P_START:
             loss_func = CT_loss_projection(loss_type="L1", loss_weight=loss_cfg.CT_P_LW)
-            out_p0 = torch.cat([out_x, out_y, out_z], dim=-3)
-            out_q0 = torch.cat([out_Q0_xy_x, out_Q0_xy_y, out_Q0_xz_x, out_Q0_xz_z, out_Q0_yz_y, out_Q0_yz_z], dim=-3)
-            loss_ct_pro = loss_func(
-                pred_rots=out_rot,
-                pred_P0=out_p0[:, 0],
-                pred_Q0=out_q0[:, 0],
-                gt_occmask=gt_occmask[:, 0],
-                roi_extent=roi_extent,
-                pred_transes=out_trans,
-                roi_2d=roi_2d[:, 0],
-                imH=sizeimH,
-                imW=sizeimW,
-                K=roi_cam
-            )
-            loss_ct_pro = loss_ct_pro + loss_func(
-                pred_rots=out_rot,
-                pred_P0=out_p0[:, 1],
-                pred_Q0=out_q0[:, 1],
-                gt_occmask=gt_occmask[:, 1],
-                roi_extent=roi_extent,
-                pred_transes=out_trans + baseline,
-                roi_2d=roi_2d[:, 1],
-                imH=sizeimH,
-                imW=sizeimW,
-                K=roi_cam
-            )
-            loss_dict["loss_ct_pro"] = (loss_ct_pro / 2) * loss_cfg.CT_P_LW
+            out_p0 = torch.cat([out_x, out_y, out_z], dim=1)
+            out_q0 = torch.cat([out_Q0_xy_x, out_Q0_xy_y, out_Q0_xz_x, out_Q0_xz_z, out_Q0_yz_y, out_Q0_yz_z], dim=1)
+            loss_dict["loss_ct_pro"] = loss_func(pred_rots=out_rot, pred_P0=out_p0, pred_Q0=out_q0,
+                                                 gt_occmask=gt_occmask, roi_extent=roi_extent, pred_transes=out_trans,
+                                                 roi_2d=roi_2d, imH=sizeimH, imW=sizeimW, K=roi_cam)
+            loss_dict["loss_ct_pro"] *= loss_cfg.CT_P_LW
         # Q0 define loss
         # forward(self, rots, pred_Q0, gt_occmask, roi_extent, transes, roi_2d, imH, imW, K=None):
         if loss_cfg.Q0_DEF_LW > 0.0:
             loss_func = Q_def_loss(loss_type="L1", loss_weight=loss_cfg.CT_P_LW)
-            out_q0 = torch.cat([out_Q0_xy_x, out_Q0_xy_y, out_Q0_xz_x, out_Q0_xz_z, out_Q0_yz_y, out_Q0_yz_z], dim=-3)
-            loss_q_def = loss_func(
-                rots=gt_rot[:, 0],
-                pred_Q0=out_q0[:, 0],
-                gt_occmask=gt_occmask[:, 0],
-                roi_extent=roi_extent,
-                transes=gt_trans[:, 0],
-                roi_2d=roi_2d[:, 0],
-                imH=sizeimH,
-                imW=sizeimW,
-                K=roi_cam
-            )
-            loss_q_def = loss_q_def + loss_func(
-                rots=gt_rot[:, 1],
-                pred_Q0=out_q0[:, 1],
-                gt_occmask=gt_occmask[:, 1],
-                roi_extent=roi_extent,
-                transes=gt_trans[:, 1],
-                roi_2d=roi_2d[:, 1],
-                imH=sizeimH,
-                imW=sizeimW,
-                K=roi_cam
-            )
-            loss_dict["loss_q_def"] = (loss_q_def / 2) * loss_cfg.Q0_DEF_LW
+            out_q0 = torch.cat([out_Q0_xy_x, out_Q0_xy_y, out_Q0_xz_x, out_Q0_xz_z, out_Q0_yz_y, out_Q0_yz_z], dim=1)
+            loss_dict["loss_q_def"] = loss_func(rots=gt_rot, pred_Q0=out_q0, gt_occmask=gt_occmask,
+                                                roi_extent=roi_extent, transes=gt_trans, roi_2d=roi_2d,
+                                                imH=sizeimH, imW=sizeimW, K=roi_cam)
+            loss_dict["loss_q_def"] *= loss_cfg.Q0_DEF_LW
         # xyz loss ----------------------------------
         if not g_head_cfg.FREEZE and (not loss_cfg.HANDLE_SYM):
             xyz_loss_type = loss_cfg.XYZ_LOSS_TYPE
@@ -678,25 +620,25 @@ class GDRN(nn.Module):
             if xyz_loss_type == "L1":
                 loss_func = nn.L1Loss(reduction="sum")
                 loss_dict["loss_coor_x"] = loss_func(
-                    flat_x * gt_mask_xyz[:, None], flat_gt_xyz[:, 0:1] * gt_mask_xyz[:, None]
+                    out_x * gt_mask_xyz[:, None], gt_xyz[:, 0:1] * gt_mask_xyz[:, None]
                 ) / gt_mask_xyz.sum().float().clamp(min=1.0)
                 loss_dict["loss_coor_y"] = loss_func(
-                    flat_y * gt_mask_xyz[:, None], flat_gt_xyz[:, 1:2] * gt_mask_xyz[:, None]
+                    out_y * gt_mask_xyz[:, None], gt_xyz[:, 1:2] * gt_mask_xyz[:, None]
                 ) / gt_mask_xyz.sum().float().clamp(min=1.0)
                 loss_dict["loss_coor_z"] = loss_func(
-                    flat_z * gt_mask_xyz[:, None], flat_gt_xyz[:, 2:3] * gt_mask_xyz[:, None]
+                    out_z * gt_mask_xyz[:, None], gt_xyz[:, 2:3] * gt_mask_xyz[:, None]
                 ) / gt_mask_xyz.sum().float().clamp(min=1.0)
             elif xyz_loss_type == "CE_coor":
                 gt_xyz_bin = gt_xyz_bin.long()
                 loss_func = CrossEntropyHeatmapLoss(reduction="sum", weight=None)  # g_head_cfg.XYZ_BIN+1
                 loss_dict["loss_coor_x"] = loss_func(
-                    flat_x * gt_mask_xyz[:, None], gt_xyz_bin[:, 0] * gt_mask_xyz.long()
+                    out_x * gt_mask_xyz[:, None], gt_xyz_bin[:, 0] * gt_mask_xyz.long()
                 ) / gt_mask_xyz.sum().float().clamp(min=1.0)
                 loss_dict["loss_coor_y"] = loss_func(
-                    flat_y * gt_mask_xyz[:, None], gt_xyz_bin[:, 1] * gt_mask_xyz.long()
+                    out_y * gt_mask_xyz[:, None], gt_xyz_bin[:, 1] * gt_mask_xyz.long()
                 ) / gt_mask_xyz.sum().float().clamp(min=1.0)
                 loss_dict["loss_coor_z"] = loss_func(
-                    flat_z * gt_mask_xyz[:, None], gt_xyz_bin[:, 2] * gt_mask_xyz.long()
+                    out_z * gt_mask_xyz[:, None], gt_xyz_bin[:, 2] * gt_mask_xyz.long()
                 ) / gt_mask_xyz.sum().float().clamp(min=1.0)
             else:
                 raise NotImplementedError(f"unknown xyz loss type: {xyz_loss_type}")
@@ -704,19 +646,12 @@ class GDRN(nn.Module):
             loss_dict["loss_coor_y"] *= loss_cfg.XYZ_LW
             loss_dict["loss_coor_z"] *= loss_cfg.XYZ_LW
 
-            if not loss_dict['loss_coor_x'].isfinite().all():
-                loss_dict['loss_coor_x'] = torch.zeros((1), device='cuda')
-            if not loss_dict['loss_coor_y'].isfinite().all():
-                loss_dict['loss_coor_y'] = torch.zeros((1), device='cuda')
-            if not loss_dict['loss_coor_z'].isfinite().all():
-                loss_dict['loss_coor_z'] = torch.zeros((1), device='cuda')
-
         # mask loss ----------------------------------
         if not g_head_cfg.FREEZE:
             mask_loss_type = loss_cfg.MASK_LOSS_TYPE
             gt_mask = gt_masks[loss_cfg.MASK_LOSS_GT]
             if mask_loss_type == "L1":
-                loss_dict["loss_mask"] = nn.L1Loss(reduction="mean")(flat_mask[:, 0, :, :], gt_mask)
+                loss_dict["loss_mask"] = nn.L1Loss(reduction="mean")(out_mask[:, 0, :, :], gt_mask)
             elif mask_loss_type == "BCE":
                 loss_dict["loss_mask"] = nn.BCEWithLogitsLoss(reduction="mean")(out_mask[:, 0, :, :], gt_mask)
             elif mask_loss_type == "CE":
@@ -730,11 +665,11 @@ class GDRN(nn.Module):
             region_loss_type = loss_cfg.REGION_LOSS_TYPE
             gt_mask_region = gt_masks[loss_cfg.REGION_LOSS_MASK_GT]
             if region_loss_type == "CE":
-                flat_gt_region = flat_gt_region.long()
+                gt_region = gt_region.long()
                 loss_func = nn.CrossEntropyLoss(reduction="sum", weight=None)  # g_head_cfg.XYZ_BIN+1
                 loss_dict["loss_region"] = loss_func(
-                    flat_region * gt_mask_region[:, None], flat_gt_region * gt_mask_region.long()
-                ) / (gt_mask_region.sum().float().clamp(min=1.0) * flat_region.shape[-1])
+                    out_region * gt_mask_region[:, None], gt_region * gt_mask_region.long()
+                ) / (gt_mask_region.sum().float().clamp(min=1.0) * out_region.shape[-1])
             else:
                 raise NotImplementedError(f"unknown region loss type: {region_loss_type}")
             loss_dict["loss_region"] *= loss_cfg.REGION_LW
@@ -754,17 +689,14 @@ class GDRN(nn.Module):
                 t_loss_use_points=loss_cfg.PM_T_USE_POINTS,
                 r_only=loss_cfg.PM_R_ONLY,
             )
-            sym_infos_repeat_interleave = list(chain.from_iterable(zip(sym_infos, sym_infos)))
-            out_trans_ext = out_trans.repeat_interleave(2, dim=0)
-            out_trans_ext[1::2] += baseline
             loss_pm_dict = loss_func(
-                pred_rots=out_rot.repeat_interleave(2, dim=0),
-                gt_rots=flat_gt_rot,
-                points=gt_points.repeat_interleave(2, dim=0),
-                pred_transes=out_trans_ext,
-                gt_transes=flat_gt_trans,
-                extents=extents.repeat_interleave(2, dim=0),
-                sym_infos=sym_infos_repeat_interleave,
+                pred_rots=out_rot,
+                gt_rots=gt_rot,
+                points=gt_points,
+                pred_transes=out_trans,
+                gt_transes=gt_trans,
+                extents=extents,
+                sym_infos=sym_infos,
             )
             loss_dict.update(loss_pm_dict)
 
@@ -785,17 +717,11 @@ class GDRN(nn.Module):
             ), "centroid loss is only valid for predicting centroid2d_rel_delta"
 
             if loss_cfg.CENTROID_LOSS_TYPE == "L1":
-                loss_dict["loss_centroid"] = nn.L1Loss(reduction="mean")(
-                    out_centroid, gt_trans_ratio[:, gt_id, :2]
-                )
+                loss_dict["loss_centroid"] = nn.L1Loss(reduction="mean")(out_centroid, gt_trans_ratio[:, :2])
             elif loss_cfg.CENTROID_LOSS_TYPE == "L2":
-                loss_dict["loss_centroid"] = L2Loss(reduction="mean")(
-                    out_centroid, gt_trans_ratio[:, gt_id, :2]
-                )
+                loss_dict["loss_centroid"] = L2Loss(reduction="mean")(out_centroid, gt_trans_ratio[:, :2])
             elif loss_cfg.CENTROID_LOSS_TYPE == "MSE":
-                loss_dict["loss_centroid"] = nn.MSELoss(reduction="mean")(
-                    out_centroid, gt_trans_ratio[:, gt_id, :2]
-                )
+                loss_dict["loss_centroid"] = nn.MSELoss(reduction="mean")(out_centroid, gt_trans_ratio[:, :2])
             else:
                 raise ValueError(f"Unknown centroid loss type: {loss_cfg.CENTROID_LOSS_TYPE}")
             loss_dict["loss_centroid"] *= loss_cfg.CENTROID_LW
@@ -804,9 +730,9 @@ class GDRN(nn.Module):
         if loss_cfg.Z_LW > 0:
             z_type = pnp_net_cfg.Z_TYPE
             if z_type == "REL":
-                gt_z = gt_trans_ratio[:, gt_id, 2]
+                gt_z = gt_trans_ratio[:, 2]
             elif z_type == "ABS":
-                gt_z = gt_trans[:, gt_id, 2]
+                gt_z = gt_trans[:, 2]
             else:
                 raise NotImplementedError
 
@@ -863,7 +789,7 @@ class GDRN(nn.Module):
             else:
                 raise ValueError(f"Unknown bind loss (R^T@t) type: {loss_cfg.BIND_LOSS_TYPE}")
             loss_dict["loss_bind"] *= loss_cfg.BIND_LW
-
+        
         if net_cfg.USE_MTL:
             for _k in loss_dict:
                 _name = _k.replace("loss_", "log_var_")
