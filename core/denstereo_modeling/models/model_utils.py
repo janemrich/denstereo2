@@ -233,6 +233,9 @@ def get_pnp_net(cfg):
     if pnp_net_cfg.DISPARITY:
         pnp_net_in_channel += 1
 
+    if pnp_net_cfg.WITH_RESIDUAL:
+        pnp_net_in_channel += 256
+
     if pnp_net_cfg.MASK_ATTENTION in ["concat"]:  # do not add dim for none/mul
         pnp_net_in_channel += 1
 
