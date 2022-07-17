@@ -34,7 +34,8 @@ SOLVER = dict(
 
 DATASETS = dict(
     TRAIN=(
-        'denstereo_002_master_chef_can_train_pbr',
+        'denstereo_037_scissors_train_pbr',
+        # 'denstereo_002_master_chef_can_train_pbr',
         # 'denstereo_035_power_drill_train_pbr',
         # 'denstereo_035_power_drill_train_pbr',
         # 'denstereo_debug_train_pbr_left',
@@ -116,7 +117,6 @@ MODEL = dict(
             TRANS_TYPE="centroid_z",
         ),
         LOSS_CFG=dict(
-            HANDLE_SYM=False,
             # xyz loss ----------------------------
             XYZ_LOSS_TYPE="L1",  # L1 | CE_coor
             XYZ_LOSS_MASK_GT="visib",  # trunc | visib | obj
@@ -151,6 +151,7 @@ MODEL = dict(
             OCC_LW=0.0,
             # disparity loss weight -------------
             DISP_LW=1.0,
+            HANDLE_SYM=True,
         ),
     ),
 )

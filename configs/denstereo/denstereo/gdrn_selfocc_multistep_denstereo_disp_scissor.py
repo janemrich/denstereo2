@@ -167,7 +167,7 @@ MODEL = dict(
             DISP_LW=1.0,
             # Q direction
             QD_LW=0.0,
-            HANDLE_SYM=False,
+            HANDLE_SYM=True,
         ),
     ),
 )

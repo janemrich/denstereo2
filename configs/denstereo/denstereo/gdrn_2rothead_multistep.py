@@ -100,7 +100,6 @@ MODEL = dict(
             TRANS_TYPE="centroid_z",
         ),
         LOSS_CFG=dict(
-            HANDLE_SYM=False,
             # xyz loss ----------------------------
             XYZ_LOSS_TYPE="L1",  # L1 | CE_coor
             XYZ_LOSS_MASK_GT="visib",  # trunc | visib | obj
@@ -132,6 +131,8 @@ MODEL = dict(
             CT_P_LW=1.0,
             # occlusion mask loss weight
             OCC_LW=0.0,
+            # handle symmetries
+            HANDLE_SYM=True,
         ),
     ),
 )

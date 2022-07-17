@@ -215,7 +215,7 @@ MODEL = dict(
             # Q direction
             QD_LW=0.0,
             #
-            HANDLE_SYM=False,
+            HANDLE_SYM=True,
         ),
     ),
 )

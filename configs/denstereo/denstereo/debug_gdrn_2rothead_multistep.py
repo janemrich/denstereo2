@@ -35,10 +35,10 @@ SOLVER = dict(
 
 DATASETS = dict(
     TRAIN=(
-        'denstereo_train_pbr',
-        # 'denstereo_single_0_3_15_stereo',
-        # 'denstereo_single_0_4_15_stereo',
-        # 'denstereo_single_0_6_15_stereo',
+        # 'denstereo_train_pbr',
+        'denstereo_single_0_3_15_stereo',
+        'denstereo_single_0_4_15_stereo',
+        'denstereo_single_0_6_15_stereo',
         # 'denstereo_single_0_6_15_stereo',
         # 'denstereo_single_0_6_15_stereo',
         # 'denstereo_single_0_6_15_stereo',
@@ -66,7 +66,7 @@ MODEL = dict(
     PIXEL_MEAN=[0.0, 0.0, 0.0],
     PIXEL_STD=[255.0, 255.0, 255.0],
     STEREO=True,
-    DISP_NET=True,
+    DISP_NET=False,
     POSE_NET=dict(
         NAME="GDRN_stereo",
         BACKBONE=dict(
@@ -125,7 +125,6 @@ MODEL = dict(
             TRANS_TYPE="centroid_z",
         ),
         LOSS_CFG=dict(
-            HANDLE_SYM=False,
             # xyz loss ----------------------------
             XYZ_LOSS_TYPE="L1",  # L1 | CE_coor
             XYZ_LOSS_MASK_GT="visib",  # trunc | visib | obj
@@ -169,6 +168,8 @@ MODEL = dict(
             OCC_LW=0.0,
             # disparity loss weight -------------
             DISP_LW=1.0,
+            # handle sym
+            HANDLE_SYM=True,
         ),
     ),
 )
