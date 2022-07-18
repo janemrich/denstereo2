@@ -582,7 +582,7 @@ class GDRN(nn.Module):
                 flat_gt_Q0,
                 flat_gt_occmask,
                 gt_mask_xyz,
-                roi_extent,
+                roi_extent.repeat_interleave(2, dim=0),
             )
             loss_dict.update(loss_dict_coor)
         # Q0 loss ------------------------------------------
