@@ -133,8 +133,12 @@ def main(args):
 
     distributed = comm.get_world_size() > 1
 
-    if comm.is_main_process() and not cfg.get("DEBUG", False):
-        wandb.init(project="denstereo-modeling", entity="jemrich")
+    if comm.is_main_process():
+        if args.no_wandb:
+            mode = "disabled"
+        else:
+            mode = "online"
+        wandb.init(project="denstereo-modeling", entity="jemrich", mode=mode)
     '''
     # get renderer ----------------------
     if cfg.MODEL.POSE_NET.XYZ_ONLINE and not args.eval_only:
@@ -206,6 +210,9 @@ if __name__ == "__main__":
     # assert osp.exists("../../configs/gdrn_selfocc/lmo/gdrn_selfocc_multistep_40E.py")
     parser.add_argument(
         "--pretrained", default=False, action="store_true", help="if pretrained start iterations from zero even if loading from checkpoint"
+    )
+    parser.add_argument(
+        "--no-wandb", default=False, action="store_true", help="deactivate wandb"
     )
     parser.add_argument(
         "--resume", default=False, action="store_true", help="whether to attempt to resume from the checkpoint directory"
