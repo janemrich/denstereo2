@@ -122,6 +122,9 @@ class GDRN(nn.Module):
         # x.shape [bs, 2, 3, 256, 256]
 
         conv_feat = self.backbone(x.reshape((bs_virtual, c, h, w)))  # [bs_virtual, c, 8, 8]
+        if type(sep_conv_feat) == list:
+            sep_conv_feat = sep_conv_feat[0]
+
         if self.neck is not None:
             conv_feat = self.neck(conv_feat)
         mask, coor_x, coor_y, coor_z, region = self.geo_head_net(conv_feat)

@@ -130,6 +130,9 @@ class GDRN(nn.Module):
         # plt.imshow(x[0,0].cpu().detach().numpy().transpose(1,2,0))
 
         conv_feat = self.backbone(x.reshape((bs_virtual, c, h, w)))  # [bs_virtual, c, 8, 8]
+        if type(sep_conv_feat) == list:
+            sep_conv_feat = sep_conv_feat[0]
+
         disps_l = self.disp_net(x[:, 0], x[:, 1]) # left -> right
         disps_r = self.disp_net(x[:, 1], x[:, 0]) # right -> left
 
