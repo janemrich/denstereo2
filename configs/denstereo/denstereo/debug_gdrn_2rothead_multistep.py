@@ -19,6 +19,8 @@ INPUT = dict(
     ),
 )
 
+DEBUG = True
+
 SOLVER = dict(
     IMS_PER_BATCH=1,
     TOTAL_EPOCHS=10000,
