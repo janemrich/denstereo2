@@ -133,7 +133,7 @@ def main(args):
 
     distributed = comm.get_world_size() > 1
 
-    if comm.is_main_process():
+    if comm.is_main_process() and not cfg.get("DEBUG", False):
         wandb.init(project="denstereo-modeling", entity="jemrich")
     '''
     # get renderer ----------------------
