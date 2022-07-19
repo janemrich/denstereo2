@@ -42,11 +42,11 @@ SOLVER = dict(
 
 DATASETS = dict(
     TRAIN=(
-        'denstereo_single_0_3_15_stereo',
-        'denstereo_single_0_4_15_stereo',
-        'denstereo_single_0_6_15_stereo',
+        # 'denstereo_single_0_3_15_stereo',
+        # 'denstereo_single_0_4_15_stereo',
+        # 'denstereo_single_0_6_15_stereo',
         # "denstereo_train_pbr_left",
-        # 'denstereo_037_scissors_train_pbr',
+        'denstereo_037_scissors_train_pbr',
         # "denstereo_002_master_chef_can_train_pbr",
     ),
     TEST=("denstereo_test_pbr",),
