@@ -94,7 +94,7 @@ class ConvPnPNet(nn.Module):
         normal_init(self.fc_r, std=0.01)
         normal_init(self.fc_t, std=0.01)
 
-    def forward(self, coor_feat, region=None, extents=None, mask_attention=None):
+    def forward(self, coor_feat, region=None, extents=None, mask_attention=None, disparity=None):
         """
         Args:
              since this is the actual correspondence
@@ -114,6 +114,8 @@ class ConvPnPNet(nn.Module):
             coor_feat[:, 3:9, :, :] = (coor_feat[:, 3:9, :, :] - 0.5) * Q0_extents.view(bs, 6, 1, 1)
         '''
         # convs
+        if disparity is not None:
+            coor_feat = torch.cat([coor_feat, disparity], dim=-3)
         if region is not None:
             x = torch.cat([coor_feat, region], dim=1)
         else:
