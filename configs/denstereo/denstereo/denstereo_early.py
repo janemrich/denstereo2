@@ -42,7 +42,7 @@ SOLVER = dict(
 
 DATASETS = dict(
     TRAIN=(
-        "denstereo_train_pbr_left",
+        "denstereo_train_pbr",
         # 'denstereo_037_scissors_train_pbr',
         # "denstereo_002_master_chef_can_train_pbr",
     ),
