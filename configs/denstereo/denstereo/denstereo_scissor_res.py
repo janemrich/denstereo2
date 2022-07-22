@@ -99,7 +99,7 @@ MODEL = dict(
     PIXEL_MEAN=[0.0, 0.0, 0.0],
     PIXEL_STD=[255.0, 255.0, 255.0],
     POSE_NET=dict(
-        NAME="GDRN_stereo",
+        NAME="GDRN_stereo_res",
         BACKBONE=dict(
             FREEZE=False,
             PRETRAINED="timm",
@@ -108,7 +108,7 @@ MODEL = dict(
                 pretrained=True,
                 in_chans=3,
                 features_only=True,
-                out_indices=(4,),
+                out_indices=(4,1,),
             ),
         ),
         ## geo head: Mask, XYZ, Region
@@ -150,7 +150,7 @@ MODEL = dict(
             DISPARITY=False,
             REGION_ATTENTION=True,
             WITH_2D_COORD=True,
-            # WITH_RESIDUAL=True,
+            WITH_RESIDUAL=True,
             ROT_TYPE="allo_rot6d",
             TRANS_TYPE="centroid_z",
         ),
