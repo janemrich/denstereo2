@@ -42,6 +42,9 @@ SOLVER = dict(
 
 DATASETS = dict(
     TRAIN=(
+        # 'denstereo_single_0_3_15_stereo',
+        # 'denstereo_single_0_4_15_stereo',
+        # 'denstereo_single_0_6_15_stereo',
         # "denstereo_train_pbr_left",
         'denstereo_037_scissors_train_pbr',
         # "denstereo_002_master_chef_can_train_pbr",
@@ -67,7 +70,7 @@ MODEL = dict(
     PIXEL_MEAN=[0.0, 0.0, 0.0],
     PIXEL_STD=[255.0, 255.0, 255.0],
     POSE_NET=dict(
-        NAME="GDRN_stereo_early",
+        NAME="GDRN_stereo_early_mono",
         BACKBONE=dict(
             FREEZE=False,
             PRETRAINED="timm",
@@ -114,7 +117,7 @@ MODEL = dict(
             MASK_THR_TEST=0.5,
         ),
         PNP_NET=dict(
-            INIT_CFG=dict(type="ConvPnPNetStereo", norm="GN", act="gelu"),
+            INIT_CFG=dict(type="ConvPnPNet", norm="GN", act="gelu"),
             DISPARITY=False,
             REGION_ATTENTION=True,
             WITH_2D_COORD=True,

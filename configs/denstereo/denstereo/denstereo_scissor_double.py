@@ -36,7 +36,7 @@ SOLVER = dict(
     WEIGHT_DECAY=0.0,
     WARMUP_FACTOR=0.001,
     WARMUP_ITERS=1000,
-    CHECKPOINT_PERIOD=1,
+    CHECKPOINT_PERIOD=10,
     AMP=dict(ENABLED=True),
 )
 
@@ -53,41 +53,9 @@ DATASETS = dict(
     SYM_OBJS=["024_bowl", "036_wood_block", "051_large_clamp", "052_extra_large_clamp", "061_foam_brick"],  # ycb
 )
 
-'''
-MODEL = dict(
-    LOAD_DETS_TEST=True,
-    PIXEL_MEAN=[0.0, 0.0, 0.0],
-    PIXEL_STD=[255.0, 255.0, 255.0],
-    CDPN=dict(
-        ROT_HEAD=dict(
-            FREEZE=False,
-            ROT_CLASS_AWARE=False,
-            MASK_CLASS_AWARE=False,
-            XYZ_LW=1.0,
-            REGION_CLASS_AWARE=False,
-            NUM_REGIONS=64,
-        ),
-        PNP_NET=dict(
-            R_ONLY=False,
-            REGION_ATTENTION=True,
-            WITH_2D_COORD=True,
-            ROT_TYPE="allo_rot6d",
-            TRANS_TYPE="centroid_z",
-            PM_NORM_BY_EXTENT=True,
-            PM_R_ONLY=True,
-            CENTROID_LOSS_TYPE="L1",
-            CENTROID_LW=1.0,
-            Z_LOSS_TYPE="L1",
-            Z_LW=1.0,
-        ),
-        TRANS_HEAD=dict(ENABLED=False),
-    ),
-
-)
-'''
 DATALOADER = dict(
     # Number of data loading threads
-    NUM_WORKERS=12,
+    NUM_WORKERS=10,
     # FILTER_VISIB_THR=0.2,
 )
 
@@ -99,7 +67,7 @@ MODEL = dict(
     PIXEL_MEAN=[0.0, 0.0, 0.0],
     PIXEL_STD=[255.0, 255.0, 255.0],
     POSE_NET=dict(
-        NAME="GDRN_stereo",
+        NAME="GDRN_stereo_early",
         BACKBONE=dict(
             FREEZE=False,
             PRETRAINED="timm",
@@ -146,7 +114,7 @@ MODEL = dict(
             MASK_THR_TEST=0.5,
         ),
         PNP_NET=dict(
-            INIT_CFG=dict(type="ConvPnPNetStereoMid", norm="GN", act="gelu"),
+            INIT_CFG=dict(type="ConvPnPNetStereo", norm="GN", act="gelu"),
             DISPARITY=False,
             REGION_ATTENTION=True,
             WITH_2D_COORD=True,
