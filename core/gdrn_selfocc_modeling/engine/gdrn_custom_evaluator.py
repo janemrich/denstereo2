@@ -610,7 +610,7 @@ class GDRN_EvaluatorCustom(DatasetEvaluator):
         # yapf: disable
         metric_names = [
             "ad_2", "ad_5", "ad_10", "ad_50",
-            "rete_2", "rete_5", "rete_10", "ad_50",
+            "rete_2", "rete_5", "rete_10", "rete_50",
             "re_2", "re_5", "re_10",
             "te_2", "te_5", "te_10",
             "proj_2", "proj_5", "proj_10",
