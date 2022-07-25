@@ -609,8 +609,8 @@ class GDRN_EvaluatorCustom(DatasetEvaluator):
         error_names = ["ad", "re", "te", "proj"]
         # yapf: disable
         metric_names = [
-            "ad_2", "ad_5", "ad_10",
-            "rete_2", "rete_5", "rete_10",
+            "ad_2", "ad_5", "ad_10", "ad_50",
+            "rete_2", "rete_5", "rete_10", "ad_50",
             "re_2", "re_5", "re_10",
             "te_2", "te_5", "te_10",
             "proj_2", "proj_5", "proj_10",
@@ -679,10 +679,12 @@ class GDRN_EvaluatorCustom(DatasetEvaluator):
                 recalls[obj_name]["ad_2"].append(float(ad_error < 0.02 * self.diameters[cur_label]))
                 recalls[obj_name]["ad_5"].append(float(ad_error < 0.05 * self.diameters[cur_label]))
                 recalls[obj_name]["ad_10"].append(float(ad_error < 0.1 * self.diameters[cur_label]))
+                recalls[obj_name]["ad_50"].append(float(ad_error < 0.5 * self.diameters[cur_label]))
                 # deg, cm
                 recalls[obj_name]["rete_2"].append(float(r_error < 2 and t_error < 0.02))
                 recalls[obj_name]["rete_5"].append(float(r_error < 5 and t_error < 0.05))
                 recalls[obj_name]["rete_10"].append(float(r_error < 10 and t_error < 0.1))
+                recalls[obj_name]["rete_50"].append(float(r_error < 50 and t_error < 0.5))
 
                 recalls[obj_name]["re_2"].append(float(r_error < 2))
                 recalls[obj_name]["re_5"].append(float(r_error < 5))
