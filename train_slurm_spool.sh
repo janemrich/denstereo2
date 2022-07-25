@@ -1,24 +1,25 @@
 #!/usr/bin/env bash
-# commonly used opts:
+#SBATCH --job-name=train_denstereo
+#SBATCH --gpus 1
+#SBATCH --cpus-per-gpu 8
+#SBATCH --nodelist ampere2
 
 # MODEL.WEIGHTS: resume or pretrained, or test checkpoint
-#--mem-per-gpu=64G  \
-NODE=$1
-CFG=$2
-NGPU=$3
+CFG=$1
+NGPU=$2
+echo gpus $NGPU
 
-export RANK=4
+#export RANK=4
 
 cd /opt/cache/
 if [ ! -d denStereo-SO ] ; then
 	git clone git@github.com:janemrich/denStereo-SO.git
 	ln -s /opt/spool/jemrich datasets
 else
+	cd denStereo-SO
 	git pull
 fi
+nvidia-smi
 
-echo srun -w ${NODE} --gpus ${NGPU} --cpus-per-gpu=${NGPU} --mem-per-gpu=64G bash core/gdrn_selfocc_modeling/train_gdrn.sh ${CFG} ${NGPU} ${@:4}
-srun -w $NODE --gpus $NGPU  --cpus-per-gpu=4 --mem-per-cpu=8G\
-    bash core/gdrn_selfocc_modeling/train_gdrn.sh \
-    $CFG $NGPU ${@:4}
-#    --cpus-per-gpu=4 --mem-per-gpu=32G \
+bash core/gdrn_selfocc_modeling/train_gdrn.sh $CFG $NGPU ${@:4}
+#SBATCH --mem-per-cpu 2G
