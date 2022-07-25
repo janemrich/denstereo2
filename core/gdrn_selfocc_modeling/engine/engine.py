@@ -196,7 +196,11 @@ def do_train(cfg, args, model, optimizer, renderer=None, resume=False):
         gradscaler=grad_scaler,
         save_to_disk=comm.is_main_process(),
     )
+    logger.info("resume " + str(resume))
     start_iter = checkpointer.resume_or_load(cfg.MODEL.WEIGHTS, resume=resume).get("iteration", -1) + 1
+    logger.info("start_iter: " + str(start_iter))
+    if not resume:
+        start_iter = 0
 
 
     # Exponential moving average (NOTE: initialize ema after loading weights) ========================
@@ -324,10 +328,13 @@ def do_train(cfg, args, model, optimizer, renderer=None, resume=False):
                 losses = sum(loss_dict.values())
                 assert torch.isfinite(losses).all(), loss_dict
 
-            loss_dict_reduced = {k: v.item() for k, v in comm.reduce_dict(loss_dict).items()}
-            losses_reduced = sum(loss for loss in loss_dict_reduced.values())
+            # loss_dict_reduced = {k: v.item() for k, v in comm.reduce_dict(loss_dict).items()} #TODO this disables distributed training
+            # losses_reduced = sum(loss for loss in loss_dict_reduced.values()) 
+            losses_reduced = sum(loss for loss in loss_dict.values()) 
+            print('distributed training disabled')
             if comm.is_main_process():
-                storage.put_scalars(total_loss=losses_reduced, **loss_dict_reduced)
+                # storage.put_scalars(total_loss=losses_reduced, **loss_dict_reduced)
+                storage.put_scalars(total_loss=losses_reduced, **loss_dict)
 
             # backward & optimize ======================================================
             if AMP_ON:

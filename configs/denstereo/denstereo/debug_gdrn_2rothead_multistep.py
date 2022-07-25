@@ -19,8 +19,10 @@ INPUT = dict(
     ),
 )
 
+DEBUG = True
+
 SOLVER = dict(
-    IMS_PER_BATCH=3,
+    IMS_PER_BATCH=1,
     TOTAL_EPOCHS=10000,
     LR_SCHEDULER_NAME="flat_and_anneal",
     ANNEAL_METHOD="cosine",  # "cosine"
@@ -35,6 +37,7 @@ SOLVER = dict(
 
 DATASETS = dict(
     TRAIN=(
+        # 'denstereo_train_pbr',
         'denstereo_single_0_3_15_stereo',
         'denstereo_single_0_4_15_stereo',
         'denstereo_single_0_6_15_stereo',
@@ -52,10 +55,11 @@ DATASETS = dict(
     # TRAIN2_RATIO=0.75,
     TEST=(
         # 'denstereo_debug_002_master_chef_can_train_pbr',
-        'denstereo_035_power_drill_test_pbr',
+        # 'denstereo_035_power_drill_test_pbr',
         # 'denstereo_debug_train_pbr_left',
         # 'denstereo_single_0_0_1_train_pbr_left',
         # "denstereo_single_0_3_1_train_pbr_left",
+        'denstereo_test_pbr',
         ),
     DET_FILES_TEST=("datasets/BOP_DATASETS/denstereo/test_bboxes/test_pbr_stereo.json",),)
 
@@ -64,10 +68,9 @@ MODEL = dict(
     PIXEL_MEAN=[0.0, 0.0, 0.0],
     PIXEL_STD=[255.0, 255.0, 255.0],
     STEREO=True,
+    DISP_NET=False,
     POSE_NET=dict(
-        # NAME="disparity_test",
-        NAME="GDRN_stereo_disp",
-        # NAME="GDRN",
+        NAME="GDRN_stereo",
         BACKBONE=dict(
             FREEZE=True,
             PRETRAINED="",
@@ -77,12 +80,6 @@ MODEL = dict(
                 depth=50,
                 in_channels=3,
                 out_indices=(3,),
-            ),
-        ),
-        DISP_NET=dict(
-            FREEZE=False,
-            INIT_CFG=dict(
-                MAX_DISP=64,
             ),
         ),
         ## geo head: Mask, XYZ, Region
@@ -125,11 +122,11 @@ MODEL = dict(
             # INIT_CFG=dict(type="ConvPnPNet", norm="GN", act="gelu"),
             REGION_ATTENTION=True,
             WITH_2D_COORD=True,
+            DISPARITY=False,
             ROT_TYPE="allo_rot6d",
             TRANS_TYPE="centroid_z",
         ),
         LOSS_CFG=dict(
-            HANDLE_SYM=False,
             # xyz loss ----------------------------
             XYZ_LOSS_TYPE="L1",  # L1 | CE_coor
             XYZ_LOSS_MASK_GT="visib",  # trunc | visib | obj
@@ -173,6 +170,8 @@ MODEL = dict(
             OCC_LW=0.0,
             # disparity loss weight -------------
             DISP_LW=1.0,
+            # handle sym
+            HANDLE_SYM=True,
         ),
     ),
 )

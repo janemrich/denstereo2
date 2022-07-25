@@ -9,6 +9,7 @@ from core.utils.solver_utils import build_optimizer_with_params
 from detectron2.utils.events import get_event_storage
 from mmcv.runner import load_checkpoint
 import mmcv
+from itertools import chain
 from ..losses.coor_cross_entropy import CrossEntropyHeatmapLoss
 from ..losses.l2_loss import L2Loss
 from ..losses.pm_loss import PyPMLoss
@@ -121,6 +122,9 @@ class GDRN(nn.Module):
         # x.shape [bs, 2, 3, 256, 256]
 
         conv_feat = self.backbone(x.reshape((bs_virtual, c, h, w)))  # [bs_virtual, c, 8, 8]
+        if type(conv_feat) == list:
+            conv_feat = conv_feat[0]
+
         if self.neck is not None:
             conv_feat = self.neck(conv_feat)
         mask, coor_x, coor_y, coor_z, region = self.geo_head_net(conv_feat)
@@ -128,32 +132,7 @@ class GDRN(nn.Module):
             occmask, Q0_xy_x, Q0_xy_y, Q0_xz_x, Q0_xz_z, Q0_yz_y, Q0_yz_z = self.selfocc_head_net(conv_feat)
         else:
             Q0_xy_x, Q0_xy_y, Q0_xz_x, Q0_xz_z, Q0_yz_y, Q0_yz_z = self.selfocc_head_net(conv_feat)
-        '''
-        save_x = x.detach().cpu().numpy()
-        save_coor = torch.cat([coor_x, coor_y, coor_z], dim=1).detach().cpu().numpy()
-        save_occ = torch.cat([Q0_xy_x, Q0_xy_y, Q0_xz_x, Q0_xz_z, Q0_yz_y, Q0_yz_z], dim=1).detach().cpu().numpy()
-        save_gt_occ = gt_q0.detach().cpu().numpy()
-        save_gt_coor = gt_xyz.detach().cpu().numpy()
-        save_gt_mask = gt_mask_visib.detach().cpu().numpy()
-        save_gt_occmask = gt_occmask.detach().cpu().numpy()
-        save_pred_mask = mask.detach().cpu().numpy()
-        outpath = "/home/yan/gdnr_selfocc/core/denstereo_modeling/output/gdrn_selfocc/ycbv/x.pkl"
-        outpath2 = "/home/yan/gdnr_selfocc/core/denstereo_modeling/output/gdrn_selfocc/ycbv/coor.pkl"
-        outpath3 = "/home/yan/gdnr_selfocc/core/denstereo_modeling/output/gdrn_selfocc/ycbv/occ.pkl"
-        outpath4 = "/home/yan/gdnr_selfocc/core/denstereo_modeling/output/gdrn_selfocc/ycbv/gt_occ.pkl"
-        outpath5 = "/home/yan/gdnr_selfocc/core/denstereo_modeling/output/gdrn_selfocc/ycbv/gt_coor.pkl"
-        outpath6 = "/home/yan/gdnr_selfocc/core/denstereo_modeling/output/gdrn_selfocc/ycbv/gt_mask.pkl"
-        outpath7 = "/home/yan/gdnr_selfocc/core/denstereo_modeling/output/gdrn_selfocc/ycbv/gt_occmask.pkl"
-        outpath8 = "/home/yan/gdnr_selfocc/core/denstereo_modeling/output/gdrn_selfocc/ycbv/pred_mask.pkl"
-        mmcv.dump(save_x, outpath)
-        mmcv.dump(save_coor, outpath2)
-        mmcv.dump(save_occ, outpath3)
-        mmcv.dump(save_gt_occ, outpath4)
-        mmcv.dump(save_gt_coor, outpath5)
-        mmcv.dump(save_gt_mask, outpath6)
-        mmcv.dump(save_gt_occmask, outpath7)
-        mmcv.dump(save_pred_mask, outpath8)
-        '''
+
         if g_head_cfg.XYZ_CLASS_AWARE:
             assert roi_classes is not None
             coor_x = coor_x.view(bs_virtual, num_classes, self.xyz_out_dim // 3, out_res, out_res)
@@ -560,7 +539,7 @@ class GDRN(nn.Module):
                 flat_gt_Q0,
                 flat_gt_occmask,
                 gt_mask_xyz,
-                roi_extent,
+                roi_extent.repeat_interleave(2, dim=0),
             )
             loss_dict.update(loss_dict_coor)
         # Q0 loss ------------------------------------------
@@ -715,6 +694,13 @@ class GDRN(nn.Module):
             loss_dict["loss_coor_y"] *= loss_cfg.XYZ_LW
             loss_dict["loss_coor_z"] *= loss_cfg.XYZ_LW
 
+            if not loss_dict['loss_coor_x'].isfinite().all():
+                loss_dict['loss_coor_x'] = torch.zeros((1), device='cuda')
+            if not loss_dict['loss_coor_y'].isfinite().all():
+                loss_dict['loss_coor_y'] = torch.zeros((1), device='cuda')
+            if not loss_dict['loss_coor_z'].isfinite().all():
+                loss_dict['loss_coor_z'] = torch.zeros((1), device='cuda')
+
         # mask loss ----------------------------------
         if not g_head_cfg.FREEZE:
             mask_loss_type = loss_cfg.MASK_LOSS_TYPE
@@ -758,6 +744,7 @@ class GDRN(nn.Module):
                 t_loss_use_points=loss_cfg.PM_T_USE_POINTS,
                 r_only=loss_cfg.PM_R_ONLY,
             )
+            sym_infos_repeat_interleave = list(chain.from_iterable(zip(sym_infos, sym_infos)))
             out_trans_ext = out_trans.repeat_interleave(2, dim=0)
             out_trans_ext[1::2] += baseline
             loss_pm_dict = loss_func(
@@ -766,8 +753,8 @@ class GDRN(nn.Module):
                 points=gt_points.repeat_interleave(2, dim=0),
                 pred_transes=out_trans_ext,
                 gt_transes=flat_gt_trans,
-                extents=extents,
-                sym_infos=sym_infos,
+                extents=extents.repeat_interleave(2, dim=0),
+                sym_infos=sym_infos_repeat_interleave,
             )
             loss_dict.update(loss_pm_dict)
 

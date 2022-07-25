@@ -196,7 +196,8 @@ class COOR_loss(nn.Module):
         loss_func = nn.L1Loss(reduction="sum")
         occmask_x = gt_occmask[:, 0, :, :]
         if occmask_x.sum() < 20:
-            loss_Q0_x = 0
+            # loss_Q0_x = 0
+            loss_Q0_x = torch.zeros((1), device='cuda')
         else:
             loss_Q0_x = loss_func(pred_q_xy_x3D * occmask_x[:, None],
                                             gt_Q3D[:, 0:1] * occmask_x[:, None]) + \
@@ -206,7 +207,8 @@ class COOR_loss(nn.Module):
                                                gt_Q3D[:, 2:3] * occmask_x[:, None])
         occmask_y = gt_occmask[:, 1, :, :]
         if occmask_y.sum() < 20:
-            loss_Q0_y = 0
+            # loss_Q0_y = 0
+            loss_Q0_y = torch.zeros((1), device='cuda')
         else:
             loss_Q0_y = loss_func(pred_q_xz_x3D * occmask_y[:, None],
                                                gt_Q3D[:, 3:4] * occmask_y[:, None]) + \
@@ -217,7 +219,8 @@ class COOR_loss(nn.Module):
 
         occmask_z = gt_occmask[:, 2, :, :]
         if occmask_z.sum() < 20:
-            loss_Q0_z = 0
+            # loss_Q0_z = 0
+            loss_Q0_z = torch.zeros((1), device='cuda')
         else:
             loss_Q0_z = loss_func(pred_q_yz_x3D * occmask_z[:, None],
                                                gt_Q3D[:, 6:7] * occmask_z[:, None]) + \
@@ -225,6 +228,12 @@ class COOR_loss(nn.Module):
                                                gt_Q3D[:, 7:8] * occmask_z[:, None]) + \
                                      loss_func(pred_q_yz_z3D * occmask_z[:, None],
                                                gt_Q3D[:, 8:] * occmask_z[:, None])
+        if not loss_Q0_x.isfinite().all():
+            loss_Q0_x = torch.zeros((1), device='cuda')
+        if not loss_Q0_y.isfinite().all():
+            loss_Q0_y = torch.zeros((1), device='cuda')
+        if not loss_Q0_z.isfinite().all():
+            loss_Q0_z = torch.zeros((1), device='cuda')
         loss_dict["loss_Q0"] = (loss_Q0_x + loss_Q0_y + loss_Q0_z) / gt_occmask.sum().float().clamp(min=1.0)
         # jisuan x
         loss_dict["loss_coor_x"] = loss_func(
@@ -236,5 +245,12 @@ class COOR_loss(nn.Module):
         loss_dict["loss_coor_z"] = loss_func(
             pred_outz3D * gt_mask_xyz[:, None], gt_P3D[:, 2:3] * gt_mask_xyz[:, None]
         ) / gt_mask_xyz.sum().float().clamp(min=1.0)
+
+        if not loss_dict['loss_coor_x'].isfinite().all():
+            loss_dict['loss_coor_x'] = torch.zeros((1), device='cuda')
+        if not loss_dict['loss_coor_y'].isfinite().all():
+            loss_dict['loss_coor_y'] = torch.zeros((1), device='cuda')
+        if not loss_dict['loss_coor_z'].isfinite().all():
+            loss_dict['loss_coor_z'] = torch.zeros((1), device='cuda')
 
         return loss_dict

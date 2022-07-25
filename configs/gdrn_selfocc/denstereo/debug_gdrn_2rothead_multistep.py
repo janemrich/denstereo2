@@ -20,8 +20,8 @@ INPUT = dict(
 )
 
 SOLVER = dict(
-    IMS_PER_BATCH=24,
-    TOTAL_EPOCHS=120,
+    IMS_PER_BATCH=3,
+    TOTAL_EPOCHS=1000,
     LR_SCHEDULER_NAME="flat_and_anneal",
     ANNEAL_METHOD="cosine",  # "cosine"
     ANNEAL_POINT=0.72,
@@ -29,23 +29,41 @@ SOLVER = dict(
     OPTIMIZER_CFG=dict(_delete_=True, type="Ranger", lr=1e-4, weight_decay=0),
     WEIGHT_DECAY=0.0,
     WARMUP_FACTOR=0.001,
-    WARMUP_ITERS=1000,
+    WARMUP_ITERS=1,
 )
 
 DATASETS = dict(
     TRAIN=(
+        'denstereo_single_0_75_17_train_pbr_left',
+        'denstereo_single_0_77_17_train_pbr_left',
+        'denstereo_single_0_76_17_train_pbr_left',
+        # 'denstereo_002_master_chef_can_train_pbr',
         # 'denstereo_debug_train_pbr_left',
-        'denstereo_single_0_2_1_train_pbr_left',
-        # "denstereo_single_15_0_0_train_pbr_left",
+        # 'denstereo_single_20_976_21_train_pbr_left',
+        # 'denstereo_single_20_976_13_train_pbr_left',
+        # 'denstereo_single_20_976_3_train_pbr_left',
+        # 'denstereo_single_20_976_20_train_pbr_left',
+        # 'denstereo_single_20_976_4_train_pbr_left',
+        # 'denstereo_single_20_976_14_train_pbr_left',
+        # 'denstereo_single_20_976_10_train_pbr_left',
+        # 'denstereo_single_20_976_17_train_pbr_left',
+        # 'denstereo_single_20_976_2_train_pbr_left',
+        # 'denstereo_single_20_976_12_train_pbr_left',
+        # 'denstereo_single_20_976_9_train_pbr_left',
+        # 'denstereo_single_20_976_19_train_pbr_left',
+        # 'denstereo_single_20_976_6_train_pbr_left',
+        # 'denstereo_single_20_976_15_train_pbr_left',
         ),
     # TRAIN2=("denstereo_imgn_13_train_1k_per_obj",),
     # TRAIN2_RATIO=0.75,
     TEST=(
+        'denstereo_test_pbr_left',
+        # 'denstereo_002_master_chef_can_test_pbr',
         # 'denstereo_debug_train_pbr_left',
-        'denstereo_single_0_2_1_train_pbr_left',
-        # "denstereo_single_15_0_0_train_pbr_left",
+        # 'denstereo_single_0_0_1_train_pbr_left',
+        # "denstereo_single_0_3_1_train_pbr_left",
         ),
-    DET_FILES_TEST=("datasets/BOP_DATASETS/denstereo/train_pbr_left/bbox.json",),)
+    DET_FILES_TEST=("datasets/BOP_DATASETS/denstereo/test_bboxes/test_pbr_left.json",),)
 
 MODEL = dict(
     LOAD_DETS_TEST=True,
@@ -106,7 +124,7 @@ MODEL = dict(
             TRANS_TYPE="centroid_z",
         ),
         LOSS_CFG=dict(
-            HANDLE_SYM=False,
+            HANDLE_SYM=True,
             # xyz loss ----------------------------
             XYZ_LOSS_TYPE="L1",  # L1 | CE_coor
             XYZ_LOSS_MASK_GT="visib",  # trunc | visib | obj
@@ -118,7 +136,7 @@ MODEL = dict(
             # region loss -------------------------
             REGION_LOSS_TYPE="CE",  # CE
             REGION_LOSS_MASK_GT="visib",  # trunc | visib | obj
-            REGION_LW=1.0,
+            REGION_LW=0.01,
             # pm loss --------------
             PM_R_ONLY=True,  # only do R loss in PM
             PM_LW=1.0,

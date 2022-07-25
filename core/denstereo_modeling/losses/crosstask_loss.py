@@ -133,4 +133,6 @@ class CT_loss(nn.Module):
             loss_z = loss_z.sum()   # 取均值
         # 最终的loss
         loss = (loss_x + loss_y + loss_z)/gt_occmask.sum().float().clamp(min=1.0)
+        if not loss.isfinite().all():
+            loss = torch.zeros((1), device='cuda')
         return loss

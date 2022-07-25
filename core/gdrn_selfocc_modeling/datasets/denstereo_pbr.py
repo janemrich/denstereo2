@@ -1,3 +1,4 @@
+from functools import cache
 import hashlib
 import logging
 import os
@@ -158,7 +159,14 @@ class DENSTEREO_PBR_Dataset:
                     try:
                         bbox_visib = gt_info_dict[str_im_id][anno_i]["bbox_visib"]
                     except IndexError as e:
-                        raise IndexError('list index out of range: scene:{} str_im_id:{} anno_i:{}'.format(scene, str_im_id, anno_i)) 
+                        raise IndexError(
+                            'list index out of range: scene:{} str_im_id:{} anno_i:{} anno:{}'.format(
+                                scene,
+                                str_im_id,
+                                anno_i,
+                                anno
+                            )
+                        ) 
                     bbox_obj = gt_info_dict[str_im_id][anno_i]["bbox_obj"]
                     x1, y1, w, h = bbox_visib
                     if self.filter_invalid:
@@ -315,7 +323,7 @@ SPLITS_DENSTEREO_PBR = dict(
         use_cache=True,
         num_to_load=-1,
         filter_invalid=True,
-        scenes=ref.denstereo.test_pbr_scenes,
+        scenes=ref.denstereo.train_pbr_scenes,
         ref_key="denstereo",
     ),
     denstereo_train_pbr_left =dict(
@@ -435,7 +443,8 @@ SPLITS_DENSTEREO_PBR = dict(
     ),
     denstereo_debug_train_pbr_left =dict(
         name="denstereo_debug_train_pbr_left",
-        objs=[ref.denstereo.objects[1]],  # selected objects
+        # objs=[ref.denstereo.objects[1]],  # selected objects
+        objs=ref.denstereo.objects,  # selected objects
         dataset_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/train_pbr_left"),
         models_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/models"),
         xyz_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/denstereo/train_pbr_left/xyz_crop_hd"),
@@ -524,6 +533,7 @@ for split in ['train_pbr_left']: # TODO add train _right 'train_pbr_right']:
                         filter_invalid=False,
                         filter_scene=True,
                         debug_im_id = scene_image_obj_id, # NOTE: debug im id
+                        scenes = ref.denstereo.debug_pbr_scenes,
                         ref_key="denstereo",
                     )
 

@@ -2,6 +2,7 @@ import datetime
 import json
 import logging
 import os
+import wandb
 
 import numpy as np
 import torch
@@ -80,7 +81,9 @@ class MyTensorboardXWriter(EventWriter):
         #     self._writer.add_scalar(k, v, storage.iter)
         for k, v in storage.histories().items():
             self._writer.add_scalar(k, v.median(self._window_size), storage.iter)
+            wandb.log({k: v.median(self._window_size)}, step=storage.iter)
             # self._writer.add_scalar(k, v.latest(), storage.iter)
+        # wandb.log(storage.histories().items())
 
         # storage.put_{image,histogram} is only meant to be used by
         # tensorboard writer. So we access its internal fields directly from here.

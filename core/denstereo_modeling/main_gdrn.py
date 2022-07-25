@@ -34,7 +34,7 @@ import ref
 from core.denstereo_modeling.datasets.dataset_factory import register_datasets_in_cfg
 #from core.denstereo_modeling.engine.engine_utils import get_renderer
 from core.denstereo_modeling.engine.engine import do_test, do_train
-from core.denstereo_modeling.models import GDRN, GDRN_stereo, GDRN_stereo_disp #, GDRN_stereo_disp_in_pnp # noqa
+from core.denstereo_modeling.models import GDRN, GDRN_stereo, GDRN_stereo_disp,  GDRN_stereo_disp_in_pnp, GDRN_stereo_disp_in_pnp_light, GDRN_stereo_early, GDRN_stereo_early_mono, GDRN_stereo_res, GDRN_stereo_disp_in_pnp_light_early
 
 
 logger = logging.getLogger("detectron2")
@@ -132,6 +132,13 @@ def main(args):
     cfg = setup(args)
 
     distributed = comm.get_world_size() > 1
+
+    if comm.is_main_process():
+        if args.no_wandb:
+            mode = "disabled"
+        else:
+            mode = "online"
+        wandb.init(project="denstereo-modeling", entity="jemrich", mode=mode)
     '''
     # get renderer ----------------------
     if cfg.MODEL.POSE_NET.XYZ_ONLINE and not args.eval_only:
@@ -162,14 +169,16 @@ def main(args):
         return do_test(cfg, model)
 
     if args.launcher == 'dataparallel':
+        print('dataparallel')
         model = DataParallel(model)
 
     elif distributed and args.launcher not in ["hvd", "bps"]:
+        print('distributed')
         model = DistributedDataParallel(
             model, device_ids=[comm.get_local_rank()], broadcast_buffers=False, find_unused_parameters=True
         )
 
-    do_train(cfg, args, model, optimizer, renderer=renderer, resume=args.resume)
+    do_train(cfg, args, model, optimizer, renderer=renderer, resume=args.resume, pretrained=args.pretrained)
     return do_test(cfg, model)
 
 
@@ -199,6 +208,12 @@ if __name__ == "__main__":
     )
     parser.add_argument("--config-file", default="../../configs/gdrn_selfocc/lmo/gdrn_selfocc_multistep_40E.py", metavar="FILE", help="path to config file")
     # assert osp.exists("../../configs/gdrn_selfocc/lmo/gdrn_selfocc_multistep_40E.py")
+    parser.add_argument(
+        "--pretrained", default=False, action="store_true", help="if pretrained start iterations from zero even if loading from checkpoint"
+    )
+    parser.add_argument(
+        "--no-wandb", default=False, action="store_true", help="deactivate wandb"
+    )
     parser.add_argument(
         "--resume", default=False, action="store_true", help="whether to attempt to resume from the checkpoint directory"
     )
@@ -242,7 +257,7 @@ if __name__ == "__main__":
     iprint("Command Line Args:", args)
     comm.init_dist_env_variables(args)
 
-    #wandb.init(project="denstereo", entity="jemrich")
+    # wandb.init(project="denstereo-modeling", entity="jemrich")
     if args.eval_only:
         torch.multiprocessing.set_sharing_strategy("file_system")
 

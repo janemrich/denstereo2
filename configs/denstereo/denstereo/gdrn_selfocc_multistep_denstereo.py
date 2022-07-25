@@ -1,7 +1,7 @@
 # about 3 days
 _base_ = ["../../_base_/gdrn_base.py"]
 
-OUTPUT_DIR = "output/denstereo/denstereo/first"
+OUTPUT_DIR = "output/denstereo/denstereo/all"
 INPUT = dict(
     DZI_PAD_SCALE=1.5,
     TRUNCATE_FG=True,
@@ -42,12 +42,11 @@ SOLVER = dict(
 
 DATASETS = dict(
     TRAIN=(
-        # "denstereo_train_pbr_left",
-        "denstereo_002_master_chef_can_train_pbr",
+        "denstereo_train_pbr",
     ),
-    TEST=("denstereo_test_pbr_left",),
+    TEST=("denstereo_test_pbr",),
     DET_FILES_TEST=(
-        "datasets/BOP_DATASETS/denstereo/test_bboxes/test_pbr_left.json",
+        "datasets/BOP_DATASETS/denstereo/test_bboxes/test_pbr_stereo.json",
     ),
     SYM_OBJS=["024_bowl", "036_wood_block", "051_large_clamp", "052_extra_large_clamp", "061_foam_brick"],  # ycb
 )
@@ -86,12 +85,14 @@ MODEL = dict(
 '''
 DATALOADER = dict(
     # Number of data loading threads
-    NUM_WORKERS=12,
-    FILTER_VISIB_THR=0.2,
+    NUM_WORKERS=10,
+    # FILTER_VISIB_THR=0.2,
 )
 
 
 MODEL = dict(
+    STEREO=True,
+    DISP_NET=False,
     LOAD_DETS_TEST=True,
     PIXEL_MEAN=[0.0, 0.0, 0.0],
     PIXEL_STD=[255.0, 255.0, 255.0],
@@ -144,6 +145,7 @@ MODEL = dict(
         ),
         PNP_NET=dict(
             INIT_CFG=dict(type="ConvPnPNetStereo", norm="GN", act="gelu"),
+            DISPARITY=False,
             REGION_ATTENTION=True,
             WITH_2D_COORD=True,
             ROT_TYPE="allo_rot6d",
@@ -175,7 +177,7 @@ MODEL = dict(
             Q0_LOSS_TYPE="L1",
             Q0_LOSS_MASK_GT="visib",  # computed from Q0
             Q0_LW=1.0,
-            Q0_DEF_LW=1.0,
+            Q0_DEF_LW=1.0, # 10?
             # cross-task loss -------------------
             CT_LW=10.0,
             CT_P_LW=1.0,
@@ -186,7 +188,7 @@ MODEL = dict(
             # Q direction
             QD_LW=0.0,
             #
-            HANDLE_SYM=False,
+            HANDLE_SYM=True,
         ),
     ),
 )

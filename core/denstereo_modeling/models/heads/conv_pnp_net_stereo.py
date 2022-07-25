@@ -100,6 +100,7 @@ class ConvPnPNetStereo(nn.Module):
         region=None,
         extents=None,
         mask_attention=None,
+        disparity=None,
     ):
         """
         Args:
@@ -120,6 +121,8 @@ class ConvPnPNetStereo(nn.Module):
             coor_feat[:, 3:9, :, :] = (coor_feat[:, 3:9, :, :] - 0.5) * Q0_extents.view(bs, 6, 1, 1)
         '''
         # convs
+        if disparity is not None:
+            coor_feat = torch.cat([coor_feat, disparity], dim=-3)
         if region is not None:
             x = torch.cat([coor_feat, region], dim=-3)
         else:

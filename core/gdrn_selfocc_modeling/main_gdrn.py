@@ -132,6 +132,12 @@ def main(args):
     cfg = setup(args)
 
     distributed = comm.get_world_size() > 1
+    if comm.is_main_process():
+        if args.no_wandb:
+            mode = "disabled"
+        else:
+            mode = "online"
+        wandb.init(project="denstereo-modeling", entity="jemrich", mode=mode)
     '''
     # get renderer ----------------------
     if cfg.MODEL.POSE_NET.XYZ_ONLINE and not args.eval_only:
@@ -199,6 +205,12 @@ if __name__ == "__main__":
     parser.add_argument(
         "--resume", default=False, action="store_true", help="whether to attempt to resume from the checkpoint directory"
     )
+    parser.add_argument(
+        "--pretrained", default=False, action="store_true", help="if pretrained start iterations from zero even if loading from checkpoint"
+    )
+    parser.add_argument(
+        "--no-wandb", default=False, action="store_true", help="deactivate wandb"
+    )
     parser.add_argument("--eval-only", default=False, action="store_true", help="perform evaluation only")
     # distributed training launcher:
     # none: non-distributed or use the detectron2 default launcher
@@ -239,8 +251,8 @@ if __name__ == "__main__":
     iprint("Command Line Args:", args)
     comm.init_dist_env_variables(args)
 
-    wandb.init(project="denstereo", entity="jemrich", group="test_group")
 
+    # wandb.init(project="denstereo-modeling", entity="jemrich")
     if args.eval_only:
         torch.multiprocessing.set_sharing_strategy("file_system")
 

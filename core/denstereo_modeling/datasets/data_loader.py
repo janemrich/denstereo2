@@ -323,8 +323,11 @@ class GDRN_DatasetFromList(Base_DatasetFromList):
         # import matplotlib.pyplot as plt
         depth_l = imageio.imread(dataset_dict["depth_file_l"]).astype(np.float32)
         depth_r = imageio.imread(dataset_dict["depth_file_r"]).astype(np.float32)
-        # plt.imshow(depth_l)
-        # plt.imshow(depth_r)
+        # fig, ax = plt.subplots(2)
+        # fig.suptitle('begin read data')
+        # ax[0].imshow(image_l)
+        # ax[1].imshow(depth_l)
+        # plt.show()
         depth_l /= dataset_dict["depth_factor"]
         depth_r /= dataset_dict["depth_factor"] # unit is meter now
 
@@ -724,6 +727,21 @@ class GDRN_DatasetFromList(Base_DatasetFromList):
 
         focal_len = dataset_dict["cam"][0][0].item() # f_x [m]
         baseline = dataset_dict["baseline"][0] # x baseline [m]
+        if scale == 0:
+            import json
+            scale_error_path = '/igd/a4/homestud/jemrich/scale_error.json'
+            try:
+                with open(scale_error_path , 'r') as scale_file:
+                    scale_error = json.load(scale_file)
+            except:
+                scale_error = []
+
+            scale_error.append(dataset_dict['scene_im_id'])
+
+            with open(scale_error_path, 'w') as scale_file:
+                json.dump(scale_error, scale_file)
+            print('scale == 0 error, scene and image id written to', scale_error_path)
+            print(bbox_xyxy, im_W, im_H, dataset_dict['scene_im_id'], inst_infos)
         resize_ratio = out_res / scale
         zero_mask_l = (depth_l == 0.0)
         zero_mask_r = (depth_r == 0.0)
@@ -731,6 +749,8 @@ class GDRN_DatasetFromList(Base_DatasetFromList):
         depth_r[zero_mask_r] = 1
         disparity_l = (((baseline * focal_len) / (depth_l)) * resize_ratio).astype(np.uint8)
         disparity_r = (((baseline * focal_len) / (depth_r)) * resize_ratio).astype(np.uint8)
+        disparity_l[zero_mask_l] = 0
+        disparity_r[zero_mask_r] = 0
 
         # region label
         if g_head_cfg.NUM_REGIONS > 1:
@@ -890,9 +910,6 @@ class GDRN_DatasetFromList(Base_DatasetFromList):
         dataset_dict["baseline"] = torch.as_tensor(baseline, dtype=torch.float32)
         dataset_dict["bbox"] = [anno["bbox_l"], anno["bbox_r"]]  # NOTE: original bbox
         dataset_dict["roi_wh"] = torch.as_tensor(np.array([bw, bh], dtype=np.float32))
-        if scale == 0:
-            raise ValueError(bbox_xyxy, im_W, im_H, dataset_dict['scene_im_id'], inst_infos, 'right')
-        resize_ratio = out_res / scale
         dataset_dict["resize_ratio"] = resize_ratio
         z_ratio_l = inst_infos["trans_l"][2] / resize_ratio
         z_ratio_r = inst_infos["trans_r"][2] / resize_ratio

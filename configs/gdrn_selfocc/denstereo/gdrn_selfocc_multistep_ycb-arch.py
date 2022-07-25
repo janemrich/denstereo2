@@ -1,7 +1,7 @@
 # about 3 days
 _base_ = ["../../_base_/gdrn_base.py"]
 
-OUTPUT_DIR = "output/gdrn_selfocc/denstereo/pbr_13e"
+OUTPUT_DIR = "output/gdrn_selfocc/denstereo/paper"
 INPUT = dict(
     DZI_PAD_SCALE=1.5,
     TRUNCATE_FG=True,
@@ -26,9 +26,9 @@ INPUT = dict(
 )
 
 SOLVER = dict(
-    # IMS_PER_BATCH=64,
-    IMS_PER_BATCH=2,
-    TOTAL_EPOCHS=15,
+    IMS_PER_BATCH=128, # BS for 1 GPU
+    # IMS_PER_BATCH=2,
+    TOTAL_EPOCHS=700,
     LR_SCHEDULER_NAME="flat_and_anneal",
     ANNEAL_METHOD="cosine",  # "cosine"
     ANNEAL_POINT=0.72,
@@ -42,7 +42,9 @@ SOLVER = dict(
 )
 
 DATASETS = dict(
-    TRAIN=("denstereo_train_pbr_left",),
+    TRAIN=(
+        "denstereo_train_pbr_left",
+    ),
     TEST=("denstereo_test_pbr_left",),
     # # AP    AP50  AR    inf.time  (faster RCNN)
     # # 75.10 93.00 81.40 25.4ms
@@ -91,8 +93,8 @@ MODEL = dict(
 '''
 DATALOADER = dict(
     # Number of data loading threads
-    NUM_WORKERS=12,
-    FILTER_VISIB_THR=0.2,
+    NUM_WORKERS=10,
+    FILTER_VISIB_THR=0.1,
 )
 
 
@@ -167,6 +169,7 @@ MODEL = dict(
             REGION_LOSS_TYPE="CE",  # CE
             REGION_LOSS_MASK_GT="erode",  # trunc | visib | obj |erode
             REGION_LW=0.01,
+            # REGION_LW=0.1,
             # pm loss --------------
             PM_R_ONLY=True,  # only do R loss in PM
             PM_LW=1.0,
@@ -180,6 +183,7 @@ MODEL = dict(
             Q0_LOSS_TYPE="L1",
             Q0_LOSS_MASK_GT="visib",  # computed from Q0
             Q0_LW=1.0,
+            Q0_DEF_LW=1.0, # 10?
             # cross-task loss -------------------
             CT_LW=10.0,
             CT_P_LW=1.0,

@@ -138,7 +138,7 @@ def get_tbx_event_writer(out_dir, backup=False):
     return tbx_event_writer
 
 
-def do_train(cfg, args, model, optimizer, renderer=None, resume=False):
+def do_train(cfg, args, model, optimizer, renderer=None, resume=False, pretrained=False):
     model.train()
 
     # some basic settings =========================
@@ -196,7 +196,11 @@ def do_train(cfg, args, model, optimizer, renderer=None, resume=False):
         gradscaler=grad_scaler,
         save_to_disk=comm.is_main_process(),
     )
+    logger.info(f"Resume: {resume}")
     start_iter = checkpointer.resume_or_load(cfg.MODEL.WEIGHTS, resume=resume).get("iteration", -1) + 1
+    if pretrained:
+        logger.info(f"Pretrained: start from iteration 0")
+        start_iter = 0
 
 
     # Exponential moving average (NOTE: initialize ema after loading weights) ========================
@@ -297,7 +301,7 @@ def do_train(cfg, args, model, optimizer, renderer=None, resume=False):
                             # other
                             E_step=epoch,
                         ) 
-                    elif cfg.MODEL.POSE_NET.DISP_NET is not None:
+                    elif cfg.MODEL.DISP_NET:
                         out_dict, loss_dict = model(
                             batch["roi_img"],
                             gt_xyz=batch.get("roi_xyz", None),
@@ -460,8 +464,10 @@ def do_train(cfg, args, model, optimizer, renderer=None, resume=False):
             if iteration - start_iter > 5 and (
                 (iteration + 1) % cfg.TRAIN.PRINT_FREQ == 0 or iteration == max_iter - 1 or iteration < 100
             ):
-                for writer in writers:
-                    writer.write()
+
+                if comm.is_main_process():
+                    for writer in writers:
+                        writer.write()
                 # visualize some images ========================================
                 if cfg.TRAIN.VIS_IMG:
                     with torch.no_grad():
