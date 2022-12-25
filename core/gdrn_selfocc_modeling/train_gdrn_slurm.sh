@@ -10,13 +10,13 @@ NGPU=$2
 #OMP_NUM_THREADS=1
 #MKL_NUM_THREADS=1
 
-BASE_PATH=/opt/spool/jemrich-denstereo
+# BASE_PATH=/opt/spool/jemrich-denstereo
 
-mkdir $BASE_PATH
-cd $BASE_PATH
+# mkdir $BASE_PATH
+# cd $BASE_PATH
 
-git clone git@github.com:janemrich/denStereo-SO.git
-cd denStereo-SO
+# git clone git@github.com:janemrich/denStereo-SO.git
+# cd denStereo-SO
 git checkout denstereo
 git pull
 ln -s /opt/spool/jemrich datasets
