@@ -8,6 +8,6 @@ dataset:
 epochs:
   value: 1
 bs:
-  value: 64
+  value: 40
 gpus:
   value: 1
