@@ -39,6 +39,7 @@ if [ $EVAL == "True" ]; then
     echo ""
     echo "sync eval model from pc3002"
     rsync -a --update --whole-file pc3002:/opt/datasets/jemrich/output/${METHOD}/${DATASET}/${RUN}/model_final.pth output/${METHOD}/${DATASET}/${RUN}/model_final.pth
+    EVALUATE="--evaluate"
 fi
 
 source rootless_docker_env.sh
@@ -58,7 +59,7 @@ fi
 echo "load image..."
 docker load -i $IMAGE_CACHE
 
-docker run --shm-size=50G --rm --gpus $NGPUS -it -v $BASE_PATH/denstereo-so:/denstereo-so -v /opt/spool/jemrich/:/denstereo-so/datasets -v $DATASET_DICT_CACHE:/denstereo-so/.cache denstereo-env:latest "cd /denstereo-so; bash core/denstereo_modeling/train_gdrn.sh $NGPUS $EVAL"
+docker run --shm-size=50G --rm --gpus $NGPUS -it -v $BASE_PATH/denstereo-so:/denstereo-so -v /opt/spool/jemrich/:/denstereo-so/datasets -v $DATASET_DICT_CACHE:/denstereo-so/.cache denstereo-env:latest "cd /denstereo-so; python launch_main.py $RUN $EVALUATE"
 
 echo "sync output..."
 rsync -aP $BASE_PATH/denstereo-so/output pc3002:/opt/datasets/jemrich/
