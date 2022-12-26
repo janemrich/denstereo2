@@ -46,6 +46,7 @@ if __name__ == '__main__':
         method=method,
         dataset=dataset,
         config=config_path,
+        run_id=run_id,
         gpus=gpus if args.evaluate else 1,
         eval="--eval-only" if args.evaluate is True else "",
         bs=bs,
