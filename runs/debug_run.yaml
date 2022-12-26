@@ -1,6 +1,6 @@
 
 config_file:
-  value: "denstereo_scissor_early.py"
+  value: "early_master_chef_can_debug.py"
 method:
   value: "denstereo"
 dataset:
