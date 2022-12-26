@@ -10,7 +10,7 @@ if __name__ == '__main__':
     parser.add_argument("--checkpoint", help="checkpoint to load", type=str)
 
     args = parser.parse_args()
-    run = args.config
+    run = args.run
     run_id = args.run_id
 
     with open('runs/{run}.yaml'.format(run=run), 'r') as f:
