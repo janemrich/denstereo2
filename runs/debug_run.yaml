@@ -1,0 +1,13 @@
+
+config_file:
+  value: "denstereo_scissor_early.py"
+method:
+  value: "denstereo"
+dataset:
+  value: "denstereo"
+epochs:
+  value: 1
+bs:
+  value: 40
+gpus:
+  value: 1
