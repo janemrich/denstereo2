@@ -146,7 +146,7 @@ def main(args):
         wandb.config.update({ "method": path.parts[1],
                               "dataset_0": cfg.DATASETS.TRAIN[0],
                               "dataset": path.parts[2],
-                              "run": path.parts[3],
+                              "run": path.parts[3][:-12],
                               "batch_size": cfg.SOLVER.IMS_PER_BATCH,
                               "epochs": cfg.SOLVER.TOTAL_EPOCHS,
                               "weights": cfg.MODEL.WEIGHTS,
