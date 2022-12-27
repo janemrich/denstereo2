@@ -1,5 +1,6 @@
 import logging
 import os
+from pathlib import Path
 
 os.environ["PYOPENGL_PLATFORM"] = "egl"
 import os.path as osp
@@ -139,6 +140,8 @@ def main(args):
         else:
             mode = "online"
         wandb.init(project="denstereo-modeling", entity="jemrich", mode=mode)
+        run_name = Path(cfg.OUTPUT_DIR).stem
+        wandb.run.name = run_name
     '''
     # get renderer ----------------------
     if cfg.MODEL.POSE_NET.XYZ_ONLINE and not args.eval_only:
