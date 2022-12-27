@@ -30,7 +30,7 @@ if __name__ == '__main__':
     )
 
     if args.evaluate:
-        weights = 'output/{method}/{dataset}/{run_id}/model_final.pth'.format(
+        weights = 'output/{method}/{dataset}/{run}/model_final.pth'.format(
             method=method,
             dataset=dataset,
             run=run
