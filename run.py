@@ -3,6 +3,7 @@ import yaml
 from typing import TypedDict
 import subprocess
 from pathlib import Path
+import datetime
 
 # parse config.yaml
 class Config:
@@ -42,26 +43,50 @@ class Config:
     def __str__(self):
         return f'Config: {self.config_file}, {self.method}, {self.dataset}, {self.epochs}, {self.bs}, {self.gpus}'
 
-    
+
+def generate_timestamp():
+    now = datetime.datetime.now()
+    return now.strftime("%m%d_%H%M%S")
+
+def get_tmux_pane():
+    result = subprocess.run(['bash', str(Path(Path().absolute()) / 'get_tmux_pane.sh')], stdout=subprocess.PIPE)
+    return result.stdout.decode('utf-8')
+
 if __name__=='__main__':
 
     parser = argparse.ArgumentParser(description='Train a GDRN model')
     parser.add_argument('--config', type=str, required=True, help='path to config file')
-    parser.add_argument('--resume', type=str, default=None, help='path to checkpoint to resume training from')
-    parser.add_argument('--eval', action="store_true", default=False, help='evaluate run')
+    parser.add_argument('--docker_session', type=str, help='docker session name')
+    parser.add_argument('--resume', type=str, default=None, help='runid to resume training from')
+    parser.add_argument('--eval', type=str, default=None, help='evaluate run id')
     args = parser.parse_args()
 
     # load config
     config = Config(args.config)
-    print(config)
+    timestamp = generate_timestamp()
+    
+    config_name = Path(args.config).stem
+    run_id = config_name + '_' + timestamp
 
-    s = "srun --gpus {gpus} --nodes=1 --cpus-per-gpu=10 --mem-per-cpu=8G --pty bash run_gdrn_container.sh {gpus} {config} {method} {dataset} {eval}"
+    if args.eval:
+        evaluate = "True"
+        run_id = args.eval
+    else:
+        evaluate = "False"
+    if args.resume:
+        resume = args.resume
+    else:
+        resume = "False"
+
+    s = "srun --gpus {gpus} -w ampere4 --nodes=1 --cpus-per-gpu=10 --mem-per-cpu=8G --pty bash run_gdrn_container.sh {gpus} {config} {run_id} {method} {dataset} {eval} {docker_session}"
     s = s.format(
         gpus=config.gpus,
-        config=Path(args.config).stem,
+        config=config_name,
+        run_id=run_id,
         method=config.method,
         dataset=config.dataset,
-        eval=args.eval
+        eval=evaluate,
+        docker_session=get_tmux_pane(),
     )
 
     print(s + '\n')

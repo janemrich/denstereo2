@@ -1,9 +1,11 @@
 
 NGPUS=$1
-RUN=$2
-METHOD=$3
-DATASET=$4
-EVAL=$5
+CONFIG=$2
+RUN_ID=$3
+METHOD=$4
+DATASET=$5
+EVAL=$6
+TMUX=$7
 
 
 ### setup environment on spool
@@ -28,14 +30,15 @@ echo "sync dataset dict cache from pc3002"
 rsync -aP pc3002:/opt/datasets/jemrich/cache/ $DATASET_DICT_CACHE 
 
 EVALUATE=""
-if [ $EVAL == "True" ]; then
+if [ ! $EVAL == "False" ]; then
     echo ""
     echo "sync eval model from pc3002"
-    rsync -aP --update --whole-file pc3002:/opt/datasets/jemrich/output/${METHOD}/${DATASET}/${RUN}/model_final.pth ${OUTPUT_PATH}/${METHOD}/${DATASET}/${RUN}/model_final.pth
+    rsync -aP --update --whole-file pc3002:/opt/datasets/jemrich/output/${METHOD}/${DATASET}/${RUN_ID}/model_final.pth ${OUTPUT_PATH}/${METHOD}/${DATASET}/${RUN_ID}/model_final.pth
     EVALUATE="--evaluate"
 fi
 
-source rootless_docker_env.sh share-data
+# source rootless_docker_env.sh share-data
+source ~/rootless_docker_env_tmux.sh $TMUX
 
 ### cache and load docker image
 if [ ! -f $IMAGE_CACHE.gz ]; then
@@ -56,9 +59,12 @@ docker images
 docker load -i $IMAGE_CACHE
 
 docker run --shm-size=50G --rm --name prod --gpus $NGPUS -dit -v /denstereo -v $OUTPUT_PATH:/denstereo/output -v ~/denstereo-so/runs:/denstereo/runs -v /opt/spool/jemrich/:/denstereo/datasets -v $DATASET_DICT_CACHE:/denstereo/.cache denstereo-env:latest
-docker exec -it prod sh -c "cd /denstereo; git clone git@git.igd-r.fraunhofer.de:jemrich/denstereo-so.git; cd denstereo-so; git checkout denstereo; ln -s ../.cache .cache; ln -s ../runs runs; ln -s ../datasets datasets; rm output/.gitignore; rmdir output; ln -s ../output output; python launch_main.py $RUN $EVALUATE"
+docker exec -it prod sh -c "cd /denstereo; git clone git@git.igd-r.fraunhofer.de:jemrich/denstereo-so.git; cd denstereo-so; git checkout denstereo; ln -s ../.cache .cache; ln -s ../runs runs; ln -s ../datasets datasets; rm output/.gitignore; rmdir output; ln -s ../output output; python launch_main.py $CONFIG $RUN_ID $EVALUATE"
 docker stop prod
 
 echo "sync output..."
 rsync -aP $OUTPUT_PATH/ pc3002:/opt/datasets/jemrich/output
 rsync -aP $DATASET_DICT_CACHE/ pc3002:/opt/datasets/jemrich/cache
+
+echo "run_id:"
+echo $RUN_ID
