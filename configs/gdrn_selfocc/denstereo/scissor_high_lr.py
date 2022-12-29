@@ -33,10 +33,10 @@ SOLVER = dict(
     ANNEAL_METHOD="cosine",  # "cosine"
     ANNEAL_POINT=0.72,
     # REL_STEPS=(0.3125, 0.625, 0.9375),
-    OPTIMIZER_CFG=dict(_delete_=True, type="Ranger", lr=2.4e-3, weight_decay=0),
+    OPTIMIZER_CFG=dict(_delete_=True, type="Ranger", lr=8e-4, weight_decay=0),
     WEIGHT_DECAY=0.0,
     WARMUP_FACTOR=0.001,
-    WARMUP_ITERS=1000,
+    WARMUP_ITERS=150,
     CHECKPOINT_PERIOD=1,
     AMP=dict(ENABLED=True),
 )
