@@ -47,7 +47,7 @@ if __name__ == '__main__':
         dataset=dataset,
         config=config_path,
         run_id=run_id,
-        gpus=gpus if args.evaluate else 1,
+        gpus=1 if args.evaluate else gpus,
         eval="--eval-only" if args.evaluate is True else "",
         bs=bs,
         epochs=epochs,
