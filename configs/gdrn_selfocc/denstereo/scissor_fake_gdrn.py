@@ -36,7 +36,7 @@ SOLVER = dict(
     OPTIMIZER_CFG=dict(_delete_=True, type="Ranger", lr=1e-4, weight_decay=0),
     WEIGHT_DECAY=0.0,
     WARMUP_FACTOR=0.001,
-    WARMUP_ITERS=150,
+    WARMUP_ITERS=1000,
     CHECKPOINT_PERIOD=1,
     AMP=dict(ENABLED=True),
 )
