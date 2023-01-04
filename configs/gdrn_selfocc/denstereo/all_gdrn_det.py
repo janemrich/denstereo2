@@ -96,7 +96,7 @@ MODEL = dict(
 DATALOADER = dict(
     # Number of data loading threads
     NUM_WORKERS=10,
-    FILTER_VISIB_THR=0.1,
+    FILTER_VISIB_THR=0.3,
 )
 
 
