@@ -55,18 +55,27 @@ def get_tmux_pane():
 if __name__=='__main__':
 
     parser = argparse.ArgumentParser(description='Train a GDRN model')
-    parser.add_argument('--config', type=str, required=True, help='path to config file')
+    parser.add_argument('--config', type=str, required=None, help='path to config file')
     parser.add_argument('--docker_session', type=str, help='docker session name')
     parser.add_argument('--resume', type=str, default=None, help='runid to resume training from')
     parser.add_argument('--eval', type=str, default=None, help='evaluate run id')
+    parser.add_argument('--eval_ampere', type=str, default=None, help='evaluate run id on ampere')
     parser.add_argument('--node', type=str, default=None, help='node to run on')
     args = parser.parse_args()
 
     # load config
-    config = Config(args.config)
+    if args.eval_ampere:
+        args.eval = args.eval_ampere
+
+        s = "runs/{}.yaml".format(args.eval_ampere[:-12])
+        print(s)
+        config_name = args.eval_ampere[:-12]
+        config = Config("runs/{}.yaml".format(config_name))
+    else:
+        config = Config(args.config)
+        config_name = Path(args.config).stem
+
     timestamp = generate_timestamp()
-    
-    config_name = Path(args.config).stem
     run_id = config_name + '_' + timestamp
     gpus = config.gpus
 

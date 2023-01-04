@@ -25,10 +25,12 @@ INPUT = dict(
     ),
 )
 
+SEED = 0
+
 SOLVER = dict(
     IMS_PER_BATCH=128, # BS for 1 GPU
     # IMS_PER_BATCH=2,
-    TOTAL_EPOCHS=40,
+    TOTAL_EPOCHS=700,
     LR_SCHEDULER_NAME="flat_and_anneal",
     ANNEAL_METHOD="cosine",  # "cosine"
     ANNEAL_POINT=0.72,
@@ -182,11 +184,11 @@ MODEL = dict(
             # Q0 loss ---------------------
             Q0_LOSS_TYPE="L1",
             Q0_LOSS_MASK_GT="visib",  # computed from Q0
-            Q0_LW=1.0,
-            Q0_DEF_LW=1.0, # 10?
+            Q0_LW=0.0,
+            Q0_DEF_LW=0.0, # 10?
             # cross-task loss -------------------
-            CT_LW=10.0,
-            CT_P_LW=1.0,
+            CT_LW=00.0,
+            CT_P_LW=0.0,
             # occlusion mask loss weight
             OCC_LW=0.0,
             PM_NORM_BY_EXTENT=True,
@@ -194,7 +196,7 @@ MODEL = dict(
             # Q direction
             QD_LW=0.0,
             #
-            HANDLE_SYM=True,
+            HANDLE_SYM=False,
         ),
     ),
 )
@@ -211,6 +213,6 @@ VAL = dict(
 '''
 
 
-TEST = dict(EVAL_PERIOD=0, VIS=False, TEST_BBOX_TYPE="est")  # gt | est
+TEST = dict(EVAL_PERIOD=1000, VIS=False, TEST_BBOX_TYPE="est")  # gt | est
 TRAIN = dict(CT_START=0.2, CT_P_START=0.2)  # we start cross task loss at maxiter*0.6
 
