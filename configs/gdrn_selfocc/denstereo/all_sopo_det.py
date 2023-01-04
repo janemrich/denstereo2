@@ -25,6 +25,8 @@ INPUT = dict(
     ),
 )
 
+SEED = 0
+
 SOLVER = dict(
     IMS_PER_BATCH=128, # BS for 1 GPU
     # IMS_PER_BATCH=2,
@@ -211,6 +213,6 @@ VAL = dict(
 '''
 
 
-TEST = dict(EVAL_PERIOD=0, VIS=False, TEST_BBOX_TYPE="est")  # gt | est
+TEST = dict(EVAL_PERIOD=1000, VIS=False, TEST_BBOX_TYPE="est")  # gt | est
 TRAIN = dict(CT_START=0.2, CT_P_START=0.2)  # we start cross task loss at maxiter*0.6
 
