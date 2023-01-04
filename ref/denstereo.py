@@ -30,6 +30,7 @@ pbr_scenes = [i for i in range(0, 50)]
 train_pbr_scenes = [i for i in range(0, 44 + 1)]
 test_pbr_scenes = [i for i in range(45, 49 + 1)]
 debug_pbr_scenes = [0]
+debug_test_pbr_scenes = [45]
 
 model_dir = osp.join(dataset_root, "models")
 fine_model_dir = osp.join(dataset_root, "models_fine")
