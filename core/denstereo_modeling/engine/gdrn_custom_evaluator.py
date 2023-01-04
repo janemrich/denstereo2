@@ -2,6 +2,7 @@
 """inference on dataset; save results; evaluate with custom evaluation
 funcs."""
 import logging
+import wandb
 import os.path as osp
 import random
 import time
@@ -13,6 +14,7 @@ import numpy as np
 import torch
 from detectron2.data import DatasetCatalog, MetadataCatalog
 from detectron2.evaluation import DatasetEvaluator
+from detectron2.utils.events import EventWriter, get_event_storage
 from tabulate import tabulate
 from tqdm import tqdm
 from transforms3d.quaternions import quat2mat
@@ -589,7 +591,9 @@ class GDRN_EvaluatorCustom(DatasetEvaluator):
 
         Return results with the metrics of the tasks.
         """
-        self._logger.info("Eval results ...")
+        # with EventStorage() as storage:
+        # storage = get_event_storage()
+        self._logger.info("Eval results ...") 
         cfg = self.cfg
         method_name = f"{cfg.EXP_ID.replace('_', '-')}"
         cache_path = osp.join(self._output_dir, f"{method_name}_{self.dataset_name}_preds.pkl")
@@ -710,9 +714,11 @@ class GDRN_EvaluatorCustom(DatasetEvaluator):
                 if len(res) > 0:
                     line.append(f"{100 * np.mean(res):.2f}")
                     this_line_res.append(np.mean(res))
+                    wandb.log({"{}_{}".format(obj_name, metric_name): np.mean(res)}) #, step=storage.iter)
                 else:
                     line.append(0.0)
                     this_line_res.append(0.0)
+                    wandb.log({"{}_{}".format(obj_name, metric_name): 0.0}) #, #step=storage.iter)
             # average
             if len(obj_names) > 0:
                 line.append(f"{100 * np.mean(this_line_res):.2f}")
@@ -726,6 +732,7 @@ class GDRN_EvaluatorCustom(DatasetEvaluator):
                 if len(res) > 0:
                     line.append(f"{np.mean(res):.3f}")
                     this_line_res.append(np.mean(res))
+                    wandb.log({"{}_{}".format(obj_name, error_name): np.mean(res)}) #, step=storage.iter)
                 else:
                     line.append(float("nan"))
                     this_line_res.append(float("nan"))
