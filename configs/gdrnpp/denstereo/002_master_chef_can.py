@@ -1,4 +1,4 @@
-_base_ = ["../../../_base_/gdrn_base.py"]
+_base_ = ["../../_base_/gdrn_base.py"]
 
 OUTPUT_DIR = "output/gdrn/ycbvPbrSO/convnext_AugCosyAAEGray_DMask_amodalClipBox_ycbv/002_master_chef_can"
 INPUT = dict(
