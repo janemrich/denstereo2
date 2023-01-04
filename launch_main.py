@@ -30,10 +30,10 @@ if __name__ == '__main__':
     )
 
     if args.evaluate:
-        weights = 'output/{method}/{dataset}/{run}/model_final.pth'.format(
+        weights = 'output/{method}/{dataset}/{run_id}/model_final.pth'.format(
             method=method,
             dataset=dataset,
-            run=run
+            run_id=run_id
         )
         if args.checkpoint:
             weights = args.checkpoint
@@ -47,7 +47,7 @@ if __name__ == '__main__':
         dataset=dataset,
         config=config_path,
         run_id=run_id,
-        gpus=gpus if args.evaluate else 1,
+        gpus=1 if args.evaluate else gpus,
         eval="--eval-only" if args.evaluate is True else "",
         bs=bs,
         epochs=epochs,

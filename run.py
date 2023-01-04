@@ -59,6 +59,7 @@ if __name__=='__main__':
     parser.add_argument('--docker_session', type=str, help='docker session name')
     parser.add_argument('--resume', type=str, default=None, help='runid to resume training from')
     parser.add_argument('--eval', type=str, default=None, help='evaluate run id')
+    parser.add_argument('--node', type=str, default=None, help='node to run on')
     args = parser.parse_args()
 
     # load config
@@ -67,10 +68,12 @@ if __name__=='__main__':
     
     config_name = Path(args.config).stem
     run_id = config_name + '_' + timestamp
+    gpus = config.gpus
 
     if args.eval:
         evaluate = "True"
         run_id = args.eval
+        gpus = 1
     else:
         evaluate = "False"
     if args.resume:
@@ -78,9 +81,10 @@ if __name__=='__main__':
     else:
         resume = "False"
 
-    s = "srun --gpus {gpus} -w ampere4 --nodes=1 --cpus-per-gpu=10 --mem-per-cpu=8G --pty bash run_gdrn_container.sh {gpus} {config} {run_id} {method} {dataset} {eval} {docker_session}"
+    s = "srun {node} --gpus {gpus} --nodes=1 --cpus-per-gpu=10 --mem-per-cpu=8G --pty bash run_gdrn_container.sh {gpus} {config} {run_id} {method} {dataset} {eval} {docker_session}"
     s = s.format(
-        gpus=config.gpus,
+        node="-w {}".format(args.node) if args.node else "",
+        gpus=gpus,
         config=config_name,
         run_id=run_id,
         method=config.method,
