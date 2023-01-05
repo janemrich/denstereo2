@@ -8,6 +8,7 @@ if __name__ == '__main__':
     parser.add_argument("run_id", help="unique run id", type=str)
     parser.add_argument("--evaluate", action="store_true", default=False, help="evaluate or train")
     parser.add_argument("--checkpoint", help="checkpoint to load", type=str)
+    parser.add_argument("--resume", action="store_true", default=False, help="resume training from checkpoint")
 
     args = parser.parse_args()
     run = args.run
@@ -40,21 +41,53 @@ if __name__ == '__main__':
 
         print('Evaluating model: {weights}'.format(weights=weights))
 
+    if not args.evaluate:
 
-    s = "python core/{method}_modeling/main_gdrn.py --config-file {config} --num-gpus {gpus} {eval} --opts SOLVER.IMS_PER_BATCH={bs} SOLVER.TOTAL_EPOCHS={epochs} OUTPUT_DIR=\"output/{method}/{dataset}/{run_id}\" SOLVER.MAX_TO_KEEP={max_to_keep} SOLVER.CHECKPOINT_PERIOD={checkpoint_period} {weights}"
+        # Train
+        s = (
+            "python core/{method}_modeling/main_gdrn.py"
+            + " --config-file {config}"
+            + " --num-gpus {gpus}"
+            + " --opts"
+                + " SOLVER.IMS_PER_BATCH={bs}"
+                + " SOLVER.TOTAL_EPOCHS={epochs}"
+                + " OUTPUT_DIR=\"output/{method}/{dataset}/{run_id}\""
+                + " SOLVER.MAX_TO_KEEP={max_to_keep}"
+                + " SOLVER.CHECKPOINT_PERIOD={checkpoint_period}"
+                + " {weights}"
+        )
+        s = s.format(
+            method=method,
+            dataset=dataset,
+            config=config_path,
+            run_id=run_id,
+            gpus=gpus,
+            bs=bs,
+            epochs=epochs,
+            max_to_keep=2,
+            checkpoint_period=40,
+            weights="MODEL.WEIGHTS=\"{}\"".format(args.checkpoint) if args.resume else ""
+        )
+        print(s + '\n')
+
+        subprocess.call(s, shell=True)
+        
+    # Evaluate
+    s = (
+        "python core/{method}_modeling/main_gdrn.py"
+        + " --config-file {config}"
+        + " --num-gpus 1"
+        + " --eval-only"
+        + " --opts"
+            + " OUTPUT_DIR=\"output/{method}/{dataset}/{run_id}\""
+            + " MODEL.WEIGHTS=\"{weights}\""
+    )
     s = s.format(
         method=method,
         dataset=dataset,
         config=config_path,
         run_id=run_id,
-        gpus=1 if args.evaluate else gpus,
-        eval="--eval-only" if args.evaluate is True else "",
-        bs=bs,
-        epochs=epochs,
-        run=run,
-        max_to_keep=2,
-        checkpoint_period=40,
-        weights="MODEL.WEIGHTS=\"{}\"".format(weights) if args.evaluate else ""
+        weights=weights,
     )
     print(s + '\n')
 
