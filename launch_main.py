@@ -30,16 +30,14 @@ if __name__ == '__main__':
         config_file=config_file
     )
 
-    if args.evaluate:
-        weights = 'output/{method}/{dataset}/{run_id}/model_final.pth'.format(
-            method=method,
-            dataset=dataset,
-            run_id=run_id
-        )
-        if args.checkpoint:
-            weights = args.checkpoint
+    weights = 'output/{method}/{dataset}/{run_id}/model_final.pth'.format(
+        method=method,
+        dataset=dataset,
+        run_id=run_id
+    )
 
-        print('Evaluating model: {weights}'.format(weights=weights))
+    if args.evaluate and args.checkpoint:
+        weights = args.checkpoint
 
     if not args.evaluate:
 
