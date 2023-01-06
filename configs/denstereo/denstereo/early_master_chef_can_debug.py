@@ -25,8 +25,10 @@ INPUT = dict(
     ),
 )
 
+SEED = 3407
+
 SOLVER = dict(
-    IMS_PER_BATCH=1,
+    IMS_PER_BATCH=10,
     TOTAL_EPOCHS=10,
     LR_SCHEDULER_NAME="flat_and_anneal",
     ANNEAL_METHOD="cosine",  # "cosine"
@@ -51,10 +53,11 @@ DATASETS = dict(
         # "denstereo_002_master_chef_can_train_pbr",
     ),
     TEST=(
+         'denstereo_debug_test_pbr',
         # 'denstereo_single_0_3_15_stereo',
         # 'denstereo_single_0_3_15_stereo',
         # "denstereo_test_pbr",
-        'denstereo_002_master_chef_can_test_pbr',
+        # 'denstereo_002_master_chef_can_test_pbr',
         ),
     DET_FILES_TEST=(
         "datasets/BOP_DATASETS/denstereo/test_bboxes/test_pbr_stereo.json",
@@ -183,6 +186,6 @@ VAL = dict(
 '''
 
 
-TEST = dict(EVAL_PERIOD=0, VIS=False, TEST_BBOX_TYPE="est")  # gt | est
+TEST = dict(EVAL_PERIOD=10, VIS=False, TEST_BBOX_TYPE="est")  # gt | est
 TRAIN = dict(CT_START=0.2, CT_P_START=0.2)  # we start cross task loss at maxiter*0.6
 

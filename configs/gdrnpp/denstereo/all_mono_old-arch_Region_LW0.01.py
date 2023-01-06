@@ -89,7 +89,8 @@ MODEL = dict(
             FREEZE=False,
             INIT_CFG=dict(
                 type="TopDownMaskXyzRegionHead",
-                in_dim=1024,  # this is num out channels of backbone conv feature
+                # in_dim=1024, # convnext
+                in_dim=2048,  # this is num out channels of backbone conv feature
             ),
             NUM_REGIONS=64,
         ),
@@ -100,7 +101,8 @@ MODEL = dict(
             FREEZE=True,
             INIT_CFG=dict(
                 type="ConvSelfoccHead",
-                in_dim=1024,
+                # in_dim=1024, # convnext
+                in_dim=2048,
                 feat_dim=256,
                 feat_kernel_size=3,
                 norm="GN",
