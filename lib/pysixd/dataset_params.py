@@ -347,7 +347,12 @@ def get_split_params(datasets_path, dataset_name, split, split_type=None):
 
     elif dataset_name in ["denstereo"]:
         if "train" in split:
-            pass
+            p["scene_ids"] = {
+                "pbr": list(range(1, 45))
+            }[split_type]
+        elif "test" in split:
+            p["scene_ids"] = list(range(45, 50))
+
 
         p["im_size"] = (640,480)
 
