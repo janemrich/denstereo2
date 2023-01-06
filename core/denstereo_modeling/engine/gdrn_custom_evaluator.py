@@ -3,6 +3,7 @@
 funcs."""
 import wandb
 import logging
+import wandb
 import os.path as osp
 import random
 import time
@@ -14,6 +15,7 @@ import numpy as np
 import torch
 from detectron2.data import DatasetCatalog, MetadataCatalog
 from detectron2.evaluation import DatasetEvaluator
+from detectron2.utils.events import EventWriter, get_event_storage
 from tabulate import tabulate
 from tqdm import tqdm
 from transforms3d.quaternions import quat2mat
@@ -590,7 +592,9 @@ class GDRN_EvaluatorCustom(DatasetEvaluator):
 
         Return results with the metrics of the tasks.
         """
-        self._logger.info("Eval results ...")
+        # with EventStorage() as storage:
+        # storage = get_event_storage()
+        self._logger.info("Eval results ...") 
         cfg = self.cfg
         method_name = f"{cfg.EXP_ID.replace('_', '-')}"
         cache_path = osp.join(self._output_dir, f"{method_name}_{self.dataset_name}_preds.pkl")

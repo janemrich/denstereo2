@@ -3,4 +3,5 @@ __pycache__
 wandb
 *.pyc
 .vscode
-runs/
+output/
+runs/*yaml

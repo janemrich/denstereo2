@@ -8,6 +8,7 @@ import datetime
 # parse config.yaml
 class Config:
     config_file: str
+    core: str
     method: str
     dataset: str
     epochs: int
@@ -19,6 +20,7 @@ class Config:
         config = self.parse_config()
 
         self.config_file = config['config_file']['value']
+        self.set_core(config['core']['value'])
         self.set_method(config['method']['value'])
         self.set_dataset(config['dataset']['value'])
         self.epochs = config['epochs']['value']
@@ -34,6 +36,11 @@ class Config:
         if not method in ['denstereo', 'gdrn', 'gdrn_selfocc', 'gdrnpp']:
             raise ValueError('Method must be one of [denstereo, gdrn, gdrn_selfocc, gdrnpp]')
         self.method = method
+
+    def set_core(self, core):
+        if not core in ['denstereo', 'gdrn_selfocc']:
+            raise ValueError('Method must be one of [denstereo, gdrn_selfocc]')
+        self.core = core
     
     def set_dataset(self, dataset):
         if not dataset in ['denstereo']:
@@ -41,7 +48,7 @@ class Config:
         self.dataset = dataset
 
     def __str__(self):
-        return f'Config: {self.config_file}, {self.method}, {self.dataset}, {self.epochs}, {self.bs}, {self.gpus}'
+        return f'Config: {self.config_file}, {self.core}, {self.method}, {self.dataset}, {self.epochs}, {self.bs}, {self.gpus}'
 
 
 def generate_timestamp():
@@ -90,7 +97,10 @@ if __name__=='__main__':
     else:
         resume = "False"
 
-    s = "srun {node} --gpus {gpus} --nodes=1 --cpus-per-gpu=10 --mem-per-cpu=8G --pty bash run_gdrn_container.sh {gpus} {config} {run_id} {method} {dataset} {eval} {docker_session}"
+    s = (
+        "srun {node} --gpus {gpus} --nodes=1 --cpus-per-gpu=10 --mem-per-cpu=8G --pty"
+        + " bash run_gdrn_container.sh {gpus} {config} {run_id} {method} {dataset} {eval} {docker_session}"
+    )
     s = s.format(
         node="-w {}".format(args.node) if args.node else "",
         gpus=gpus,
