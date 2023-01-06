@@ -7,6 +7,8 @@ import os.path as osp
 import sys
 from setproctitle import setproctitle
 import torch
+import numpy as np
+import random
 from torch.nn.parallel import DistributedDataParallel, DataParallel
 
 from detectron2.engine import launch
@@ -131,6 +133,9 @@ def setup(args):
 
 def main(args):
     cfg = setup(args)
+
+    if cfg.SEED:
+        cv2.setRNGSeed(cfg.SEED)
 
     distributed = comm.get_world_size() > 1
 

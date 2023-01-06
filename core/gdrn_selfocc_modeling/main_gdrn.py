@@ -132,6 +132,9 @@ def setup(args):
 def main(args):
     cfg = setup(args)
 
+    if cfg.SEED:
+        cv2.setRNGSeed(cfg.SEED)
+
     distributed = comm.get_world_size() > 1
     if comm.is_main_process():
         if args.no_wandb:

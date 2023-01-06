@@ -33,6 +33,7 @@ EVALUATE=""
 if [ ! $EVAL == "False" ]; then
     echo ""
     echo "sync eval model from pc3002"
+    mkdir -p ${OUTPUT_PATH}/${METHOD}/${DATASET}/${RUN_ID}
     rsync -aP --update --whole-file pc3002:/opt/datasets/jemrich/output/${METHOD}/${DATASET}/${RUN_ID}/model_final.pth ${OUTPUT_PATH}/${METHOD}/${DATASET}/${RUN_ID}/model_final.pth
     EVALUATE="--evaluate"
 fi
@@ -68,3 +69,4 @@ rsync -aP $DATASET_DICT_CACHE/ pc3002:/opt/datasets/jemrich/cache
 
 echo "run_id:"
 echo $RUN_ID
+docker rmi -f denstereo-env:latest

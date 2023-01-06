@@ -55,22 +55,34 @@ def get_tmux_pane():
 if __name__=='__main__':
 
     parser = argparse.ArgumentParser(description='Train a GDRN model')
-    parser.add_argument('--config', type=str, required=True, help='path to config file')
+    parser.add_argument('--config', type=str, required=None, help='path to config file')
     parser.add_argument('--docker_session', type=str, help='docker session name')
     parser.add_argument('--resume', type=str, default=None, help='runid to resume training from')
     parser.add_argument('--eval', type=str, default=None, help='evaluate run id')
+    parser.add_argument('--eval_ampere', type=str, default=None, help='evaluate run id on ampere')
+    parser.add_argument('--node', type=str, default=None, help='node to run on')
     args = parser.parse_args()
 
     # load config
-    config = Config(args.config)
+    if args.eval_ampere:
+        args.eval = args.eval_ampere
+
+        s = "runs/{}.yaml".format(args.eval_ampere[:-12])
+        print(s)
+        config_name = args.eval_ampere[:-12]
+        config = Config("runs/{}.yaml".format(config_name))
+    else:
+        config = Config(args.config)
+        config_name = Path(args.config).stem
+
     timestamp = generate_timestamp()
-    
-    config_name = Path(args.config).stem
     run_id = config_name + '_' + timestamp
+    gpus = config.gpus
 
     if args.eval:
         evaluate = "True"
         run_id = args.eval
+        gpus = 1
     else:
         evaluate = "False"
     if args.resume:
@@ -78,9 +90,10 @@ if __name__=='__main__':
     else:
         resume = "False"
 
-    s = "srun --gpus {gpus} -w ampere4 --nodes=1 --cpus-per-gpu=10 --mem-per-cpu=8G --pty bash run_gdrn_container.sh {gpus} {config} {run_id} {method} {dataset} {eval} {docker_session}"
+    s = "srun {node} --gpus {gpus} --nodes=1 --cpus-per-gpu=10 --mem-per-cpu=8G --pty bash run_gdrn_container.sh {gpus} {config} {run_id} {method} {dataset} {eval} {docker_session}"
     s = s.format(
-        gpus=config.gpus,
+        node="-w {}".format(args.node) if args.node else "",
+        gpus=gpus,
         config=config_name,
         run_id=run_id,
         method=config.method,

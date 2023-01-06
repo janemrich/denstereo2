@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """inference on dataset; save results; evaluate with custom evaluation
 funcs."""
+import wandb
 import logging
 import wandb
 import os.path as osp
@@ -718,7 +719,7 @@ class GDRN_EvaluatorCustom(DatasetEvaluator):
                 else:
                     line.append(0.0)
                     this_line_res.append(0.0)
-                    wandb.log({"{}_{}".format(obj_name, metric_name): 0.0}) #, #step=storage.iter)
+                    wandb.log({"{}_{}".format(obj_name, metric_name): 0.0}) #, step=storage.iter)
             # average
             if len(obj_names) > 0:
                 line.append(f"{100 * np.mean(this_line_res):.2f}")
