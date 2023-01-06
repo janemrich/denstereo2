@@ -30,6 +30,8 @@ INPUT = dict(
     ),
 )
 
+SEED = 0
+
 SOLVER = dict(
     IMS_PER_BATCH=36,
     TOTAL_EPOCHS=100,
@@ -43,7 +45,7 @@ SOLVER = dict(
 )
 
 DATASETS = dict(
-    TRAIN=("denstereo_002_master_chef_can_train_pbr_left",),
+    TRAIN=("denstereo_pbr_left",),
     TEST=("denstereo_test_pbr"),
     DET_FILES_TEST=("datasets/BOP_DATASETS/denstereo/test_bboxes/test_pbr_stereo.json",),
     SYM_OBJS=[
