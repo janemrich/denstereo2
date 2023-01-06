@@ -73,11 +73,13 @@ MODEL = dict(
             FREEZE=False,
             PRETRAINED="timm",
             INIT_CFG=dict(
-                type="timm/convnext_base",
+                type="timm/resnest50d",
+                # type="timm/convnext_base",
                 pretrained=True,
                 in_chans=3,
                 features_only=True,
-                out_indices=(3,),
+                out_indices=(4,), # resnest
+                # out_indices=(3,), # convnext
             ),
         ),
         ## geo head: Mask, XYZ, Region
@@ -135,7 +137,8 @@ MODEL = dict(
             # region loss -------------------------
             REGION_LOSS_TYPE="CE",  # CE
             REGION_LOSS_MASK_GT="visib",  # trunc | visib | obj
-            REGION_LW=1.0,
+            REGION_LW=0.01,
+            # REGION_LW=1.0, # should be 0.1 at least for now to make it comparable
             # pm loss --------------
             PM_LOSS_SYM=True,  # NOTE: sym loss
             PM_R_ONLY=True,  # only do R loss in PM
