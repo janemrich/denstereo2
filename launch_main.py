@@ -18,6 +18,7 @@ if __name__ == '__main__':
         config = yaml.load(f, Loader=yaml.FullLoader)
     
     config_file = config['config_file']['value']
+    core = config['core']['value']
     method = config['method']['value']
     dataset = config['dataset']['value']
     epochs = config['epochs']['value']
@@ -43,7 +44,7 @@ if __name__ == '__main__':
 
         # Train
         s = (
-            "python core/{method}_modeling/main_gdrn.py"
+            "python core/{core}_modeling/main_gdrn.py"
             + " --config-file {config}"
             + " --num-gpus {gpus}"
             + " --opts"
@@ -55,6 +56,7 @@ if __name__ == '__main__':
                 + " {weights}"
         )
         s = s.format(
+            core=core,
             method=method,
             dataset=dataset,
             config=config_path,
@@ -72,7 +74,7 @@ if __name__ == '__main__':
         
     # Evaluate
     s = (
-        "python core/{method}_modeling/main_gdrn.py"
+        "python core/{core}_modeling/main_gdrn.py"
         + " --config-file {config}"
         + " --num-gpus 1"
         + " --eval-only"
@@ -81,6 +83,7 @@ if __name__ == '__main__':
             + " MODEL.WEIGHTS=\"{weights}\""
     )
     s = s.format(
+        core=core,
         method=method,
         dataset=dataset,
         config=config_path,
