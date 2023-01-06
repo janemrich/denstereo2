@@ -9,14 +9,27 @@
     
         {
             "name": "denstereo",
-            "python": "${command:python.interpreterPath}",
+            "python": "/opt/conda/bin/python",
             "type": "python",
-            "justMyCode": false,
+            "justMyCode": true,
+            "request": "launch",
+            "program": "core/denstereo_modeling/main_gdrn.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--config-file", "configs/denstereo/denstereo/early_master_chef_can_debug.py",
+                "--num-gpus", "1",
+            ]
+        },
+        {
+            "name": "denstereo-gdrnpp-debug",
+            "python": "/opt/conda/bin/python",
+            "type": "python",
+            "justMyCode": true,
             "request": "launch",
             "program": "core/gdrn_selfocc_modeling/main_gdrn.py",
             "console": "integratedTerminal",
             "args": [
-                "--config-file", "configs/gdrn_selfocc/denstereo/debug_gdrn_2rothead_multistep.py",
+                "--config-file", "configs/gdrnpp/denstereo/debug.py",
                 "--num-gpus", "1",
             ]
         }
