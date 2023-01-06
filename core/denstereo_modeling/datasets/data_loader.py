@@ -317,7 +317,6 @@ class GDRN_DatasetFromList(Base_DatasetFromList):
 
         dataset_name = dataset_dict["dataset_name"]
 
-        print(dataset_dict["file_name_l"])
         image_l = read_image_mmcv(dataset_dict["file_name_l"], format=self.img_format)
         image_r = read_image_mmcv(dataset_dict["file_name_r"], format=self.img_format)
 
