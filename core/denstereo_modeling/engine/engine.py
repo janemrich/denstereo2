@@ -405,7 +405,13 @@ def do_train(cfg, args, model, optimizer, renderer=None, resume=False, pretraine
                 '''
                 # do test after reasonable iteration
                 losses = sum(loss_dict.values())
-                if not torch.isfinite(losses).all(): import code; code.interact(local=locals())
+                if not torch.isfinite(losses).all():
+                    # print with flush
+                    print(cfg, flush=True)
+                    print(loss_dict, flush=True)
+                    print(data, flush=True)
+                    print('iteration', iteration, flush=True)
+
                 assert torch.isfinite(losses).all(), (loss_dict, data)
 
             # loss_dict_reduced = {k: v.item() for k, v in comm.reduce_dict(loss_dict).items()}
