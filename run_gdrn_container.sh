@@ -31,7 +31,7 @@ echo "sync dataset dict cache from pc3002"
 rsync -aP pc3002:/opt/datasets/jemrich/cache/ $DATASET_DICT_CACHE 
 
 EVALUATE=""
-if [ ! $EVAL == "False" ]; then
+if [[ ! $EVAL == "False" ]]; then
     echo ""
     echo "sync eval model from pc3002"
     mkdir -p ${OUTPUT_PATH}/${METHOD}/${DATASET}/${RUN_ID}
@@ -40,7 +40,7 @@ if [ ! $EVAL == "False" ]; then
 fi
 
 DEBUG=""
-if [ $BRANCH == "debug" ]; then
+if [[ $BRANCH == "debug" ]]; then
     DEBUG="--debug"
 fi
 
