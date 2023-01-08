@@ -6,6 +6,7 @@ METHOD=$4
 DATASET=$5
 EVAL=$6
 TMUX=$7
+BRANCH=$8
 
 
 ### setup environment on spool
@@ -38,6 +39,11 @@ if [ ! $EVAL == "False" ]; then
     EVALUATE="--evaluate"
 fi
 
+DEBUG=""
+if [ $BRANCH == "debug" ]; then
+    DEBUG="--debug"
+fi
+
 # source rootless_docker_env.sh share-data
 source ~/rootless_docker_env_tmux.sh $TMUX
 
@@ -60,7 +66,7 @@ docker images
 docker load -i $IMAGE_CACHE
 
 docker run --shm-size=50G --rm --name prod --gpus $NGPUS -dit -v /denstereo -v $OUTPUT_PATH:/denstereo/output -v ~/denstereo-so/runs:/denstereo/runs -v /opt/spool/jemrich/:/denstereo/datasets -v $DATASET_DICT_CACHE:/denstereo/.cache denstereo-env:latest
-docker exec -it prod sh -c "cd /denstereo; git clone git@git.igd-r.fraunhofer.de:jemrich/denstereo-so.git; cd denstereo-so; git checkout denstereo; ln -s ../.cache .cache; ln -s ../runs runs; ln -s ../datasets datasets; rm output/.gitignore; rmdir output; ln -s ../output output; python launch_main.py $CONFIG $RUN_ID $EVALUATE"
+docker exec -it prod sh -c "cd /denstereo; git clone git@git.igd-r.fraunhofer.de:jemrich/denstereo-so.git; cd denstereo-so; git checkout ${BRANCH}; ln -s ../.cache .cache; ln -s ../runs runs; ln -s ../datasets datasets; rm output/.gitignore; rmdir output; ln -s ../output output; python launch_main.py $CONFIG $RUN_ID $EVALUATE $DEBUG"
 docker stop prod
 
 echo "sync output..."

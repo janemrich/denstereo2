@@ -9,6 +9,7 @@ if __name__ == '__main__':
     parser.add_argument("--evaluate", action="store_true", default=False, help="evaluate or train")
     parser.add_argument("--checkpoint", help="checkpoint to load", type=str)
     parser.add_argument("--resume", action="store_true", default=False, help="resume training from checkpoint")
+    parser.add_argument("--debug", action="store_true", default=False, help="run in debug mode")
 
     args = parser.parse_args()
     run = args.run
@@ -73,23 +74,24 @@ if __name__ == '__main__':
         subprocess.call(s, shell=True)
         
     # Evaluate
-    s = (
-        "python core/{core}_modeling/main_gdrn.py"
-        + " --config-file {config}"
-        + " --num-gpus 1"
-        + " --eval-only"
-        + " --opts"
-            + " OUTPUT_DIR=\"output/{method}/{dataset}/{run_id}\""
-            + " MODEL.WEIGHTS=\"{weights}\""
-    )
-    s = s.format(
-        core=core,
-        method=method,
-        dataset=dataset,
-        config=config_path,
-        run_id=run_id,
-        weights=weights,
-    )
-    print(s + '\n')
+    if not args.debug:
+        s = (
+            "python core/{core}_modeling/main_gdrn.py"
+            + " --config-file {config}"
+            + " --num-gpus 1"
+            + " --eval-only"
+            + " --opts"
+                + " OUTPUT_DIR=\"output/{method}/{dataset}/{run_id}\""
+                + " MODEL.WEIGHTS=\"{weights}\""
+        )
+        s = s.format(
+            core=core,
+            method=method,
+            dataset=dataset,
+            config=config_path,
+            run_id=run_id,
+            weights=weights,
+        )
+        print(s + '\n')
 
-    subprocess.call(s, shell=True)
+        subprocess.call(s, shell=True)

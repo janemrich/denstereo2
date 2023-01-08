@@ -68,6 +68,7 @@ if __name__=='__main__':
     parser.add_argument('--eval', type=str, default=None, help='evaluate run id')
     parser.add_argument('--eval_ampere', type=str, default=None, help='evaluate run id on ampere')
     parser.add_argument('--node', type=str, default=None, help='node to run on')
+    parser.add_argument('--debug', action='store_true', help='run in debug mode')
     args = parser.parse_args()
 
     # load config
@@ -99,7 +100,7 @@ if __name__=='__main__':
 
     s = (
         "srun {node} --gpus {gpus} --nodes=1 --cpus-per-gpu=10 --mem-per-cpu=8G --pty"
-        + " bash run_gdrn_container.sh {gpus} {config} {run_id} {method} {dataset} {eval} {docker_session}"
+        + " bash run_gdrn_container.sh {gpus} {config} {run_id} {method} {dataset} {eval} {docker_session} {branch}"
     )
     s = s.format(
         node="-w {}".format(args.node) if args.node else "",
@@ -110,6 +111,7 @@ if __name__=='__main__':
         dataset=config.dataset,
         eval=evaluate,
         docker_session=get_tmux_pane(),
+        branch='debug' if args.debug else 'denstereo',
     )
 
     print(s + '\n')
