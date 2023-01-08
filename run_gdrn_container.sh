@@ -42,6 +42,8 @@ fi
 DEBUG=""
 if [[ $BRANCH == "debug" ]]; then
     DEBUG="--debug"
+else
+    BRANCH="denstereo"
 fi
 
 # source rootless_docker_env.sh share-data
