@@ -46,7 +46,7 @@ SOLVER = dict(
 
 DATASETS = dict(
     TRAIN=("denstereo_train_pbr_left",),
-    TEST=("denstereo_test_pbr_left"),
+    TEST=("denstereo_test_pbr_left",),
     DET_FILES_TEST=("datasets/BOP_DATASETS/denstereo/test_bboxes/test_pbr_left.json",),
     SYM_OBJS=[
         "024_bowl",
