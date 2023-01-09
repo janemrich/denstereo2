@@ -308,8 +308,6 @@ def do_train(cfg, args, model, optimizer, renderer=None, resume=False):
                     roi_coord_2d=batch.get("roi_coord_2d", None),
                     roi_coord_2d_rel=batch.get("roi_coord_2d_rel", None),
                     roi_extents=batch.get("roi_extent", None),
-                    do_loss=True,
-                    out_dict, loss_dict = model(
                 '''
                 out_dict, loss_dict = model(
                     batch["roi_img"],
@@ -317,7 +315,7 @@ def do_train(cfg, args, model, optimizer, renderer=None, resume=False):
                     gt_xyz_bin=batch.get("roi_xyz_bin", None),
                     gt_mask_trunc=batch["roi_mask_trunc"],
                     gt_mask_visib=batch["roi_mask_visib"],
-                    gt_mask_full=batch["roi_mask_obj"],
+                    gt_mask_full=batch["roi_mask_full"],
                     gt_region=batch.get("roi_region", None),
                     gt_ego_rot=batch.get("ego_rot", None),
                     gt_trans=batch.get("trans", None),

@@ -69,6 +69,11 @@ def transform_instance_annotations(annotation, transforms, image_size, *, keypoi
         mask = transforms.apply_segmentation(cocosegm2mask(annotation["segmentation"], h=im_H, w=im_W))
         annotation["segmentation"] = mask
 
+    if "mask_full" in annotation:
+        # NOTE: here we transform segms to binary masks (interp is nearest by default)
+        mask_full = transforms.apply_segmentation(cocosegm2mask(annotation["mask_full"], h=im_H, w=im_W))
+        annotation["mask_full"] = mask_full
+
     if "keypoints" in annotation:
         keypoints = utils.transform_keypoint_annotations(
             annotation["keypoints"], transforms, image_size, keypoint_hflip_indices
@@ -543,6 +548,13 @@ class GDRN_DatasetFromList(Base_DatasetFromList):
             mask_obj[:, :, None], bbox_center, scale, out_res, interpolation=mask_xyz_interp
         )
 
+        if "mask_full" in anno.keys():
+            # TODO: maybe directly use mask_obj
+            mask_full = anno["mask_full"].astype("float32")
+            roi_mask_full = crop_resize_by_warp_affine(
+                mask_full[:, :, None], bbox_center, scale, out_res, interpolation=mask_xyz_interp
+            )
+
         roi_mask_obj_erode = crop_resize_by_warp_affine(
             mask_obj_erode[:, :, None], bbox_center, scale, out_res, interpolation=mask_xyz_interp
         )
@@ -604,7 +616,12 @@ class GDRN_DatasetFromList(Base_DatasetFromList):
             roi_xyz_bin[2] = np.asarray(roi_z_norm * n_xyz_bin, dtype=np.uint8)
 
             # the last bin is for bg
-            roi_masks = {"trunc": roi_mask_trunc, "visib": roi_mask_visib, "obj": roi_mask_obj}
+            roi_masks = {
+                "trunc": roi_mask_trunc, 
+                "visib": roi_mask_visib,
+                "obj": roi_mask_obj,
+                "full": roi_mask_full,
+            }
             roi_mask_xyz = roi_masks[loss_cfg.XYZ_LOSS_MASK_GT]
             roi_xyz_bin[0][roi_mask_xyz == 0] = n_xyz_bin
             roi_xyz_bin[1][roi_mask_xyz == 0] = n_xyz_bin
@@ -635,6 +652,8 @@ class GDRN_DatasetFromList(Base_DatasetFromList):
         dataset_dict["roi_mask_visib"] = torch.as_tensor(roi_mask_visib.astype("float32")).contiguous()
         dataset_dict["roi_mask_obj"] = torch.as_tensor(roi_mask_obj.astype("float32")).contiguous()
         dataset_dict["roi_mask_erode"] = torch.as_tensor(roi_mask_obj_erode.astype("float32")).contiguous()
+        if "mask_full" in anno.keys():
+            dataset_dict["roi_mask_full"] = torch.as_tensor(roi_mask_full.astype("float32")).contiguous()
         dataset_dict["occmask"] = torch.as_tensor(roi_occmask.astype("float32")).contiguous()
 
         dataset_dict["bbox_center"] = torch.as_tensor(bbox_center, dtype=torch.float32)

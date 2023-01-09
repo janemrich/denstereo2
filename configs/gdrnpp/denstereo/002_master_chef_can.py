@@ -168,13 +168,17 @@ MODEL = dict(
     ),
 )
 
+
+'''
 VAL = dict(
-    DATASET_NAME="ycbv",
-    SPLIT_TYPE="",
+    DATASET_NAME="denstereo",
+    SPLIT="test~left",
+    SPLIT_TYPE="pbr",
     SCRIPT_PATH="lib/pysixd/scripts/eval_pose_results_more.py",
-    TARGETS_FILENAME="test_targets_bop19.json",
+    TARGETS_FILENAME="test_bboxes/test_targets_pbr_left.json",
     ERROR_TYPES="vsd,mspd,mssd",
     USE_BOP=True,  # whether to use bop toolkit
 )
+'''
 
 TEST = dict(EVAL_PERIOD=0, VIS=False, TEST_BBOX_TYPE="est")  # gt | est

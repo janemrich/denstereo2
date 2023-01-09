@@ -44,7 +44,7 @@ def batch_data(cfg, data, renderer=None, device="cuda", phase="train"):
     # yapf: disable
     for key in [
         "roi_xyz", "roi_xyz_bin",
-        "roi_mask_trunc", "roi_mask_visib", "roi_mask_obj", "roi_mask_erode",
+        "roi_mask_trunc", "roi_mask_visib", "roi_mask_obj", "roi_mask_erode", "roi_mask_full",
         "roi_region",
         "ego_rot", "trans",
         "roi_points",

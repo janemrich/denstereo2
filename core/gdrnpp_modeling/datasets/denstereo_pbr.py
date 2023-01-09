@@ -191,6 +191,11 @@ class DENSTEREO_PBR_Dataset:
 
                     mask_rle = binary_mask_to_rle(mask_single, compressed=True)
 
+                    # load mask full
+                    mask_full = mmcv.imread(mask_file, "unchanged")
+                    mask_full = mask_full.astype("bool")
+                    mask_full_rle = binary_mask_to_rle(mask_full, compressed=True)
+
                     xyz_path = osp.join(self.xyz_root, f"{scene_id:06d}/{int_im_id:06d}_{anno_i:06d}-xyz.npz")
                     assert osp.exists(xyz_path), xyz_path
                     occ_path = osp.join(self.occ_root, f"{scene_id:06d}/{int_im_id:06d}_{anno_i:06d}-Q0.npz")
@@ -203,7 +208,7 @@ class DENSTEREO_PBR_Dataset:
                         "trans": t,
                         "centroid_2d": proj,  # absolute (cx, cy)
                         "segmentation": mask_rle,
-                        "mask_full_file": mask_file,  # TODO: load as mask_full, rle
+                        "mask_full": mask_full_rle,  # TODO: load as mask_full, rle
                         "visib_fract": visib_fract,
                         "xyz_path": xyz_path,
                         "occ_path": occ_path,
