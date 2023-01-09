@@ -302,7 +302,6 @@ class GDRN_DatasetFromList(Base_DatasetFromList):
         cfg = self.cfg
         net_cfg = cfg.MODEL.POSE_NET
         g_head_cfg = net_cfg.GEO_HEAD
-        s_head_cfg = net_cfg.SELFOCC_HEAD
         pnp_net_cfg = net_cfg.PNP_NET
         loss_cfg = net_cfg.LOSS_CFG
 

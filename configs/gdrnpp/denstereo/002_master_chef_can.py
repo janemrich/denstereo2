@@ -89,31 +89,31 @@ MODEL = dict(
             ),
             NUM_REGIONS=64,
         ),
-        SELFOCC_HEAD=dict(
-            OCCMASK_AWARE=False,
-            Q0_CLASS_AWARE=False,
-            MASK_CLASS_AWARE=False,
-            FREEZE=True,
-            INIT_CFG=dict(
-                type="ConvSelfoccHead",
-                in_dim=1024, # convnext
-                # in_dim=2048, # resnest
-                feat_dim=256,
-                feat_kernel_size=3,
-                norm="GN",
-                num_gn_groups=32,
-                act="GELU",  # relu | lrelu | silu (swish) | gelu | mish
-                out_kernel_size=1,
-                out_layer_shared=False,
-                Q0_num_classes=1,
-                mask_num_classes=1,
-            ),
-            MIN_Q0_REGION=20,
-            LR_MULT=1.0,
+        # SELFOCC_HEAD=dict(
+        #     OCCMASK_AWARE=False,
+        #     Q0_CLASS_AWARE=False,
+        #     MASK_CLASS_AWARE=False,
+        #     FREEZE=True,
+        #     INIT_CFG=dict(
+        #         type="ConvSelfoccHead",
+        #         in_dim=1024, # convnext
+        #         # in_dim=2048, # resnest
+        #         feat_dim=256,
+        #         feat_kernel_size=3,
+        #         norm="GN",
+        #         num_gn_groups=32,
+        #         act="GELU",  # relu | lrelu | silu (swish) | gelu | mish
+        #         out_kernel_size=1,
+        #         out_layer_shared=False,
+        #         Q0_num_classes=1,
+        #         mask_num_classes=1,
+        #     ),
+        #     MIN_Q0_REGION=20,
+        #     LR_MULT=1.0,
 
-            REGION_CLASS_AWARE=False,
-            MASK_THR_TEST=0.5,
-        ),
+        #     REGION_CLASS_AWARE=False,
+        #     MASK_THR_TEST=0.5,
+        # ),
         PNP_NET=dict(
             INIT_CFG=dict(norm="GN", act="gelu"),
             REGION_ATTENTION=True,
@@ -148,22 +148,22 @@ MODEL = dict(
             Z_LOSS_TYPE="L1",
             Z_LW=1.0,
 
-            # just for selfocc
-            # Q0 loss ---------------------
-            Q0_LOSS_TYPE="L1",
-            Q0_LOSS_MASK_GT="visib",  # computed from Q0
-            Q0_LW=0.0,
-            Q0_DEF_LW=0.0, # 10?
-            # cross-task loss -------------------
-            CT_LW=0.0,
-            CT_P_LW=0.0,
-            # occlusion mask loss weight
-            OCC_LW=0.0,
-            PM_NORM_BY_EXTENT=True,
-            # Q direction
-            QD_LW=0.0,
-            #
-            HANDLE_SYM=False,
+            # # just for selfocc
+            # # Q0 loss ---------------------
+            # Q0_LOSS_TYPE="L1",
+            # Q0_LOSS_MASK_GT="visib",  # computed from Q0
+            # Q0_LW=0.0,
+            # Q0_DEF_LW=0.0, # 10?
+            # # cross-task loss -------------------
+            # CT_LW=0.0,
+            # CT_P_LW=0.0,
+            # # occlusion mask loss weight
+            # OCC_LW=0.0,
+            # PM_NORM_BY_EXTENT=True,
+            # # Q direction
+            # QD_LW=0.0,
+            # #
+            # HANDLE_SYM=False,
         ),
     ),
 )
