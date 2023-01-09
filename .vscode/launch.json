@@ -16,8 +16,11 @@
             "program": "core/denstereo_modeling/main_gdrn.py",
             "console": "integratedTerminal",
             "args": [
-                "--config-file", "configs/denstereo/denstereo/early_master_chef_can_debug.py",
+                "--config-file", "configs/denstereo/denstereo/all_early_stereo-gdrn_det.py",
                 "--num-gpus", "1",
+                "--no-wandb",
+                "--opts",
+                    "SOLVER.IMS_PER_BATCH=32",
             ]
         },
         {
@@ -26,12 +29,15 @@
             "type": "python",
             "justMyCode": true,
             "request": "launch",
-            "program": "core/gdrn_selfocc_modeling/main_gdrn.py",
+            "program": "core/gdrnpp_modeling/main_gdrn.py",
             "console": "integratedTerminal",
             "args": [
                 "--config-file", "configs/gdrnpp/denstereo/debug.py",
                 "--num-gpus", "1",
+                "--no-wandb",
+                "--opts",
+                    "SOLVER.IMS_PER_BATCH=32",
             ]
-        }
+        },
     ]
 }

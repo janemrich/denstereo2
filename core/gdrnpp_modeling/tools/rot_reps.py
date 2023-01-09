@@ -5,28 +5,6 @@ import torch.nn as nn
 from transforms3d.quaternions import quat2mat, mat2quat, axangle2quat
 import torch.nn.functional as F
 
-def rot6d_to_mat_batch(d6):
-    """
-    Converts 6D rotation representation by Zhou et al. [1] to rotation matrix.
-    Args:
-        d6: 6D rotation representation, of size (*, 6)
-    Returns:
-        batch of rotation matrices of size (*, 3, 3)
-    [1] Zhou, Y., Barnes, C., Lu, J., Yang, J., & Li, H.
-    On the Continuity of Rotation Representations in Neural Networks. CVPR 2019.
-    Retrieved from http://arxiv.org/abs/1812.07035
-    """
-    # poses
-    x_raw = d6[..., 0:3]  # bx3
-    y_raw = d6[..., 3:6]  # bx3
-
-    x = F.normalize(x_raw, p=2, dim=-1)  # bx3
-    z = torch.cross(x, y_raw, dim=-1)  # bx3
-    z = F.normalize(z, p=2, dim=-1)  # bx3
-    y = torch.cross(z, x, dim=-1)  # bx3
-
-    # (*,3)x3 --> (*,3,3)
-    return torch.stack((x, y, z), dim=-1)  # (b,3,3)
 
 def normalize_vector(v):
     # bxn
@@ -53,46 +31,66 @@ def cross_product(u, v):
     return out
 
 
-def ortho6d_to_mat_batch(poses):
-    # poses bx6
-    # poses
-    x_raw = poses[:, 0:3]  # bx3
-    y_raw = poses[:, 3:6]  # bx3
-
-    x = normalize_vector(x_raw)  # bx3
-    z = cross_product(x, y_raw)  # bx3
-    z = normalize_vector(z)  # bx3
-    y = cross_product(z, x)  # bx3
-
-    x = x.view(-1, 3, 1)
-    y = y.view(-1, 3, 1)
-    z = z.view(-1, 3, 1)
-    matrix = torch.cat((x, y, z), 2)  # bx3x3
-    return matrix
-
-
-def mat_to_ortho6d_batch(rots):
+def rot6d_to_mat_batch(d6):
     """
-    bx3x3
-    ---
-    bx6
+    Converts 6D rotation representation by Zhou et al. [1] to rotation matrix.
+    Args:
+        d6: 6D rotation representation, of size (*, 6)
+    Returns:
+        batch of rotation matrices of size (*, 3, 3)
+    [1] Zhou, Y., Barnes, C., Lu, J., Yang, J., & Li, H.
+    On the Continuity of Rotation Representations in Neural Networks. CVPR 2019.
+    Retrieved from http://arxiv.org/abs/1812.07035
+    """
+    # poses
+    x_raw = d6[..., 0:3]  # bx3
+    y_raw = d6[..., 3:6]  # bx3
+
+    x = F.normalize(x_raw, p=2, dim=-1)  # bx3
+    z = torch.cross(x, y_raw, dim=-1)  # bx3
+    z = F.normalize(z, p=2, dim=-1)  # bx3
+    y = torch.cross(z, x, dim=-1)  # bx3
+
+    # (*,3)x3 --> (*,3,3)
+    return torch.stack((x, y, z), dim=-1)  # (b,3,3)
+
+
+def mat_to_rot6d_batch(rots):
+    """
+    Converts rotation matrices to 6D rotation representation by Zhou et al. [1]
+    by dropping the last col. Note that 6D representation is not unique.
+    Args:
+        rots: batch of rotation matrices of size (*, 3, 3)
+    Returns:
+        6D rotation representation, of size (*, 6)
+    [1] Zhou, Y., Barnes, C., Lu, J., Yang, J., & Li, H.
+    On the Continuity of Rotation Representations in Neural Networks.
+    IEEE Conference on Computer Vision and Pattern Recognition, 2019.
+    Retrieved from http://arxiv.org/abs/1812.07035
     """
     x = rots[:, :, 0]  # col x
     y = rots[:, :, 1]  # col y
-    ortho6d = torch.cat([x, y], 1)  # bx6
-    return ortho6d
+    rot6d = torch.cat([x, y], 1)  # bx6
+    return rot6d
 
 
-def mat_to_ortho6d_np(rot):
-    """
-    3x3
-    ---
-    (6,)
+def mat_to_rot6d_np(rot):
+    """numpy version for only one matrix.
+    Converts a single rotation matrix to 6D rotation representation by Zhou et al. [1]
+    by dropping the last col. Note that 6D representation is not unique.
+    Args:
+        rot: rotation matrix of size (3, 3)
+    Returns:
+        6D rotation representation, of size (6,)
+    [1] Zhou, Y., Barnes, C., Lu, J., Yang, J., & Li, H.
+    On the Continuity of Rotation Representations in Neural Networks.
+    IEEE Conference on Computer Vision and Pattern Recognition, 2019.
+    Retrieved from http://arxiv.org/abs/1812.07035
     """
     x = rot[:3, 0]  # col x
     y = rot[:3, 1]  # col y
-    ortho6d = np.concatenate([x, y])  # (6,)
-    return ortho6d
+    rot6d = np.concatenate([x, y])  # (6,)
+    return rot6d
 
 
 def quat2mat_batch(quaternion):
@@ -144,8 +142,8 @@ def normalize_5d_rotation(r5d):
     return out_rotation
 
 
-def rotation5d_to_mat_batch(r5d):
-    # rotation5d bx5
+def rot5d_to_mat_batch(r5d):
+    # rot5d bx5
     # out matrix bx3x3
     batch = r5d.shape[0]
     sin = r5d[:, 0].view(batch, 1)  # bx1
@@ -218,7 +216,7 @@ def ortho5d_to_mat_batch(a):
     norm = torch.sqrt(torch.pow(u[:, 1:], 2).sum(1))  # batch
     u = u / norm.view(batch, 1).repeat(1, u.shape[1])  # batch*4
     b = torch.cat((a[:, 0:2], u), 1)  # batch*6
-    matrix = ortho6d_to_mat_batch(b)
+    matrix = rot6d_to_mat_batch(b)
     return matrix
 
 
@@ -499,24 +497,6 @@ def axisAngle2quat_batch(axisAngles):
     return quat
 
 
-# NOTE: this is from code of 6d rot paper
-# def mat2quat_batch(matrices, eps=1e-8):
-#     # matrices batch*4*4 or batch*3*3
-#     # quaternions batch*4
-#     batch = matrices.shape[0]
-
-#     w = torch.sqrt(1.0 + matrices[:, 0, 0] + matrices[:, 1, 1] + matrices[:, 2, 2]) / 2.0
-#     w = torch.max(w, torch.zeros(batch).to(matrices) + eps)  # batch
-#     w4 = 4.0 * w
-#     x = (matrices[:, 2, 1] - matrices[:, 1, 2]) / w4
-#     y = (matrices[:, 0, 2] - matrices[:, 2, 0]) / w4
-#     z = (matrices[:, 1, 0] - matrices[:, 0, 1]) / w4
-
-#     quats = torch.cat((w.view(batch, 1), x.view(batch, 1), y.view(batch, 1), z.view(batch, 1)), 1)
-
-#     return quats
-
-
 def mat2quat_batch(rotation_matrix: torch.Tensor, eps: float = 1e-8) -> torch.Tensor:
     # NOTE: from kornia, but they use (x, y, z, w) quat format
     # NOTE: it seems this is still not stable, leeding to NaN losses
@@ -591,7 +571,7 @@ def mat2quat_batch(rotation_matrix: torch.Tensor, eps: float = 1e-8) -> torch.Te
 
 #####################################
 # tests
-def test_ortho6d_rot():
+def test_rot6d_to_mat():
     axis = np.random.rand(3)
     angle = np.random.rand(1)
     # quat = axangle2quat([1, 2, 3], 0.7)
@@ -601,9 +581,9 @@ def test_ortho6d_rot():
     print("mat:\n", mat)
     mat_th = torch.tensor(mat.astype("float32"))[None].to("cuda")
     print("mat_th:\n", mat_th)
-    ortho6d = mat_to_ortho6d_batch(mat_th)
-    print("ortho6d:\n", ortho6d)
-    mat_2 = ortho6d_to_mat_batch(ortho6d)
+    rot6d = mat_to_rot6d_batch(mat_th)
+    print("rot6d:\n", rot6d)
+    mat_2 = rot6d_to_mat_batch(rot6d)
     print("mat_2:\n", mat_2)
     diff_mat = mat_th - mat_2
     print("mat_diff:\n", diff_mat)
@@ -639,7 +619,7 @@ def test_mat2rot6d_np():
     print("quat:\n", quat)
     mat = quat2mat(quat)
     print("mat:\n", mat)
-    rot6d = mat_to_ortho6d_np(mat)
+    rot6d = mat_to_rot6d_np(mat)
     print("rot6d: \n", rot6d)
 
 
@@ -649,7 +629,7 @@ if __name__ == "__main__":
 
     sys.path.insert(0, osp.join(osp.dirname(__file__), "../../"))
 
-    # test_ortho6d_rot()
+    test_rot6d_to_mat()
 
     # test_mat2quat_torch()
-    test_mat2rot6d_np()
+    # test_mat2rot6d_np()
