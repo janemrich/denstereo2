@@ -38,8 +38,8 @@ class Config:
         self.method = method
 
     def set_core(self, core):
-        if not core in ['denstereo', 'gdrn_selfocc']:
-            raise ValueError('Method must be one of [denstereo, gdrn_selfocc]')
+        if not core in ['denstereo', 'gdrn_selfocc', 'gdrnpp']:
+            raise ValueError('Method must be one of [denstereo, gdrn_selfocc, gdrnpp]')
         self.core = core
     
     def set_dataset(self, dataset):

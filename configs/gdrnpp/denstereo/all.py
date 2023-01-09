@@ -30,6 +30,8 @@ INPUT = dict(
     ),
 )
 
+SEED = 0
+
 SOLVER = dict(
     IMS_PER_BATCH=36,
     TOTAL_EPOCHS=100,
