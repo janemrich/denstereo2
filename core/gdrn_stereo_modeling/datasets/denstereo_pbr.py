@@ -62,7 +62,7 @@ class DENSTEREO_PBR_Dataset:
         self.height = data_cfg["height"]  # 480
         self.width = data_cfg["width"]  # 640
 
-        self.cache_dir = data_cfg.get("cache_dir", osp.join(PROJ_ROOT, ".cache"))  # .cache
+        self.cache_dir = data_cfg.get("cache_dir", osp.join(PROJ_ROOT, ".cache/gdrn_stereo"))  # .cache
         self.use_cache = data_cfg.get("use_cache", True)
         self.num_to_load = data_cfg["num_to_load"]  # -1
         self.filter_invalid = data_cfg.get("filter_invalid", True)
