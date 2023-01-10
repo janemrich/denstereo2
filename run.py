@@ -33,13 +33,13 @@ class Config:
         return config
 
     def set_method(self, method):
-        if not method in ['denstereo', 'gdrn', 'gdrn_selfocc', 'gdrnpp']:
-            raise ValueError('Method must be one of [denstereo, gdrn, gdrn_selfocc, gdrnpp]')
+        if not method in ['denstereo', 'gdrn', 'gdrn_selfocc', 'gdrnpp', 'gdrn_stereo']:
+            raise ValueError('Method must be one of [denstereo, gdrn, gdrn_selfocc, gdrnpp, gdrn_stereo]')
         self.method = method
 
     def set_core(self, core):
-        if not core in ['denstereo', 'gdrn_selfocc', 'gdrnpp']:
-            raise ValueError('Method must be one of [denstereo, gdrn_selfocc, gdrnpp]')
+        if not core in ['denstereo', 'gdrn_selfocc', 'gdrnpp', 'gdrn_stereo']:
+            raise ValueError('Method must be one of [denstereo, gdrn_selfocc, gdrnpp, gdrn_stereo]')
         self.core = core
     
     def set_dataset(self, dataset):
