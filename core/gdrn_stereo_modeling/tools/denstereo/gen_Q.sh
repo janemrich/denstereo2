@@ -1,0 +1,1 @@
+cd ~/denStereo-SO/; a2 --cpus-per-task 55 --mem-per-cpu 1G python -m core.gdrn_stereo_modeling.tools.denstereo.generate_pbr_Q0_numba_cpu --dataset denstereo --split train_pbr_right --threads 50
