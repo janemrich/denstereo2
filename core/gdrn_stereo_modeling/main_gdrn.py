@@ -38,7 +38,7 @@ from core.gdrn_stereo_modeling.datasets.dataset_factory import register_datasets
 #from core.gdrn_stereo_modeling.engine.engine_utils import get_renderer
 from core.gdrn_stereo_modeling.engine.engine import do_test, do_train
 # from core.gdrn_stereo_modeling.models import GDRN, GDRN_stereo, GDRN_stereo_disp,  GDRN_stereo_disp_in_pnp, GDRN_stereo_disp_in_pnp_light, GDRN_stereo_early, GDRN_stereo_early_mono, GDRN_stereo_res, GDRN_stereo_disp_in_pnp_light_early
-from core.gdrn_stereo_modeling.models import GDRN_stereo_early_mono
+from core.gdrn_stereo_modeling.models import GDRN_stereo_early_mono, GDRN_stereo_early_mono_no_weight_sharing
 
 
 logger = logging.getLogger("detectron2")
