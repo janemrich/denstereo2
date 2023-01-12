@@ -162,17 +162,16 @@ MODEL = dict(
         ),
     ),
 )
-'''
+
 VAL = dict(
     DATASET_NAME="denstereo",
-    SPLIT_TYPE="",
-    SCRIPT_PATH="../../../lib/pysixd/scripts/eval_pose_results_more.py",
-    TARGETS_FILENAME="denstereo_test_targets_keyframe.json",  # 'lm_test_targets_bb8.json'
-    ERROR_TYPES="AUCadd,AUCadi,AUCad,ad,ABSadd,ABSadi,ABSad",
+    SPLIT="test~left",
+    SPLIT_TYPE="pbr",
+    SCRIPT_PATH="lib/pysixd/scripts/eval_pose_results_more.py",
+    TARGETS_FILENAME="test_bboxes/test_targets_pbr_left.json",
+    ERROR_TYPES="vsd,mspd,mssd",
     USE_BOP=True,  # whether to use bop toolkit
 )
-'''
-
 
 TEST = dict(EVAL_PERIOD=0, VIS=False, TEST_BBOX_TYPE="est")  # gt | est
 TRAIN = dict(CT_START=0.2, CT_P_START=0.2)  # we start cross task loss at maxiter*0.6
