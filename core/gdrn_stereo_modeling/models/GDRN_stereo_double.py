@@ -36,9 +36,9 @@ logger = logging.getLogger(__name__)
 
 
 class GDRN(nn.Module):
-    def __init__(self, cfg, backbone, geo_head_net, selfocc_head_net, neck=None, pnp_net=None):
+    def __init__(self, cfg, backbone, geo_head_net, neck=None, pnp_net=None):
         super().__init__()
-        assert cfg.MODEL.POSE_NET.NAME == "GDRN_stereo_early", cfg.MODEL.POSE_NET.NAME
+        assert cfg.MODEL.POSE_NET.NAME == "GDRN_stereo_double", cfg.MODEL.POSE_NET.NAME
         self.backbone = backbone
         self.neck = neck
 
@@ -48,12 +48,10 @@ class GDRN(nn.Module):
         self.epoch_count = 0
 
         self.geo_head_net = geo_head_net
-        self.selfocc_head_net = selfocc_head_net
         self.pnp_net = pnp_net
 
         self.cfg = cfg
         self.xyz_out_dim, self.mask_out_dim, self.region_out_dim = get_xyz_mask_region_out_dim(cfg)
-        self.Q0_out_dim, self.occmask_out_dim = get_selfocc_out_dim(cfg)
         # uncertainty multi-task loss weighting
         # https://github.com/Hui-Li/multi-task-learning-example-PyTorch/blob/master/multi-task-learning-example-PyTorch.ipynb
         # a = log(sigma^2)
@@ -157,28 +155,6 @@ class GDRN(nn.Module):
         # NOTE: use softmax for bins (the last dim is bg)
         if coor_x.shape[1] > 1 and coor_y.shape[1] > 1 and coor_z.shape[1] > 1:
             raise NotImplementedError('softmax should be applied to dim=1, I think this is a bug')
-            coor_x_softmax = F.softmax(coor_x[:bs, :-1, :, :], dim=1)
-            coor_y_softmax = F.softmax(coor_y[:bs, :-1, :, :], dim=1)
-            coor_z_softmax = F.softmax(coor_z[:bs, :-1, :, :], dim=1)
-            Q0_xy_x_sofrmax = F.softmax(Q0_xy_x[:bs, :-1, :, :])
-            Q0_xy_y_sofrmax = F.softmax(Q0_xy_y[:bs, :-1, :, :])
-            Q0_xz_x_sofrmax = F.softmax(Q0_xz_x[:bs, :-1, :, :])
-            Q0_xz_z_sofrmax = F.softmax(Q0_xz_z[:bs, :-1, :, :])
-            Q0_yz_y_sofrmax = F.softmax(Q0_yz_y[:bs, :-1, :, :])
-            Q0_yz_z_sofrmax = F.softmax(Q0_yz_z[:bs, :-1, :, :])
-            coor_feat = torch.cat([coor_x_softmax, coor_y_softmax, coor_z_softmax, Q0_xy_x_sofrmax, Q0_xy_y_sofrmax,
-                                   Q0_xz_x_sofrmax, Q0_xz_z_sofrmax, Q0_yz_y_sofrmax, Q0_yz_z_sofrmax], dim=1)
-            coor_x_softmax_r = F.softmax(coor_x[bs:, :-1, :, :], dim=1)
-            coor_y_softmax_r = F.softmax(coor_y[bs:, :-1, :, :], dim=1)
-            coor_z_softmax_r = F.softmax(coor_z[bs:, :-1, :, :], dim=1)
-            Q0_xy_x_sofrmax_r = F.softmax(Q0_xy_x[bs:, :-1, :, :])
-            Q0_xy_y_sofrmax_r = F.softmax(Q0_xy_y[bs:, :-1, :, :])
-            Q0_xz_x_sofrmax_r = F.softmax(Q0_xz_x[bs:, :-1, :, :])
-            Q0_xz_z_sofrmax_r = F.softmax(Q0_xz_z[bs:, :-1, :, :])
-            Q0_yz_y_sofrmax_r = F.softmax(Q0_yz_y[bs:, :-1, :, :])
-            Q0_yz_z_sofrmax_r = F.softmax(Q0_yz_z[bs:, :-1, :, :])
-            coor_feat_r = torch.cat([coor_x_softmax_r, coor_y_softmax_r, coor_z_softmax_r, Q0_xy_x_sofrmax_r, Q0_xy_y_sofrmax_r,
-                                   Q0_xz_x_sofrmax_r, Q0_xz_z_sofrmax_r, Q0_yz_y_sofrmax_r, Q0_yz_z_sofrmax_r], dim=1)
         else:
             coor_feat = torch.cat(
                 [
