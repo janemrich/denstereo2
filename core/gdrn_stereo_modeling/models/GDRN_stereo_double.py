@@ -14,10 +14,6 @@ from ..losses.coor_cross_entropy import CrossEntropyHeatmapLoss
 from ..losses.l2_loss import L2Loss
 from ..losses.pm_loss import PyPMLoss
 from ..losses.rot_loss import angular_distance, rot_l2_loss
-from ..losses.crosstask_loss import CT_loss
-from ..losses.crosstask_projection_loss import CT_loss_projection
-from ..losses.q0_ref_loss import Q_def_loss
-from ..losses.coor_sym_loss import COOR_loss
 from .model_utils import (
     compute_mean_re_te,
     get_neck,
@@ -314,8 +310,6 @@ class GDRN(nn.Module):
                 gt_points=gt_points,
                 sym_infos=sym_infos,
                 extents=roi_extents,
-                roi_2d=roi_coord_2d,
-                roi_cam=roi_cams,
             )
 
             if net_cfg.USE_MTL:
