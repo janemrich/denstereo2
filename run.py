@@ -1,6 +1,5 @@
 import argparse
 import yaml
-from typing import TypedDict
 import subprocess
 from pathlib import Path
 import datetime
@@ -59,30 +58,7 @@ def get_tmux_pane():
     result = subprocess.run(['bash', str(Path(Path().absolute()) / 'get_tmux_pane.sh')], stdout=subprocess.PIPE)
     return result.stdout.decode('utf-8')
 
-if __name__=='__main__':
-
-    parser = argparse.ArgumentParser(description='Train a GDRN model')
-    parser.add_argument('--config', type=str, required=None, help='path to config file')
-    parser.add_argument('--docker_session', type=str, help='docker session name')
-    parser.add_argument('--resume', type=str, default=None, help='runid to resume training from')
-    parser.add_argument('--eval', type=str, default=None, help='evaluate run id')
-    parser.add_argument('--eval_ampere', type=str, default=None, help='evaluate run id on ampere')
-    parser.add_argument('--node', type=str, default=None, help='node to run on')
-    parser.add_argument('--debug', action='store_true', help='run in debug mode')
-    args = parser.parse_args()
-
-    # load config
-    if args.eval_ampere:
-        args.eval = args.eval_ampere
-
-        s = "runs/{}.yaml".format(args.eval_ampere[:-12])
-        print(s)
-        config_name = args.eval_ampere[:-12]
-        config = Config("runs/{}.yaml".format(config_name))
-    else:
-        config = Config(args.config)
-        config_name = Path(args.config).stem
-
+def run(config, config_name, args):
     timestamp = generate_timestamp()
     run_id = config_name + '_' + timestamp
     gpus = config.gpus
@@ -99,8 +75,10 @@ if __name__=='__main__':
         resume = "False"
 
     s = (
-        "srun {node} --gpus {gpus} --nodes=1 --cpus-per-gpu=10 --mem-per-cpu=8G --pty"
-        + " bash run_gdrn_container.sh {gpus} {config} {run_id} {method} {dataset} {eval} {docker_session} {branch}"
+        "tmux new-session -d -s {run_id}"
+        + " srun {node} --gpus {gpus} --nodes=1 --cpus-per-gpu=10 --mem-per-cpu=8G --pty"
+        + " bash run_gdrn_container.sh {gpus} {config} {run_id} {method} {dataset} {eval} {branch}"
+        # + " bash run_gdrn_container.sh {gpus} {config} {run_id} {method} {dataset} {eval} {docker_session} {branch}"
     )
     s = s.format(
         node="-w {}".format(args.node) if args.node else "",
@@ -110,9 +88,39 @@ if __name__=='__main__':
         method=config.method,
         dataset=config.dataset,
         eval=evaluate,
-        docker_session=get_tmux_pane(),
+        # docker_session=get_tmux_pane(),
         branch='debug' if args.debug else 'denstereo',
     )
 
     print(s + '\n')
-    subprocess.call(s, shell=True)
+    subprocess.run(s, shell=True)
+
+
+if __name__=='__main__':
+
+    parser = argparse.ArgumentParser(description='Train a GDRN model')
+    # config may be a list of configs
+    parser.add_argument('--config', action='append', type=str, required=None, help='path to config file')
+    parser.add_argument('--docker_session', type=str, help='docker session name')
+    parser.add_argument('--resume', type=str, default=None, help='runid to resume training from')
+    parser.add_argument('--eval', type=str, default=None, help='evaluate run id')
+    parser.add_argument('--eval_ampere', type=str, default=None, help='evaluate run id on ampere')
+    parser.add_argument('--node', type=str, default=None, help='node to run on')
+    parser.add_argument('--debug', action='store_true', help='run in debug mode')
+    args = parser.parse_args()
+
+    # load config
+    if args.eval_ampere:
+        args.eval = True
+
+        s = "runs/{}.yaml".format(args.eval_ampere[:-12])
+        print(s)
+        config_name = args.eval_ampere[:-12]
+        config = Config("runs/{}.yaml".format(config_name))
+
+        run(config, config_name, args)
+    else:
+        for config in args.config:
+            config_name = Path(config).stem
+
+            run(Config(config), config_name, args)
