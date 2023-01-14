@@ -160,7 +160,7 @@ def main(args):
         path = Path(cfg.OUTPUT_DIR)
         run = path.parts[3]
         if run[-1] == 's':
-            run = run.split('_')[:-1].join('_')
+            run = '_'.join(run.split('_')[:-1])
         run = run[:-12]
         wandb.config.update({ "method": path.parts[1],
                               "dataset_0": cfg.DATASETS.TRAIN[0],
