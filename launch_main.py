@@ -25,6 +25,10 @@ if __name__ == '__main__':
     epochs = config['epochs']['value']
     bs = config['bs']['value']
     gpus = config['gpus']['value']
+    if 'seed' in config:
+        seed = config['seed']['value']
+    else:
+        seed = 0
 
     config_path = 'configs/{method}/{dataset}/{config_file}'.format(
         method=method,
@@ -55,6 +59,7 @@ if __name__ == '__main__':
                 + " SOLVER.MAX_TO_KEEP={max_to_keep}"
                 + " SOLVER.CHECKPOINT_PERIOD={checkpoint_period}"
                 + " {weights}"
+                + " SEED={seed}"
         )
         s = s.format(
             core=core,
@@ -67,7 +72,8 @@ if __name__ == '__main__':
             epochs=epochs,
             max_to_keep=2,
             checkpoint_period=40,
-            weights="MODEL.WEIGHTS=\"{}\"".format(args.checkpoint) if args.resume else ""
+            weights="MODEL.WEIGHTS=\"{}\"".format(args.checkpoint) if args.resume else "",
+            seed=seed,
         )
         print(s + '\n')
 
