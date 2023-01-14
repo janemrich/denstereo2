@@ -157,6 +157,7 @@ def main(args):
                               "batch_size": cfg.SOLVER.IMS_PER_BATCH,
                               "epochs": cfg.SOLVER.TOTAL_EPOCHS,
                               "weights": cfg.MODEL.WEIGHTS,
+                              "seed": cfg.get("SEED", None),
                               })
     '''
     # get renderer ----------------------
