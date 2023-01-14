@@ -8,28 +8,21 @@ import torch.nn.functional as F
 from core.utils.solver_utils import build_optimizer_with_params
 from detectron2.utils.events import get_event_storage
 from mmcv.runner import load_checkpoint
-import mmcv
 from itertools import chain
 from ..losses.coor_cross_entropy import CrossEntropyHeatmapLoss
 from ..losses.l2_loss import L2Loss
 from ..losses.pm_loss import PyPMLoss
 from ..losses.rot_loss import angular_distance, rot_l2_loss
-from ..losses.crosstask_loss import CT_loss
-from ..losses.crosstask_projection_loss import CT_loss_projection
-from ..losses.q0_ref_loss import Q_def_loss
-from ..losses.coor_sym_loss import COOR_loss
 from ..losses.mobilestereonet_loss import msn_loss
 from .model_utils import (
     compute_mean_re_te,
     get_disp_net,
     get_neck,
     get_geo_head,
-    get_selfocc_head,
     get_mask_prob,
     get_pnp_net,
     get_rot_mat,
     get_xyz_mask_region_out_dim,
-    get_selfocc_out_dim,
 )
 from .pose_from_pred import pose_from_pred
 from .pose_from_pred_centroid_z import pose_from_pred_centroid_z
@@ -40,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 
 class GDRN(nn.Module):
-    def __init__(self, cfg, backbone, geo_head_net, selfocc_head_net, neck=None, pnp_net=None, disp_net=None):
+    def __init__(self, cfg, backbone, geo_head_net, neck=None, pnp_net=None, disp_net=None):
         super().__init__()
         assert cfg.MODEL.POSE_NET.NAME == "GDRN_stereo_disp_in_pnp_light", cfg.MODEL.POSE_NET.NAME
         self.backbone = backbone
@@ -52,13 +45,11 @@ class GDRN(nn.Module):
         self.epoch_count = 0
 
         self.geo_head_net = geo_head_net
-        self.selfocc_head_net = selfocc_head_net
         self.pnp_net = pnp_net
         self.disp_net = disp_net
 
         self.cfg = cfg
         self.xyz_out_dim, self.mask_out_dim, self.region_out_dim = get_xyz_mask_region_out_dim(cfg)
-        self.Q0_out_dim, self.occmask_out_dim = get_selfocc_out_dim(cfg)
         # uncertainty multi-task loss weighting
         # https://github.com/Hui-Li/multi-task-learning-example-PyTorch/blob/master/multi-task-learning-example-PyTorch.ipynb
         # a = log(sigma^2)
@@ -100,22 +91,14 @@ class GDRN(nn.Module):
         roi_extents=None, # no side dimension
         resize_ratios=None, # no side dimension
         do_loss=False,
-        # selfocc
-        gt_q0=None,
-        gt_occmask=None,
-        roi_extent=None,
         # disp
         gt_disp=None,
-        # other
-        size_imW=None,
-        size_imH=None,
         E_step=None,
 
     ):
         cfg = self.cfg
         net_cfg = cfg.MODEL.POSE_NET
         g_head_cfg = net_cfg.GEO_HEAD
-        s_head_cfg = net_cfg.SELFOCC_HEAD
         pnp_net_cfg = net_cfg.PNP_NET
 
         device = x.device
@@ -146,10 +129,6 @@ class GDRN(nn.Module):
         if self.neck is not None:
             conv_feat = self.neck(conv_feat)
         mask, coor_x, coor_y, coor_z, region = self.geo_head_net(conv_feat)
-        if s_head_cfg.OCCMASK_AWARE:
-            occmask, Q0_xy_x, Q0_xy_y, Q0_xz_x, Q0_xz_z, Q0_yz_y, Q0_yz_z = self.selfocc_head_net(conv_feat)
-        else:
-            Q0_xy_x, Q0_xy_y, Q0_xz_x, Q0_xz_z, Q0_yz_y, Q0_yz_z = self.selfocc_head_net(conv_feat)
 
         if g_head_cfg.XYZ_CLASS_AWARE:
             assert roi_classes is not None
@@ -159,21 +138,6 @@ class GDRN(nn.Module):
             coor_y = coor_y[torch.arange(bs_virtual).to(device), roi_classes]
             coor_z = coor_z.view(bs_virtual, num_classes, self.xyz_out_dim // 3, out_res, out_res)
             coor_z = coor_z[torch.arange(bs_virtual).to(device), roi_classes]
-
-        if s_head_cfg.Q0_CLASS_AWARE:
-            Q0_xy_x = Q0_xy_x.view(bs_virtual, num_classes, self.Q0_out_dim // 6, out_res, out_res)
-            Q0_xy_x = Q0_xy_x[torch.arange(bs_virtual).to(device), roi_classes]
-            Q0_xz_x = Q0_xz_x.view(bs_virtual, num_classes, self.Q0_out_dim // 6, out_res, out_res)
-            Q0_xz_x = Q0_xz_x[torch.arange(bs_virtual).to(device), roi_classes]
-            Q0_yz_y = Q0_yz_y.view(bs_virtual, num_classes, self.Q0_out_dim // 6, out_res, out_res)
-            Q0_yz_y = Q0_yz_y[torch.arange(bs_virtual).to(device), roi_classes]
-
-            Q0_xy_y = Q0_xy_y.view(bs_virtual, num_classes, self.Q0_out_dim // 6, out_res, out_res)
-            Q0_xy_y = Q0_xy_y[torch.arange(bs_virtual).to(device), roi_classes]
-            Q0_xz_z = Q0_xz_z.view(bs_virtual, num_classes, self.Q0_out_dim // 6, out_res, out_res)
-            Q0_xz_z = Q0_xz_z[torch.arange(bs_virtual).to(device), roi_classes]
-            Q0_yz_z = Q0_yz_z.view(bs_virtual, num_classes, self.Q0_out_dim // 6, out_res, out_res)
-            Q0_yz_z = Q0_yz_z[torch.arange(bs_virtual).to(device), roi_classes]
 
         if g_head_cfg.MASK_CLASS_AWARE:
             assert roi_classes is not None
@@ -190,40 +154,12 @@ class GDRN(nn.Module):
         # NOTE: use softmax for bins (the last dim is bg)
         if coor_x.shape[1] > 1 and coor_y.shape[1] > 1 and coor_z.shape[1] > 1:
             raise NotImplementedError('softmax should be applied to dim=1, I think this is a bug')
-            coor_x_softmax = F.softmax(coor_x[:bs, :-1, :, :], dim=1)
-            coor_y_softmax = F.softmax(coor_y[:bs, :-1, :, :], dim=1)
-            coor_z_softmax = F.softmax(coor_z[:bs, :-1, :, :], dim=1)
-            Q0_xy_x_sofrmax = F.softmax(Q0_xy_x[:bs, :-1, :, :])
-            Q0_xy_y_sofrmax = F.softmax(Q0_xy_y[:bs, :-1, :, :])
-            Q0_xz_x_sofrmax = F.softmax(Q0_xz_x[:bs, :-1, :, :])
-            Q0_xz_z_sofrmax = F.softmax(Q0_xz_z[:bs, :-1, :, :])
-            Q0_yz_y_sofrmax = F.softmax(Q0_yz_y[:bs, :-1, :, :])
-            Q0_yz_z_sofrmax = F.softmax(Q0_yz_z[:bs, :-1, :, :])
-            coor_feat = torch.cat([coor_x_softmax, coor_y_softmax, coor_z_softmax, Q0_xy_x_sofrmax, Q0_xy_y_sofrmax,
-                                   Q0_xz_x_sofrmax, Q0_xz_z_sofrmax, Q0_yz_y_sofrmax, Q0_yz_z_sofrmax], dim=1)
-            coor_x_softmax_r = F.softmax(coor_x[bs:, :-1, :, :], dim=1)
-            coor_y_softmax_r = F.softmax(coor_y[bs:, :-1, :, :], dim=1)
-            coor_z_softmax_r = F.softmax(coor_z[bs:, :-1, :, :], dim=1)
-            Q0_xy_x_sofrmax_r = F.softmax(Q0_xy_x[bs:, :-1, :, :])
-            Q0_xy_y_sofrmax_r = F.softmax(Q0_xy_y[bs:, :-1, :, :])
-            Q0_xz_x_sofrmax_r = F.softmax(Q0_xz_x[bs:, :-1, :, :])
-            Q0_xz_z_sofrmax_r = F.softmax(Q0_xz_z[bs:, :-1, :, :])
-            Q0_yz_y_sofrmax_r = F.softmax(Q0_yz_y[bs:, :-1, :, :])
-            Q0_yz_z_sofrmax_r = F.softmax(Q0_yz_z[bs:, :-1, :, :])
-            coor_feat_r = torch.cat([coor_x_softmax_r, coor_y_softmax_r, coor_z_softmax_r, Q0_xy_x_sofrmax_r, Q0_xy_y_sofrmax_r,
-                                   Q0_xz_x_sofrmax_r, Q0_xz_z_sofrmax_r, Q0_yz_y_sofrmax_r, Q0_yz_z_sofrmax_r], dim=1)
         else:
             coor_feat = torch.cat(
                 [
                     coor_x,
                     coor_y,
                     coor_z,
-                    Q0_xy_x,
-                    Q0_xy_y,
-                    Q0_xz_x,
-                    Q0_xz_z,
-                    Q0_yz_y,
-                    Q0_yz_z,
                 ],
                 dim=-3
             )
@@ -362,12 +298,6 @@ class GDRN(nn.Module):
             coor_y = coor_y.reshape(bs, 2, 1, w, h)
             coor_z = coor_z.reshape(bs, 2, 1, w, h)
             region = region.reshape(bs, 2, region.shape[-3], w, h)
-            Q0_xy_x = Q0_xy_x.reshape(bs, 2, 1, w, h)
-            Q0_xy_y = Q0_xy_y.reshape(bs, 2, 1, w, h)
-            Q0_xz_x = Q0_xz_x.reshape(bs, 2, 1, w, h)
-            Q0_xz_z = Q0_xz_z.reshape(bs, 2, 1, w, h)
-            Q0_yz_y = Q0_yz_y.reshape(bs, 2, 1, w, h)
-            Q0_yz_z = Q0_yz_z.reshape(bs, 2, 1, w, h)
 
             # import matplotlib.pyplot as plt
             # fig, axs = plt.subplots(4,2)
@@ -405,25 +335,10 @@ class GDRN(nn.Module):
                 gt_points=gt_points,
                 sym_infos=sym_infos,
                 extents=roi_extents,
-                # roi_classes=roi_classes,
-                # selfocc
-                gt_occmask=gt_occmask,
-                gt_Q0=gt_q0, 
-                out_Q0_xy_x=Q0_xy_x,
-                out_Q0_xy_y=Q0_xy_y,
-                out_Q0_xz_x=Q0_xz_x,
-                out_Q0_xz_z=Q0_xz_z,
-                out_Q0_yz_y=Q0_yz_y,
-                out_Q0_yz_z=Q0_yz_z,
-                roi_extent=roi_extent,
-                roi_2d=roi_coord_2d,
-                roi_cam=roi_cams,
                 # disparity
                 out_disp = [disps_l, disps_r],
                 gt_disp = gt_disp,
                 # other
-                sizeimH=size_imH,
-                sizeimW=size_imW,
                 E_step=E_step,
             )
 
@@ -505,30 +420,17 @@ class GDRN(nn.Module):
         gt_points=None,
         sym_infos=None, 
         extents=None, # 1 BS
-        # selfocc
-        gt_occmask=None,
-        gt_Q0=None,
-        out_Q0_xy_x=None, out_Q0_xy_y=None, out_Q0_xz_x=None,
-        out_Q0_xz_z=None, out_Q0_yz_y=None, out_Q0_yz_z=None,
-        roi_extent=None,
-        roi_2d=None,
-        roi_cam=None,
         # disparity
         gt_disp=None,
         out_disp=None,
         # other
-        sizeimH=None,
-        sizeimW=None,
         E_step=None,
     ):
         net_cfg = cfg.MODEL.POSE_NET
         g_head_cfg = net_cfg.GEO_HEAD
-        s_head_cfg = net_cfg.SELFOCC_HEAD
         pnp_net_cfg = net_cfg.PNP_NET
         disp_net_cfg = net_cfg.DISP_NET
         loss_cfg = net_cfg.LOSS_CFG
-
-        bs = out_trans.shape[0]
 
         gt_id = 0
 
@@ -537,14 +439,6 @@ class GDRN(nn.Module):
         flat_gt_mask_visib = gt_mask_visib.flatten(0, 1)
         flat_gt_mask_obj = gt_mask_obj.flatten(0, 1)
         flat_gt_mask_erode = gt_mask_erode.flatten(0, 1)
-        flat_gt_occmask = gt_occmask.flatten(0, 1)
-        flat_gt_Q0 = gt_Q0.flatten(0, 1)
-        flat_Q0_xy_x = out_Q0_xy_x.flatten(0, 1)
-        flat_Q0_xy_y = out_Q0_xy_y.flatten(0, 1)
-        flat_Q0_xz_x = out_Q0_xz_x.flatten(0, 1)
-        flat_Q0_xz_z = out_Q0_xz_z.flatten(0, 1)
-        flat_Q0_yz_y = out_Q0_yz_y.flatten(0, 1)
-        flat_Q0_yz_z = out_Q0_yz_z.flatten(0, 1)
         flat_x = out_x.flatten(0, 1)
         flat_y = out_y.flatten(0, 1)
         flat_z = out_z.flatten(0, 1)
@@ -554,7 +448,6 @@ class GDRN(nn.Module):
         flat_gt_region = gt_region.flatten(0, 1)
         flat_gt_rot = gt_rot.flatten(0, 1)
         flat_gt_trans = gt_trans.flatten(0, 1)
-        flat_gt_trans_ratio = gt_trans_ratio.flatten(0, 1)
 
         if gt_mask_erode is None:
             gt_mask_erode = gt_mask_visib
@@ -565,12 +458,6 @@ class GDRN(nn.Module):
             "obj": flat_gt_mask_obj,
             "erode": flat_gt_mask_erode
         }
-        unflat_gt_masks = {
-            "trunc": gt_mask_trunc,
-            "visib": gt_mask_visib,
-            "obj": gt_mask_obj,
-            "erode": gt_mask_erode
-        }
 
         loss_dict = {}
         # disparity
@@ -578,145 +465,8 @@ class GDRN(nn.Module):
             loss_dict["loss_disp"] = msn_loss(out_disp[0], gt_disp[:, 0], gt_mask_visib[:, 0]) # left
             loss_dict["loss_disp"] += msn_loss(out_disp[1], gt_disp[:, 1], gt_mask_visib[:, 1]) # right
             loss_dict["loss_disp"] *= loss_cfg.DISP_LW
-        # handle symmetric objects
-        if loss_cfg.HANDLE_SYM:
-            loss_func = COOR_loss()
-            gt_mask_xyz = gt_masks[loss_cfg.XYZ_LOSS_MASK_GT]
-            out_p0 = torch.cat([out_x, out_y, out_z], dim=-3)
-            out_q0 = torch.cat([out_Q0_xy_x, out_Q0_xy_y, out_Q0_xz_x, out_Q0_xz_z, out_Q0_yz_y, out_Q0_yz_z], dim=-3)
-            loss_dict_coor = loss_func(
-                out_rot.repeat_interleave(2, dim=0),
-                flat_gt_rot,
-                out_p0.flatten(0, 1),
-                flat_gt_xyz,
-                out_q0.flatten(0, 1),
-                flat_gt_Q0,
-                flat_gt_occmask,
-                gt_mask_xyz,
-                roi_extent.repeat_interleave(2, dim=0),
-            )
-            loss_dict.update(loss_dict_coor)
-        # Q0 loss ------------------------------------------
-        if not s_head_cfg.FREEZE and loss_cfg.Q0_LW > 0.0 and (not loss_cfg.HANDLE_SYM):
-            Q0_loss_type = loss_cfg.Q0_LOSS_TYPE
-            loss_func = nn.L1Loss(reduction="sum")
-            occmask_x = flat_gt_occmask[:, 0, :, :]
-            if occmask_x.sum() < s_head_cfg.MIN_Q0_REGION:
-                loss_dict["loss_Q0_x"] = torch.zeros((1), device=cfg.MODEL.DEVICE)
-            else:
-                loss_dict["loss_Q0_x"] = loss_func(flat_Q0_xy_x * occmask_x[:, None],
-                                                   flat_gt_Q0[:, 0:1] * occmask_x[:, None])\
-                                         / occmask_x.sum().float().clamp(min=1.0) + \
-                                         loss_func(flat_Q0_xy_y * occmask_x[:, None],
-                                                   flat_gt_Q0[:, 1:2] * occmask_x[:, None]) \
-                                         / occmask_x.sum().float().clamp(min=1.0)
-
-            occmask_y = flat_gt_occmask[:, 1, :, :]
-            if occmask_y.sum() < s_head_cfg.MIN_Q0_REGION:
-                loss_dict["loss_Q0_y"] = torch.zeros((1), device=cfg.MODEL.DEVICE)
-            else:
-                loss_dict["loss_Q0_y"] = loss_func(flat_Q0_xz_x * occmask_y[:, None],
-                                                   flat_gt_Q0[:, 2:3] * occmask_y[:, None]) \
-                                         / occmask_y.sum().float().clamp(min=1.0) + \
-                                         loss_func(flat_Q0_xz_z * occmask_y[:, None],
-                                                   flat_gt_Q0[:, 3:4] * occmask_y[:, None]) \
-                                         / occmask_y.sum().float().clamp(min=1.0)
-
-            occmask_z = flat_gt_occmask[:, 2, :, :]
-            if occmask_z.sum() < s_head_cfg.MIN_Q0_REGION:
-                loss_dict["loss_Q0_z"] = torch.zeros((1), device=cfg.MODEL.DEVICE)
-            else:
-                loss_dict["loss_Q0_z"] = loss_func(flat_Q0_yz_y * occmask_z[:, None],
-                                                   flat_gt_Q0[:, 4:5] * occmask_z[:, None]) \
-                                         / occmask_z.sum().float().clamp(min=1.0) + \
-                                         loss_func(flat_Q0_yz_z * occmask_z[:, None],
-                                                   flat_gt_Q0[:, 5:] * occmask_z[:, None]) \
-                                         / occmask_z.sum().float().clamp(min=1.0)
-            loss_dict["loss_Q0_x"] *= loss_cfg.Q0_LW
-            loss_dict["loss_Q0_y"] *= loss_cfg.Q0_LW
-            loss_dict["loss_Q0_z"] *= loss_cfg.Q0_LW
-        # cross task loss
-        if loss_cfg.CT_LW > 0.0 and E_step > cfg.SOLVER.TOTAL_EPOCHS * cfg.TRAIN.CT_START:
-            loss_func = CT_loss(loss_type="L1", loss_weight=loss_cfg.CT_LW)
-            out_p0 = torch.cat([out_x, out_y, out_z], dim=-3)
-            out_q0 = torch.cat([out_Q0_xy_x, out_Q0_xy_y, out_Q0_xz_x, out_Q0_xz_z, out_Q0_yz_y, out_Q0_yz_z], dim=-3)
-            loss_ct = loss_func(
-                pred_rots=out_rot,
-                pred_P0=out_p0[:, 0],
-                pred_Q0=out_q0[:, 0],
-                gt_occmask=gt_occmask[:, 0],
-                roi_extent=roi_extent,
-                pred_transes=out_trans
-            )
-            loss_ct = loss_ct + loss_func(
-                pred_rots=out_rot,
-                pred_P0=out_p0[:, 1],
-                pred_Q0=out_q0[:, 1],
-                gt_occmask=gt_occmask[:, 1],
-                roi_extent=roi_extent,
-                pred_transes=out_trans + baseline
-            )
-            loss_dict["loss_ct"] = (loss_ct / 2) * loss_cfg.CT_LW
-        # cross task projection loss
-        if loss_cfg.CT_P_LW > 0.0 and E_step > cfg.SOLVER.TOTAL_EPOCHS * cfg.TRAIN.CT_P_START:
-            loss_func = CT_loss_projection(loss_type="L1", loss_weight=loss_cfg.CT_P_LW)
-            out_p0 = torch.cat([out_x, out_y, out_z], dim=-3)
-            out_q0 = torch.cat([out_Q0_xy_x, out_Q0_xy_y, out_Q0_xz_x, out_Q0_xz_z, out_Q0_yz_y, out_Q0_yz_z], dim=-3)
-            loss_ct_pro = loss_func(
-                pred_rots=out_rot,
-                pred_P0=out_p0[:, 0],
-                pred_Q0=out_q0[:, 0],
-                gt_occmask=gt_occmask[:, 0],
-                roi_extent=roi_extent,
-                pred_transes=out_trans,
-                roi_2d=roi_2d[:, 0],
-                imH=sizeimH,
-                imW=sizeimW,
-                K=roi_cam
-            )
-            loss_ct_pro = loss_ct_pro + loss_func(
-                pred_rots=out_rot,
-                pred_P0=out_p0[:, 1],
-                pred_Q0=out_q0[:, 1],
-                gt_occmask=gt_occmask[:, 1],
-                roi_extent=roi_extent,
-                pred_transes=out_trans + baseline,
-                roi_2d=roi_2d[:, 1],
-                imH=sizeimH,
-                imW=sizeimW,
-                K=roi_cam
-            )
-            loss_dict["loss_ct_pro"] = (loss_ct_pro / 2) * loss_cfg.CT_P_LW
-        # Q0 define loss
-        # forward(self, rots, pred_Q0, gt_occmask, roi_extent, transes, roi_2d, imH, imW, K=None):
-        if loss_cfg.Q0_DEF_LW > 0.0:
-            loss_func = Q_def_loss(loss_type="L1", loss_weight=loss_cfg.CT_P_LW)
-            out_q0 = torch.cat([out_Q0_xy_x, out_Q0_xy_y, out_Q0_xz_x, out_Q0_xz_z, out_Q0_yz_y, out_Q0_yz_z], dim=-3)
-            loss_q_def = loss_func(
-                rots=gt_rot[:, 0],
-                pred_Q0=out_q0[:, 0],
-                gt_occmask=gt_occmask[:, 0],
-                roi_extent=roi_extent,
-                transes=gt_trans[:, 0],
-                roi_2d=roi_2d[:, 0],
-                imH=sizeimH,
-                imW=sizeimW,
-                K=roi_cam
-            )
-            loss_q_def = loss_q_def + loss_func(
-                rots=gt_rot[:, 1],
-                pred_Q0=out_q0[:, 1],
-                gt_occmask=gt_occmask[:, 1],
-                roi_extent=roi_extent,
-                transes=gt_trans[:, 1],
-                roi_2d=roi_2d[:, 1],
-                imH=sizeimH,
-                imW=sizeimW,
-                K=roi_cam
-            )
-            loss_dict["loss_q_def"] = (loss_q_def / 2) * loss_cfg.Q0_DEF_LW
         # xyz loss ----------------------------------
-        if not g_head_cfg.FREEZE and (not loss_cfg.HANDLE_SYM):
+        if not g_head_cfg.FREEZE:
             xyz_loss_type = loss_cfg.XYZ_LOSS_TYPE
             gt_mask_xyz = gt_masks[loss_cfg.XYZ_LOSS_MASK_GT]
             if xyz_loss_type == "L1":
@@ -948,9 +698,6 @@ def build_model_optimizer(cfg, is_test=False):
     geo_head, geo_head_params = get_geo_head(cfg)
     params_lr_list.extend(geo_head_params)
 
-    # selfocc head
-    selfocc_head, selfocc_head_params = get_selfocc_head(cfg)
-    params_lr_list.extend(selfocc_head_params)
     # pnp net -----------------------------------------------
     pnp_net, pnp_net_params = get_pnp_net(cfg)
     params_lr_list.extend(pnp_net_params)
@@ -959,7 +706,7 @@ def build_model_optimizer(cfg, is_test=False):
     params_lr_list.extend(disp_net_params)
 
     # build model
-    model = GDRN(cfg, backbone, neck=neck, geo_head_net=geo_head, selfocc_head_net=selfocc_head, pnp_net=pnp_net, disp_net=disp_net)
+    model = GDRN(cfg, backbone, neck=neck, geo_head_net=geo_head, pnp_net=pnp_net, disp_net=disp_net)
     if net_cfg.USE_MTL:
         params_lr_list.append(
             {
