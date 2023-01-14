@@ -13,6 +13,7 @@ class Config:
     epochs: int
     bs: int
     gpus: int
+    seed = [0]
 
     def __init__(self, config_path):
         self.config_path = config_path
@@ -25,6 +26,8 @@ class Config:
         self.epochs = config['epochs']['value']
         self.bs = config['bs']['value']
         self.gpus = config['gpus']['value']
+        if 'seed' in config:
+            self.seed = config['seed']['value']
 
     def parse_config(self):
         with open(self.config_path, 'r') as f:
@@ -58,9 +61,9 @@ def get_tmux_pane():
     result = subprocess.run(['bash', str(Path(Path().absolute()) / 'get_tmux_pane.sh')], stdout=subprocess.PIPE)
     return result.stdout.decode('utf-8')
 
-def run(config, config_name, args):
+def run(config, config_name, args, seed=0):
     timestamp = generate_timestamp()
-    run_id = config_name + '_' + timestamp
+    run_id = config_name + '_' + timestamp + '_' + str(int(seed)) + 's'
     gpus = config.gpus
 
     if args.eval:
@@ -113,7 +116,10 @@ if __name__=='__main__':
     if args.eval_ampere:
         args.eval = True
 
-        s = "runs/{}.yaml".format(args.eval_ampere[:-12])
+        run = args.eval_ampere
+        if args.eval_ampere[-1] == 's':
+            run = '_'.join(run.split('_')[:-1])
+        s = "runs/{}.yaml".format(run[:-12])
         print(s)
         config_name = args.eval_ampere[:-12]
         config = Config("runs/{}.yaml".format(config_name))
@@ -121,6 +127,8 @@ if __name__=='__main__':
         run(config, config_name, args)
     else:
         for config in args.config:
+            cfg = Config(config)
             config_name = Path(config).stem
 
-            run(Config(config), config_name, args)
+            for seed in cfg.seed:
+                run(cfg, config_name, args, seed=seed)

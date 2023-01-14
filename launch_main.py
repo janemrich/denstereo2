@@ -14,6 +14,9 @@ if __name__ == '__main__':
     args = parser.parse_args()
     run = args.run
     run_id = args.run_id
+    if run_id.split('_')[-1][-1] == 's':
+        seeded = True
+        seed = int(run_id.split('_')[-1][:-1])
 
     with open('runs/{run}.yaml'.format(run=run), 'r') as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
@@ -25,10 +28,6 @@ if __name__ == '__main__':
     epochs = config['epochs']['value']
     bs = config['bs']['value']
     gpus = config['gpus']['value']
-    if 'seed' in config:
-        seed = config['seed']['value']
-    else:
-        seed = 0
 
     config_path = 'configs/{method}/{dataset}/{config_file}'.format(
         method=method,
@@ -59,7 +58,7 @@ if __name__ == '__main__':
                 + " SOLVER.MAX_TO_KEEP={max_to_keep}"
                 + " SOLVER.CHECKPOINT_PERIOD={checkpoint_period}"
                 + " {weights}"
-                + " SEED={seed}"
+                + " {seed}"
         )
         s = s.format(
             core=core,
@@ -73,7 +72,7 @@ if __name__ == '__main__':
             max_to_keep=2,
             checkpoint_period=40,
             weights="MODEL.WEIGHTS=\"{}\"".format(args.checkpoint) if args.resume else "",
-            seed=seed,
+            seed="SEED={}".format(seed) if seeded else "",
         )
         print(s + '\n')
 
