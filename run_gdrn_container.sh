@@ -5,8 +5,7 @@ RUN_ID=$3
 METHOD=$4
 DATASET=$5
 EVAL=$6
-TMUX=$7
-BRANCH=$8
+BRANCH=$7
 
 
 ### setup environment on spool
