@@ -5,8 +5,7 @@ RUN_ID=$3
 METHOD=$4
 DATASET=$5
 EVAL=$6
-TMUX=$7
-BRANCH=$8
+BRANCH=$7
 
 
 ### setup environment on spool
@@ -30,6 +29,11 @@ echo ""
 echo "sync dataset dict cache from pc3002"
 rsync -aP pc3002:/opt/datasets/jemrich/cache/ $DATASET_DICT_CACHE 
 
+### sync cached dataset dicts
+echo ""
+echo "sync dataset"
+# rsync -aP pc3002:/opt/datasets/BOP_DATASETS/denstereo/ /opt/spool/jemrich/BOP_DATASETS/denstereo
+
 EVALUATE=""
 if [[ ! $EVAL == "False" ]]; then
     echo ""
@@ -46,8 +50,8 @@ else
     BRANCH="denstereo"
 fi
 
-# source rootless_docker_env.sh share-data
-source ~/rootless_docker_env_tmux.sh $TMUX
+source rootless_docker_env.sh #share-data
+# source ~/rootless_docker_env_tmux.sh $TMUX
 
 ### cache and load docker image
 if [ ! -f $IMAGE_CACHE.gz ]; then
@@ -77,4 +81,5 @@ rsync -aP $DATASET_DICT_CACHE/ pc3002:/opt/datasets/jemrich/cache
 
 echo "run_id:"
 echo $RUN_ID
-docker rmi -f denstereo-env:latest
+# docker rmi -f denstereo-env:latest
+source stop_rootless_docker.sh
