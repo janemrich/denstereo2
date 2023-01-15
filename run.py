@@ -3,6 +3,7 @@ import yaml
 import subprocess
 from pathlib import Path
 import datetime
+from time import sleep
 
 # parse config.yaml
 class Config:
@@ -79,9 +80,12 @@ def run(config, config_name, args, seed=0):
 
     s = (
         "tmux new-session -d -s {run_id}"
+        # + " start_session.sh {node} {gpus}"
+        # + " {config} {run_id} {method} {dataset} {eval} {branch}"
         + " srun {node} --gpus {gpus} --nodes=1 --cpus-per-gpu=10 --mem-per-cpu=8G --pty"
         + " bash run_gdrn_container.sh {gpus} {config} {run_id} {method} {dataset} {eval} {branch}"
         # + " bash run_gdrn_container.sh {gpus} {config} {run_id} {method} {dataset} {eval} {docker_session} {branch}"
+        # + " 2>&1 | tee ~/log/{run_id}.log"
     )
     s = s.format(
         node="-w {}".format(args.node) if args.node else "",
@@ -96,7 +100,9 @@ def run(config, config_name, args, seed=0):
     )
 
     print(s + '\n')
-    subprocess.run(s, shell=True)
+    process = subprocess.Popen(s, shell=True)
+    if args.eval:
+        process.wait()
 
 
 if __name__=='__main__':
@@ -106,25 +112,24 @@ if __name__=='__main__':
     parser.add_argument('--config', action='append', type=str, required=None, help='path to config file')
     parser.add_argument('--docker_session', type=str, help='docker session name')
     parser.add_argument('--resume', type=str, default=None, help='runid to resume training from')
-    parser.add_argument('--eval', type=str, default=None, help='evaluate run id')
-    parser.add_argument('--eval_ampere', type=str, default=None, help='evaluate run id on ampere')
+    parser.add_argument('--eval', action='append', type=str, default=None, help='evaluate run id')
+    # parser.add_argument('--eval_ampere', type=str, default=None, help='evaluate run id on ampere')
     parser.add_argument('--node', type=str, default=None, help='node to run on')
     parser.add_argument('--debug', action='store_true', help='run in debug mode')
     args = parser.parse_args()
 
     # load config
-    if args.eval_ampere:
-        args.eval = True
+    if args.eval:
+        for run_id in args.eval:
+            if run_id[-1] == 's':
+                config_name = '_'.join(run_id.split('_')[:-1])
+            config_name = config_name[:-12]
+            config_path = "runs/{}.yaml".format(config_name)
+            config = Config(config_path)
 
-        run = args.eval_ampere
-        if args.eval_ampere[-1] == 's':
-            run = '_'.join(run.split('_')[:-1])
-        s = "runs/{}.yaml".format(run[:-12])
-        print(s)
-        config_name = args.eval_ampere[:-12]
-        config = Config("runs/{}.yaml".format(config_name))
+            args.eval = run_id
 
-        run(config, config_name, args)
+            run(config, config_name, args)
     else:
         for config in args.config:
             cfg = Config(config)
