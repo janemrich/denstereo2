@@ -24,7 +24,7 @@ def main():
     for obj in tqdm(objects):
         print(obj)
         obj_id = data_ref.obj2id[obj]
-        model_path = osp.join(model_dir, f"{obj}.ply")
+        model_path = osp.join(model_dir, f"obj_{obj_id:06d}.ply")
         model = inout.load_ply(model_path, vertex_scale=vertex_scale)
         fps_dict[str(obj_id)] = {}
         fps_dict[str(obj_id)]["fps4_and_center"] = get_fps_and_center(model["pts"], num_fps=4, init_center=True)

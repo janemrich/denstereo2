@@ -63,7 +63,7 @@ with open(osp.join(dataset_root, "split", "mechanics_trainval_scenes.txt"), "r")
     # read all lines without newline char
     train_val_scenes.extend(f.read().splitlines())
 
-model_dir = osp.join(dataset_root, "objects")
+model_dir = osp.join(dataset_root, "models")
 # fine_model_dir = osp.join(dataset_root, "models_fine")
 # model_eval_dir = osp.join(dataset_root, "models_eval")
 # model_scaled_simple_dir = osp.join(dataset_root, "models_rescaled")  # m, .obj
