@@ -15,15 +15,16 @@ ref_key = "stereobj_1m"
 data_ref = ref.__dict__[ref_key]
 
 model_dir = data_ref.model_dir
-id2obj = data_ref.id2obj
+objects = data_ref.objects
 
 
 def main():
-    vertex_scale = 0.001
+    vertex_scale = 1
     fps_dict = {}
-    for obj_id in tqdm(id2obj):
-        print(obj_id)
-        model_path = osp.join(model_dir, f"obj_{obj_id:06d}.ply")
+    for obj in tqdm(objects):
+        print(obj)
+        obj_id = data_ref.obj2id[obj]
+        model_path = osp.join(model_dir, f"{obj}.ply")
         model = inout.load_ply(model_path, vertex_scale=vertex_scale)
         fps_dict[str(obj_id)] = {}
         fps_dict[str(obj_id)]["fps4_and_center"] = get_fps_and_center(model["pts"], num_fps=4, init_center=True)
