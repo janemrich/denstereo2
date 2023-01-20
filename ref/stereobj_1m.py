@@ -54,14 +54,17 @@ with open(osp.join(dataset_root, "split", "mechanics_val_scenes.txt"), "r") as f
     # read all lines without newline char
     val_scenes.extend(f.read().splitlines())
 
-train_val_scenes = []
+trainval_scenes = []
 with open(osp.join(dataset_root, "split", "biolab_trainval_scenes.txt"), "r") as f:
     # read all lines without newline char
-    train_val_scenes = f.read().splitlines()
+    trainval_scenes = f.read().splitlines()
 # extend with mechanics scenes
 with open(osp.join(dataset_root, "split", "mechanics_trainval_scenes.txt"), "r") as f:
     # read all lines without newline char
-    train_val_scenes.extend(f.read().splitlines())
+    trainval_scenes.extend(f.read().splitlines())
+
+all_scenes = test_scenes + trainval_scenes
+labeled_scenes = trainval_scenes
 
 model_dir = osp.join(dataset_root, "models")
 # fine_model_dir = osp.join(dataset_root, "models_fine")
@@ -95,7 +98,7 @@ mechanics_objects = [
 ]
 
 
-id2obj = { #Todo
+id2obj = {
     1: "blade_razor",
     2: "hammer",
     3: "screwdriver",
