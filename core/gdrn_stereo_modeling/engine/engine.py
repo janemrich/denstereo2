@@ -35,8 +35,6 @@ from core.utils.my_writer import MyCommonMetricPrinter, MyJSONWriter, MyTensorbo
 from core.utils.utils import get_emb_show
 from core.utils.data_utils import denormalize_image
 from core.gdrn_stereo_modeling.datasets.data_loader import build_gdrn_train_loader, build_gdrn_test_loader
-from core.gdrn_stereo_modeling.losses.crosstask_loss import CT_loss
-from core.gdrn_stereo_modeling.losses.crosstask_projection_loss import CT_loss_projection
 
 from .engine_utils import batch_data, get_out_coor, get_out_mask
 from .gdrn_evaluator import gdrn_inference_on_dataset, GDRN_Evaluator

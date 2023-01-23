@@ -34,7 +34,7 @@ with open(osp.join(dataset_root, "split", "mechanics_train_scenes.txt"), "r") as
     # read all lines without newline char
     train_scenes.extend(f.read().splitlines())
 
-debug_scenes = train_scenes[:1]
+debug_scenes = ['mechanics_scene_8_08172020_1']
 
 test_scenes = []
 with open(osp.join(dataset_root, "split", "biolab_test_scenes.txt"), "r") as f:
@@ -119,7 +119,8 @@ id2obj = {
     18: "tube_rack_50_ml",
 }
 
-objects = sorted(id2obj.values())
+
+objects = id2obj.values()
 
 obj_num = len(id2obj)
 obj2id = {_name: _id for _id, _name in id2obj.items()}

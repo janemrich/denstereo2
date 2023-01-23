@@ -15,6 +15,7 @@ from core.gdrn_stereo_modeling.datasets import ycbv_pbr
 from core.gdrn_stereo_modeling.datasets import ycbv_d2
 from core.gdrn_stereo_modeling.datasets import ycbv_bop_test
 from core.gdrn_stereo_modeling.datasets import denstereo_pbr
+from core.gdrn_stereo_modeling.datasets import stereobj_1m_detectron
 # from core.gdrn_stereo_modeling.datasets import denstereo_pbr_debug
 # from core.gdrn_stereo_modeling.datasets import denstereo_pbr_test
 
@@ -31,6 +32,7 @@ _DSET_MOD_NAMES = [
     "ycbv_d2",
     "ycbv_bop_test",
     "denstereo_pbr",
+    "stereobj_1m_detectron",
     ]
 
 logger = logging.getLogger(__name__)

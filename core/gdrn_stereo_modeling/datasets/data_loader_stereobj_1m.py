@@ -5,8 +5,7 @@ import os.path as osp
 import pickle
 
 import cv2
-import mmcv
-import imageio
+from PIL import Image
 import numpy as np
 import ref
 import torch
@@ -29,11 +28,10 @@ from detectron2.data import transforms as T
 from detectron2.structures import BoxMode
 from detectron2.utils.logger import log_first_n
 from lib.pysixd import inout, misc
-from lib.utils.mask_utils import cocosegm2mask, get_edge
+from lib.utils.mask_utils import cocosegm2mask, get_edge, rle2mask
 
 from .dataset_factory import register_datasets
 from .data_loader_online import GDRN_Online_DatasetFromList
-from .data_loader_stereobj_1m import GDRN_Stereobj_1m_DatasetFromList
 import scipy.ndimage as scin
 logger = logging.getLogger(__name__)
 
@@ -87,9 +85,10 @@ def transform_instance_annotations(annotation, transforms, image_size, *, keypoi
         annotation["keypoints_l"] = keypoints_l
         annotation["keypoints_r"] = keypoints_r
 
-    if "centroid_2d_l" in annotation:
-        annotation["centroid_2d_l"] = transforms.apply_coords(np.array(annotation["centroid_2d_l"]).reshape(1, 2)).flatten()
-        annotation["centroid_2d_r"] = transforms.apply_coords(np.array(annotation["centroid_2d_r"]).reshape(1, 2)).flatten()
+    if "centroid_2d" in annotation:
+        annotation["centroid_2d"] = transforms.apply_coords(
+            np.array(annotation["centroid_2d"]).reshape(1, 2)
+        ).flatten()
 
     return annotation
 
@@ -120,7 +119,7 @@ def build_gdrn_augmentation(cfg, is_train):
     return augmentation
 
 
-class GDRN_DatasetFromList(Base_DatasetFromList):
+class GDRN_Stereobj_1m_DatasetFromList(Base_DatasetFromList):
     """NOTE: we can also use the default DatasetFromList and
     implement a similar custom DataMapper,
     but it is harder to implement some features relying on other dataset dicts
@@ -316,23 +315,15 @@ class GDRN_DatasetFromList(Base_DatasetFromList):
 
         dataset_name = dataset_dict["dataset_name"]
 
-        image_l = read_image_mmcv(dataset_dict["file_name_l"], format=self.img_format)
-        image_r = read_image_mmcv(dataset_dict["file_name_r"], format=self.img_format)
+        inp = Image.open(dataset_dict["file_name"])
+        inp = np.asarray(inp)
+        _, w, _ = inp.shape
+        image_l = inp[:, :w//2]
+        image_r = inp[:, w//2:]
 
-        # import matplotlib.pyplot as plt
-        depth_l = imageio.imread(dataset_dict["depth_file_l"]).astype(np.float32)
-        depth_r = imageio.imread(dataset_dict["depth_file_r"]).astype(np.float32)
-        # fig, ax = plt.subplots(2)
-        # fig.suptitle('begin read data')
-        # ax[0].imshow(image_l)
-        # ax[1].imshow(depth_l)
-        # plt.show()
-        depth_l /= dataset_dict["depth_factor"]
-        depth_r /= dataset_dict["depth_factor"] # unit is meter now
-
-        # should be consistent with the size in dataset_dict
         utils.check_image_size(dataset_dict, image_l)
         utils.check_image_size(dataset_dict, image_r)
+
         im_H_ori, im_W_ori = image_l.shape[:2]
 
         # currently only replace bg for train ###############################
@@ -537,20 +528,27 @@ class GDRN_DatasetFromList(Base_DatasetFromList):
         dataset_dict["roi_extent"] = torch.tensor(roi_extent, dtype=torch.float32)
 
         # load xyz =======================================================
-        xyz_info_l = np.load(inst_infos["xyz_path_l"]) # also load npz files
-        xyz_info_r = np.load(inst_infos["xyz_path_r"]) # also load npz files
+        xyz_path = inst_infos["xyz_path"]
+        xyz_info = np.load(xyz_path, allow_pickle=True)['xyz'].item()
+        xyz_info_l = xyz_info['left']
+        xyz_info_r = xyz_info['right']
+        # xyz_info_l = np.load(inst_infos["xyz_path_l"]) # also load npz files
+        # xyz_info_r = np.load(inst_infos["xyz_path_r"]) # also load npz files
 
         x1, y1, x2, y2 = xyz_info_l["xyxy"]
         # float16 does not affect performance (classification/regresion)
         xyz_crop = xyz_info_l["xyz_crop"]
-        xyz_l = np.zeros((im_H, im_W, 3), dtype=np.float32)
+        xyz_l = np.zeros((im_H_ori, im_W_ori, 3), dtype=np.float32)
+
         xyz_l[y1 : y2 + 1, x1 : x2 + 1, :] = xyz_crop
+        xyz_l = cv2.resize(xyz_l, (im_W, im_H), interpolation=cv2.INTER_AREA)
 
         x1, y1, x2, y2 = xyz_info_r["xyxy"]
         # float16 does not affect performance (classification/regresion)
         xyz_crop = xyz_info_r["xyz_crop"]
-        xyz_r = np.zeros((im_H, im_W, 3), dtype=np.float32)
+        xyz_r = np.zeros((im_H_ori, im_W_ori, 3), dtype=np.float32)
         xyz_r[y1 : y2 + 1, x1 : x2 + 1, :] = xyz_crop
+        xyz_r = cv2.resize(xyz_r, (im_W, im_H), interpolation=cv2.INTER_AREA)
 
         # NOTE: full mask
         mask_obj_l = ((xyz_l[:, :, 0] != 0) | (xyz_l[:, :, 1] != 0) | (xyz_l[:, :, 2] != 0)).astype(np.bool).astype(np.float32)
@@ -566,47 +564,13 @@ class GDRN_DatasetFromList(Base_DatasetFromList):
             xyz_l = self.smooth_xyz(xyz_l)
             xyz_r = self.smooth_xyz(xyz_r)
 
-        occ_info_l = np.load(inst_infos["occ_path_l"])
-        occ_info_r = np.load(inst_infos["occ_path_r"])
-        occ_crop_l = occ_info_l["occ_crop"]
-        occ_crop_r = occ_info_r["occ_crop"]
-        Q0_l = np.zeros((im_H, im_W, 6), dtype=np.float32)
-        Q0_r = np.zeros((im_H, im_W, 6), dtype=np.float32)
-
         # merge bboxes
-        x1_l, y1_l, x2_l, y2_l = occ_info_l['xyxy']
-        x1_r, y1_r, x2_r, y2_r = occ_info_r['xyxy']
+        x1_l, y1_l, x2_l, y2_l = xyz_info_l['xyxy']
+        x1_r, y1_r, x2_r, y2_r = xyz_info_r['xyxy']
         inst_infos["bbox"] = [min(x1_l, x1_r), min(y1_l, y1_r), max(x2_l, x2_r), max(y2_l, y2_r)]
         
-        x1, y1, x2, y2 = occ_info_l['xyxy']
-        # override bbox info using xyz_infos
-        inst_infos["bbox_l"] = [x1, y1, x2, y2]
-
-        Q0_l[y1: y2 + 1, x1: x2 + 1, :] = occ_crop_l.astype(np.float32)
-        occmask_x_l = (
-            (((Q0_l[:, :, 0] != 0) | (Q0_l[:, :, 1] != 0)) & (mask_obj_erode_l != 0)).astype(np.bool).astype(np.float32)
-        )
-        occmask_y_l = (
-            (((Q0_l[:, :, 2] != 0) | (Q0_l[:, :, 3] != 0)) & (mask_obj_erode_l != 0)).astype(np.bool).astype(np.float32)
-        )
-        occmask_z_l = (
-            (((Q0_l[:, :, 4] != 0) | (Q0_l[:, :, 5] != 0)) & (mask_obj_erode_l != 0)).astype(np.bool).astype(np.float32)
-        )
-
-        x1, y1, x2, y2 = occ_info_r['xyxy']
-        # override bbox info using xyz_infos
-        inst_infos["bbox_r"] = [x1, y1, x2, y2]
-
-        Q0_r[y1: y2 + 1, x1: x2 + 1, :] = occ_crop_r.astype(np.float32)
-        occmask_x_r = (
-            (((Q0_r[:, :, 0] != 0) | (Q0_r[:, :, 1] != 0)) & (mask_obj_erode_r != 0)).astype(np.bool).astype(np.float32)
-        )
-        occmask_y_r = (
-            (((Q0_r[:, :, 2] != 0) | (Q0_r[:, :, 3] != 0)) & (mask_obj_erode_r != 0)).astype(np.bool).astype(np.float32)
-        )
-        occmask_z_r = (
-            (((Q0_r[:, :, 4] != 0) | (Q0_r[:, :, 5] != 0)) & (mask_obj_erode_r != 0)).astype(np.bool).astype(np.float32)
-        )
+        inst_infos["bbox_l"] = [x1_l, y1_l, x2_l, y2_l]
+        inst_infos["bbox_r"] = [x1_r, y1_r, x2_r, y2_r]
 
         inst_infos["bbox_mode"] = BoxMode.XYXY_ABS
 
@@ -627,8 +591,9 @@ class GDRN_DatasetFromList(Base_DatasetFromList):
         ).transpose(2, 0, 1)
         # import matplotlib.pyplot as plt
         # plt.imshow(image_l)
+        # plt.savefig('image.png')
         # plt.imshow(roi_img_l.transpose(1,2,0))
-        # plt.show()
+        # plt.savefig('image.png')
         roi_img_r = crop_resize_by_warp_affine(
             image_r, bbox_center, scale, input_res, interpolation=cv2.INTER_LINEAR
         ).transpose(2, 0, 1)
@@ -647,7 +612,8 @@ class GDRN_DatasetFromList(Base_DatasetFromList):
         ## roi_mask ---------------------------------------
         # (mask_trunc < mask_visib < mask_obj)
         mask_visib_l = anno["segmentation_l"].astype("float32") * mask_obj_l
-        mask_visib_r = anno["segmentation_r"].astype("float32") * mask_obj_r
+        # mask_visib_r = rle2mask(anno["segmentation_r"], im_H, im_W).astype("float32") * mask_obj_l
+        mask_visib_r = anno["segmentation_r"].astype("float32") * mask_obj_r # this was a bug in the original code #todo test result
         if mask_trunc_l is None:
             mask_trunc_l = mask_visib_l
             mask_trunc_r = mask_visib_r
@@ -695,11 +661,11 @@ class GDRN_DatasetFromList(Base_DatasetFromList):
         roi_xyz_r = crop_resize_by_warp_affine(xyz_r, bbox_center, scale, out_res, interpolation=mask_xyz_interp)
 
         ## depth ------------------------------------------------------
-        depth_l = crop_resize_by_warp_affine(depth_l, bbox_center, scale, out_res, interpolation=mask_xyz_interp)
-        depth_r = crop_resize_by_warp_affine(depth_r, bbox_center, scale, out_res, interpolation=mask_xyz_interp)
+        # depth_l = crop_resize_by_warp_affine(depth_l, bbox_center, scale, out_res, interpolation=mask_xyz_interp)
+        # depth_r = crop_resize_by_warp_affine(depth_r, bbox_center, scale, out_res, interpolation=mask_xyz_interp)
 
-        focal_len = dataset_dict["cam"][0][0].item() # f_x [m]
-        baseline = dataset_dict["baseline"][0] # x baseline [m]
+        # focal_len = dataset_dict["cam"][0][0].item() # f_x [m]
+        # baseline = dataset_dict["baseline"][0] # x baseline [m]
         if scale == 0:
             import json
             scale_error_path = '/igd/a4/homestud/jemrich/scale_error.json'
@@ -716,14 +682,14 @@ class GDRN_DatasetFromList(Base_DatasetFromList):
             print('scale == 0 error, scene and image id written to', scale_error_path)
             print(bbox_xyxy, im_W, im_H, dataset_dict['scene_im_id'], inst_infos)
         resize_ratio = out_res / scale
-        zero_mask_l = (depth_l == 0.0)
-        zero_mask_r = (depth_r == 0.0)
-        depth_l[zero_mask_l] = 1
-        depth_r[zero_mask_r] = 1
-        disparity_l = (((baseline * focal_len) / (depth_l)) * resize_ratio).astype(np.uint8)
-        disparity_r = (((baseline * focal_len) / (depth_r)) * resize_ratio).astype(np.uint8)
-        disparity_l[zero_mask_l] = 0
-        disparity_r[zero_mask_r] = 0
+        # zero_mask_l = (depth_l == 0.0)
+        # zero_mask_r = (depth_r == 0.0)
+        # depth_l[zero_mask_l] = 1
+        # depth_r[zero_mask_r] = 1
+        # disparity_l = (((baseline * focal_len) / (depth_l)) * resize_ratio).astype(np.uint8)
+        # disparity_r = (((baseline * focal_len) / (depth_r)) * resize_ratio).astype(np.uint8)
+        # disparity_l[zero_mask_l] = 0
+        # disparity_r[zero_mask_r] = 0
 
         # region label
         if g_head_cfg.NUM_REGIONS > 1:
@@ -812,13 +778,15 @@ class GDRN_DatasetFromList(Base_DatasetFromList):
 
 
         # pose targets ----------------------------------------------------------------------
-        pose_l = inst_infos["pose_l"]
-        pose_r = inst_infos["pose_r"]
+        pose_l = inst_infos["pose"] # left or right pose
+        pose_r = np.full((3, 3), np.nan) # no right pose in stereobj for now
         dataset_dict["ego_rot"] = torch.as_tensor(
             np.stack([pose_l[:3, :3], pose_r[:3, :3]], axis=0).astype("float32")
         )
+        trans_l = inst_infos['trans']
+        trans_r = np.full((3,), np.nan)
         dataset_dict["trans"] = torch.as_tensor(
-            np.stack([inst_infos["trans_l"], inst_infos["trans_r"]], axis=0).astype("float32")
+            np.stack([trans_l, trans_r], axis=0).astype("float32")
         )
 
         dataset_dict["roi_points"] = torch.as_tensor(
@@ -855,16 +823,17 @@ class GDRN_DatasetFromList(Base_DatasetFromList):
         dataset_dict["bbox"] = [anno["bbox_l"], anno["bbox_r"]]  # NOTE: original bbox
         dataset_dict["roi_wh"] = torch.as_tensor(np.array([bw, bh], dtype=np.float32))
         dataset_dict["resize_ratio"] = resize_ratio
-        z_ratio_l = inst_infos["trans_l"][2] / resize_ratio
-        z_ratio_r = inst_infos["trans_r"][2] / resize_ratio
-        obj_center_l = anno["centroid_2d_l"]
-        obj_center_r = anno["centroid_2d_r"]
+        z_ratio_l = inst_infos["trans"][2] / resize_ratio
+        # z_ratio_r = inst_infos["trans_r"][2] / resize_ratio
+        obj_center_l = anno["centroid_2d"]
+        # obj_center_r = anno["centroid_2d_r"]
         delta_c_l = obj_center_l - bbox_center
-        delta_c_r = obj_center_r - bbox_center
+        # delta_c_r = obj_center_r - bbox_center
         trans_ratio_l = torch.as_tensor([delta_c_l[0] / bw, delta_c_l[1] / bh, z_ratio_l]).to(torch.float32)
-        trans_ratio_r = torch.as_tensor([delta_c_r[0] / bw, delta_c_r[1] / bh, z_ratio_r]).to(torch.float32)
+        # trans_ratio_r = torch.as_tensor([delta_c_r[0] / bw, delta_c_r[1] / bh, z_ratio_r]).to(torch.float32)
         # depth
-        dataset_dict["disparity"] = torch.as_tensor(np.stack([disparity_l, disparity_r], axis=0)).contiguous()
+        # dataset_dict["disparity"] = torch.as_tensor(np.stack([disparity_l, disparity_r], axis=0)).contiguous()
+        trans_ratio_r = torch.full((3,), np.nan)
         dataset_dict["trans_ratio"] = torch.stack([trans_ratio_l, trans_ratio_r], dim=0)
         return dataset_dict
 
@@ -919,10 +888,7 @@ def build_gdrn_train_loader(cfg, dataset_names):
     if cfg.MODEL.POSE_NET.XYZ_ONLINE:
         dataset = GDRN_Online_DatasetFromList(cfg, split="train", lst=dataset_dicts, copy=False)
     else:
-        if cfg.DATALOADER.TYPE == "stereobj_1m":
-            dataset = GDRN_Stereobj_1m_DatasetFromList(cfg, split="train", lst=dataset_dicts, copy=False)
-        else:
-            dataset = GDRN_DatasetFromList(cfg, split="train", lst=dataset_dicts, copy=False)
+        dataset = GDRN_DatasetFromList(cfg, split="train", lst=dataset_dicts, copy=False)
 
     sampler_name = cfg.DATALOADER.SAMPLER_TRAIN
     logger = logging.getLogger(__name__)
@@ -982,20 +948,7 @@ def build_gdrn_test_loader(cfg, dataset_name, train_objs=None):
         if cfg.DATALOADER.FILTER_EMPTY_DETS:
             dataset_dicts = filter_empty_dets(dataset_dicts)
 
-    if cfg.DATALOADER == "stereobj_1m":
-        dataset = GDRN_Stereobj_1m_DatasetFromList(
-            cfg,
-            split="test",
-            lst=dataset_dicts,
-            flatten=False
-        )
-    else:
-        dataset = GDRN_DatasetFromList(
-            cfg,
-            split="test",
-            lst=dataset_dicts,
-            flatten=False
-        )
+    dataset = GDRN_DatasetFromList(cfg, split="test", lst=dataset_dicts, flatten=False)
 
     sampler = InferenceSampler(len(dataset))
     # Always use 1 image per worker during inference since this is the
