@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 import json
+import signal
 
 os.environ["PYOPENGL_PLATFORM"] = "egl"
 import os.path as osp
@@ -230,16 +231,26 @@ def get_time_delta(sec):
     delta_time_str = str(timedelta(seconds=sec))
     return delta_time_str
 
+
+def handler_stop_signals(signum, frame):
+    global run
+    run = False
+
+run = True
+
 class XyzGen(object):
-    def __init__(self, base_dir, dataset, scene):
+    def __init__(self, base_dir, dataset, scenes):
         self.base_dir = Path(base_dir)
         self.dataset_root = self.base_dir / dataset
         model_dir = self.dataset_root / "models"
-        self.scene = scene
+        self.scenes = scenes
         cls_indexes = sorted(id2obj.keys())
         self.model = modelload(model_dir, cls_indexes)
         self.camera, self.baseline = get_camera_params(self.dataset_root)
-        # print(self.camera)
+        # print(self.camera)]
+
+        signal.signal(signal.SIGINT, handler_stop_signals)
+        signal.signal(signal.SIGTERM, handler_stop_signals)
 
     def main(self):
         camK = self.camera
@@ -247,132 +258,106 @@ class XyzGen(object):
         camK_inv = np.linalg.inv(camK)
         height = IM_H
         width = IM_W
-        for scene in tqdm(self.scene, postfix=f"{self.scene}"):
+        for scene in self.scenes:
             scene_root = self.dataset_root / scene
+            print(scene_root)
+            total = len(list(scene_root.glob('*_rt_label.json')))
 
-            for f in tqdm(scene_root.glob('*.jpg'), leave=False, desc=f"Image in Scene {scene}"):
-                print(f.stem)
+            with tqdm(total=total) as pbar:
+                for label_path in tqdm(scene_root.glob('*_rt_label.json'), leave=False, desc=f"Image in Scene {scene}"):
+                    print(label_path)
 
-                label_path = scene_root / (f.stem + '_rt_label.json')
-                # print('label_path', label_path)
-                with open(label_path, 'r') as rt_f:
-                    rt_data = json.load(rt_f)
+                    with open(label_path, 'r') as rt_f:
+                        rt_data = json.load(rt_f)
 
-                mask_path = scene_root / (f.stem + '_mask_label.npz')
-                obj_masks = np.load(mask_path, allow_pickle=True)['masks'].item()
-                for obj_number, obj in rt_data['class'].items():
-                    if obj not in obj2id:
-                        # print('skip object')
-                        continue
-                    outpath = scene_root / '{}_{:06d}_xyz.npz'.format(f.stem, int(obj2id[obj]))
-                    # if osp.exists(outpath):
-                        # print('skip, already exists')
-                        # continue
-                    xyz = {
-                        'left': {},
-                        'right': {}
-                    }
-                    for side in ['left', 'right']:
+                    mask_path = scene_root / (label_path.stem[:6] + '_mask_label.npz')
+                    obj_masks = np.load(mask_path, allow_pickle=True)['masks'].item()
+                    for obj_number, obj in rt_data['class'].items():
+                        if not run:
+                            print('Stopping')
+                            exit(0)
+                        if obj not in obj2id:
+                            continue
+                        outpath = scene_root / '{}_{:06d}_xyz.npz'.format(
+                            label_path.stem[:6],
+                            int(obj2id[obj])
+                        )
+                        if osp.exists(outpath):
+                            continue
+                        xyz = {
+                            'left': {},
+                            'right': {}
+                        }
+                        for side in ['left', 'right']:
 
-                        # print('obj', obj)
-                        mask = np.zeros([1440, 1440], dtype='bool')
-                        mask_in_bbox = obj_masks[side][obj_number]['mask']
+                            # print('obj', obj)
+                            mask = np.zeros([1440, 1440], dtype='bool')
+                            mask_in_bbox = obj_masks[side][obj_number]['mask']
+                            if mask_in_bbox is None:
+                                print('Mask is None', label_path.parts[-2], label_path.stem, side, obj_number)
+                                continue
 
-                        R = np.array(rt_data['rt'][obj_number]['R'], dtype="float32")
-                        t = np.array(rt_data['rt'][obj_number]['t'], dtype="float32").reshape((3, 1))
-                        if side == 'right':
-                            t += camK_inv @ self.baseline
+                            R = np.array(rt_data['rt'][obj_number]['R'], dtype="float32")
+                            t = np.array(rt_data['rt'][obj_number]['t'], dtype="float32").reshape((3, 1))
+                            if side == 'right':
+                                t += camK_inv @ self.baseline
 
-                        mask_in_bbox = mask_in_bbox.astype(bool).astype(float)
-                        pixellist = np.full([height, width], 100, dtype=np.float32)
-                        x1 = obj_masks[side][obj_number]['x_min']
-                        x2 = obj_masks[side][obj_number]['x_max']
-                        y1 = obj_masks[side][obj_number]['y_min']
-                        y2 = obj_masks[side][obj_number]['y_max']
-                        if x1 is not None:
-                            mask[y1:(y2+1), x1:(x2+1)] = mask_in_bbox
-                        if np.sum(mask_in_bbox) == 0:
-                            xyz[side]['xyz_crop'] = np.zeros((height, width, 3), dtype=np.float16)
-                            xyz[side]['xyxy'] = [0, 0, width - 1, height - 1]
-                        else:
-                            # begin to estimate new xyz
-                            obj_id = str(obj2id[obj])
-                            vert = self.model[obj_id]["vert"]
-                            norm_d = self.model[obj_id]["norm_d"]
-                            vert_id = self.model[obj_id]["vert_id"]
+                            mask_in_bbox = mask_in_bbox.astype(bool).astype(float)
+                            pixellist = np.full([height, width], 100, dtype=np.float32)
+                            x1 = obj_masks[side][obj_number]['x_min']
+                            x2 = obj_masks[side][obj_number]['x_max']
+                            y1 = obj_masks[side][obj_number]['y_min']
+                            y2 = obj_masks[side][obj_number]['y_max']
+                            if x1 is not None:
+                                mask[y1:(y2+1), x1:(x2+1)] = mask_in_bbox
+                            if np.sum(mask_in_bbox) == 0:
+                                xyz[side]['xyz_crop'] = np.zeros((height, width, 3), dtype=np.float16)
+                                xyz[side]['xyxy'] = [0, 0, width - 1, height - 1]
+                            else:
+                                # begin to estimate new xyz
+                                obj_id = str(obj2id[obj])
+                                vert = self.model[obj_id]["vert"]
+                                norm_d = self.model[obj_id]["norm_d"]
+                                vert_id = self.model[obj_id]["vert_id"]
 
-                            xyz[side]['xyxy'] = [x1, y1, x2, y2]
-                            xyz_crop = calc_xy_crop(
-                                vert_id,
-                                vert, camK,
-                                R,
-                                t,
-                                norm_d,
-                                height,
-                                width,
-                                camK_inv,
-                                pixellist,
-                                mask,
-                                x1,
-                                y1,
-                                x2,
-                                y2,
-                                )
-                            xyz[side]['xyz_crop'] = xyz_crop
-                    show = False
-                    if show:
-                        import matplotlib.pyplot as plt
-                        _, axarr = plt.subplots(1,2)
-                        axarr[0].imshow(xyz['left']['xyz_crop'])
-                        axarr[1].imshow(xyz['right']['xyz_crop'])
-                        plt.savefig(f"xyz_{obj}.png",  bbox_inches = 'tight', pad_inches = 0)
-                    np.savez_compressed(outpath, xyz=xyz)
+                                xyz[side]['xyxy'] = [x1, y1, x2, y2]
+                                xyz_crop = calc_xy_crop(
+                                    vert_id,
+                                    vert, camK,
+                                    R,
+                                    t,
+                                    norm_d,
+                                    height,
+                                    width,
+                                    camK_inv,
+                                    pixellist,
+                                    mask,
+                                    x1,
+                                    y1,
+                                    x2,
+                                    y2,
+                                    )
+                                xyz[side]['xyz_crop'] = xyz_crop
+                        show = False
+                        if show:
+                            import matplotlib.pyplot as plt
+                            _, axarr = plt.subplots(1,2)
+                            axarr[0].imshow(xyz['left']['xyz_crop'])
+                            axarr[1].imshow(xyz['right']['xyz_crop'])
+                            plt.savefig(f"xyz_{obj}.png",  bbox_inches = 'tight', pad_inches = 0)
+                        np.savez_compressed(outpath, xyz=xyz)
 
 
 if __name__ == "__main__":
     import argparse
-    import time
-
-    import setproctitle
 
     parser = argparse.ArgumentParser(description="gen denstereo train_pbr xyz")
     parser.add_argument("--bop_path", type=str, default="../../datasets/BOP_DATASETS")
     parser.add_argument("--dataset", type=str, default="stereobj_1m", help="dataset")
-    parser.add_argument("--scenes", type=str, default="all", help="scene id")
-    # parser.add_argument("--xyz_out", type=str, default="xyz_crop_hd", help="xyz high fidelity output folder name")
-    parser.add_argument("--threads", type=int, default=1, help="number of threads")
+    parser.add_argument("--scene", type=str, default="all", help="scene id")
     args = parser.parse_args()
 
     base_dir = args.bop_path
 
-    scenes = np.array(get_scenes(Path(base_dir) / args.dataset))
-    if args.scenes != "all":
-        # scenes = {args.scenes: scenes[args.scenes]}
-        scenes = scenes[:int(args.scenes)]
-
-    for scene in scenes:
-        # if 'biolab' in scene: continue
-        # print("scene: {}".format(scene))
-        xyz_gen = XyzGen(base_dir, args.dataset, [scene])
-        xyz_gen.main()
-
-    def gen_P(scenes):
-        T_begin = time.perf_counter()
-        setproctitle.setproctitle(
-            f"gen_xyz_{args.dataset}_{args.scene}"
-        )
-
-        xyz_gen = XyzGen(base_dir, args.dataset, scenes)
-        xyz_gen.main()
-
-        T_end = time.perf_counter() - T_begin
-        print(
-            "scene {}".format(args.scene),
-            "total time: {}".format(get_time_delta(T_end)),
-        )
-
-    # scenes = np.array(scenes.keys()).reshape((len(scenes), 1))
-    scenes = scenes.reshape((-1, 1))
-    print(scenes)
-    # with Pool(args.threads) as p:
-        # p.map(gen_P, scenes)
+    xyz_gen = XyzGen(base_dir, args.dataset, [args.scene])
+    xyz_gen.main()

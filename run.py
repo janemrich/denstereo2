@@ -46,8 +46,8 @@ class Config:
         self.core = core
     
     def set_dataset(self, dataset):
-        if not dataset in ['denstereo']:
-            raise ValueError('Dataset must be one of [denstereo]')
+        if not dataset in ['denstereo', 'stereobj_1m']:
+            raise ValueError('Dataset must be one of [denstereo, stereobj_1m]')
         self.dataset = dataset
 
     def __str__(self):
