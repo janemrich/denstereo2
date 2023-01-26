@@ -172,6 +172,7 @@ class STEREOBJ_1M_dataset:
         self.num_instances_without_valid_segmentation = 0
         self.num_instances_without_valid_box = 0
         self.num_instances_without_ground_truth = 0
+        self.num_instances_without_xyz = 0
         dataset_dicts = []  # ######################################################
         # it is slow because of loading and converting masks to rle
         for scene in tqdm(self.scenes):
@@ -263,6 +264,9 @@ class STEREOBJ_1M_dataset:
                         scene_root,
                         f"{int_im_id:06d}_{ref.stereobj_1m.obj2id[obj]:06d}_xyz.npz"
                     )
+                    if not osp.exists(xyz_path):
+                        self.num_instances_without_xyz += 1
+                        continue
                     inst = {
                         "category_id": obj_label,  # 0-based label
                         "bbox_l": BoxMode.convert(bbox_visib_l, BoxMode.XYXY_ABS, BoxMode.XYWH_ABS),  # TODO: load both bbox_obj and bbox_visib
@@ -303,6 +307,12 @@ class STEREOBJ_1M_dataset:
             logger.warning(
                 "Filtered out {} instances without ground truth. ".format(
                     self.num_instances_without_ground_truth
+                )
+            )
+        if self.num_instances_without_xyz > 0:
+            logger.warning(
+                "Filtered out {} instances without xyz. ".format(
+                    self.num_instances_without_xyz
                 )
             )
         if self.num_instances_without_valid_segmentation > 0:
