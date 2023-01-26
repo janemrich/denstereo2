@@ -70,7 +70,7 @@ if __name__ == '__main__':
             bs=bs,
             epochs=epochs,
             max_to_keep=2,
-            checkpoint_period=40,
+            checkpoint_period=5,
             weights="MODEL.WEIGHTS=\"{}\"".format(args.checkpoint) if args.resume else "",
             seed="SEED={}".format(seed) if seeded else "",
         )
