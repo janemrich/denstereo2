@@ -171,6 +171,7 @@ class STEREOBJ_1M_dataset:
         logger.info("loading dataset dicts: {}".format(self.name))
         self.num_instances_without_valid_segmentation = 0
         self.num_instances_without_valid_box = 0
+        self.num_instances_without_ground_truth = 0
         dataset_dicts = []  # ######################################################
         # it is slow because of loading and converting masks to rle
         for scene in tqdm(self.scenes):
@@ -185,10 +186,11 @@ class STEREOBJ_1M_dataset:
                     if self.max_im < int_im_id:
                         continue
 
-                gt_dict = json.load((
-                    scene_root / "{}_rt_label.json".format(str_im_id)
-                    ).open()
-                )
+                gt_path = scene_root / "{}_rt_label.json".format(str_im_id)
+                if not gt_path.exists():
+                    self.num_instances_without_ground_truth += 1 
+                    continue
+                gt_dict = json.load((gt_path).open())
 
                 rgb_path = scene_root / "{}.jpg".format(str_im_id)
                 assert osp.exists(rgb_path), rgb_path
@@ -297,6 +299,12 @@ class STEREOBJ_1M_dataset:
                 record["annotations"] = insts
                 dataset_dicts.append(record)
 
+        if self.num_instances_without_ground_truth > 0:
+            logger.warning(
+                "Filtered out {} instances without ground truth. ".format(
+                    self.num_instances_without_ground_truth
+                )
+            )
         if self.num_instances_without_valid_segmentation > 0:
             logger.warning(
                 "Filtered out {} instances without valid segmentation. "
@@ -402,7 +410,7 @@ SPLITS_STEREOBJ_1M = dict(
         scenes=ref.stereobj_1m.train_scenes,
         ref_key="stereobj_1m",
     ),
-    stereobj_1m_test_pbr =dict(
+    stereobj_1m_test =dict(
         name="stereobj_1m_test",
         objs=ref.stereobj_1m.objects,  # selected objects
         dataset_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/stereobj_1m"),
@@ -417,6 +425,23 @@ SPLITS_STEREOBJ_1M = dict(
         num_to_load=-1,
         filter_invalid=True,
         scenes=ref.stereobj_1m.test_scenes,
+        ref_key="stereobj_1m",
+    ),
+    stereobj_1m_val =dict(
+        name="stereobj_1m_val",
+        objs=ref.stereobj_1m.objects,  # selected objects
+        dataset_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/stereobj_1m"),
+        models_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/stereobj_1m/models"),
+        # xyz_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/stereobj_1m/train_pbr_left/xyz_crop_hd"),
+        scale_to_meter=1.0,
+        with_masks=True,  # (load masks but may not use it)
+        with_depth=False,  # (load depth path here, but may not use it)
+        height=1440,
+        width=1440,
+        use_cache=True,
+        num_to_load=-1,
+        filter_invalid=True,
+        scenes=ref.stereobj_1m.val_scenes,
         ref_key="stereobj_1m",
     ),
     stereobj_1m_debug_train =dict(
