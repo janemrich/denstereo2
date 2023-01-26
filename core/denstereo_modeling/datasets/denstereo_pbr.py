@@ -69,7 +69,7 @@ class DENSTEREO_PBR_Dataset:
         ##################################################
 
         # NOTE: careful! Only the selected objects
-        self.cat_ids = [cat_id for cat_id, obj_name in ref.ycbv.id2obj.items() if obj_name in self.objs]
+        self.cat_ids = [cat_id for cat_id, obj_name in ref.denstereo.id2obj.items() if obj_name in self.objs]
         # map selected objs to [0, num_objs-1]
         self.cat2label = {v: i for i, v in enumerate(self.cat_ids)}  # id_map
         self.label2cat = {label: cat for cat, label in self.cat2label.items()}
