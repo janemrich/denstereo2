@@ -4,9 +4,14 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
-        
-
-    
+        {
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
         {
             "name": "denstereo",
             "python": "/opt/conda/bin/python",
@@ -16,11 +21,13 @@
             "program": "core/denstereo_modeling/main_gdrn.py",
             "console": "integratedTerminal",
             "args": [
-                "--config-file", "configs/denstereo/denstereo/all_early_stereo-gdrn_det.py",
-                "--num-gpus", "1",
+                "--config-file",
+                "configs/denstereo/denstereo/all_early_stereo-gdrn_det.py",
+                "--num-gpus",
+                "1",
                 "--no-wandb",
                 "--opts",
-                    "SOLVER.IMS_PER_BATCH=32",
+                "SOLVER.IMS_PER_BATCH=32",
             ]
         },
         {
@@ -32,11 +39,85 @@
             "program": "core/gdrnpp_modeling/main_gdrn.py",
             "console": "integratedTerminal",
             "args": [
-                "--config-file", "configs/gdrnpp/denstereo/debug.py",
-                "--num-gpus", "1",
+                "--config-file",
+                "configs/gdrnpp/denstereo/all.py",
+                "--num-gpus",
+                "1",
                 "--no-wandb",
                 "--opts",
-                    "SOLVER.IMS_PER_BATCH=32",
+                "SOLVER.IMS_PER_BATCH=32",
+            ]
+        },
+        {
+            "name": "gdrn_stereo-debug",
+            "python": "/opt/conda/bin/python",
+            "type": "python",
+            "justMyCode": true,
+            "request": "launch",
+            "program": "core/gdrn_stereo_modeling/main_gdrn.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--config-file",
+                "configs/gdrn_stereo/stereobj_1m/debug.py",
+                "--num-gpus",
+                "1",
+                "--no-wandb",
+                "--opts",
+                "SOLVER.IMS_PER_BATCH=32",
+            ]
+        },
+        {
+            "name": "gdrn_stereo-mechanics_scene_8_1",
+            "python": "/opt/conda/bin/python",
+            "type": "python",
+            "justMyCode": true,
+            "request": "launch",
+            "program": "core/gdrn_stereo_modeling/main_gdrn.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--config-file",
+                "configs/gdrn_stereo/stereobj_1m/mechanics_scene_8_1.py",
+                "--num-gpus",
+                "1",
+                "--eval",
+                "--opts",
+                "SOLVER.IMS_PER_BATCH=32",
+                "MODEL.WEIGHTS=output/gdrn_stereo/stereobj_1m/first/model_final.pth",
+            ]
+        },
+        {
+            "name": "yolox",
+            // "python": "/opt/conda/envs/torch19/bin/python",
+            "python": "/opt/conda/bin/python",
+            "type": "python",
+            "justMyCode": true,
+            "request": "launch",
+            "program": "det/yolox/tools/main_yolox.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--num-gpus",
+                "1",
+                "--config-file",
+                "configs/yolox/stereobj_1m.py",
+            ]
+        },
+        {
+            "name": "eval",
+            "python": "/opt/conda/bin/python",
+            "type": "python",
+            "justMyCode": true,
+            "request": "launch",
+            "program": "core/gdrn_stereo_modeling/main_gdrn.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--config-file",
+                "configs/gdrnpp/denstereo/all_mono_old-arch_Region_LW0.01.py",
+                "--num-gpus",
+                "1",
+                "--no-wandb",
+                "--eval",
+                "--opts",
+                "SOLVER.IMS_PER_BATCH=32",
             ]
         },
     ]
