@@ -66,7 +66,7 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="gen denstereo train_pbr xyz")
-    parser.add_argument("--bop_path", type=str, default="/opt/spool/jemrich/")
+    parser.add_argument("--bop_path", type=str, default="/opt/spool/jemrich/BOP_DATASETS")
     parser.add_argument("--dataset", type=str, default="stereobj_1m", help="dataset")
     parser.add_argument("--scene", type=str, default="all", help="scene id")
     args = parser.parse_args()
@@ -80,6 +80,7 @@ if __name__ == "__main__":
 
     total_existing_xyz = 0
     total_should_exist = 0
+    unfinished_scenes = 0
 
     for scene in scenes:
         existing_xyz = 0
@@ -114,8 +115,11 @@ if __name__ == "__main__":
 
         total_existing_xyz += existing_xyz
         total_should_exist += should_exist
+        if should_exist - existing_xyz > 0:
+            unfinished_scenes += 1
     
     print('total_existing_xyz', total_existing_xyz)
     print('total_should_exist', total_should_exist)
     print('total_missing', total_should_exist - total_existing_xyz)
     print('total_missing %', (total_should_exist - total_existing_xyz) / total_should_exist)
+    print('unfinished_scenes', unfinished_scenes)

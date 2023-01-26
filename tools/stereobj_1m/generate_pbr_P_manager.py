@@ -23,7 +23,7 @@ def get_scenes(dataset_root):
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="gen denstereo train_pbr xyz")
-    parser.add_argument("--bop_path", type=str, default="/opt/spool/jemrich/")
+    parser.add_argument("--bop_path", type=str, default="/opt/spool/jemrich/BOP_DATASETS", help="bop path")
     parser.add_argument("--dataset", type=str, default="stereobj_1m", help="dataset")
     parser.add_argument("--node", type=str, default="ampere2", help="node name")
     parser.add_argument("--scenes", type=str, default="all", help="scene type")
