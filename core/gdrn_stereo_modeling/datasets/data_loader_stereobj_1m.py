@@ -406,8 +406,9 @@ class GDRN_Stereobj_1m_DatasetFromList(Base_DatasetFromList):
             # yapf: disable
             roi_keys = [
                 "scene_im_id",
+                "file_name",
                 "file_name_l",
-                "file_name_r",
+                # "file_name_r",
                 "cam",
                 "baseline",
                 "im_H",
@@ -435,8 +436,9 @@ class GDRN_Stereobj_1m_DatasetFromList(Base_DatasetFromList):
             for inst_i, inst_infos in enumerate(dataset_dict["annotations"]):
                 # inherent image-level infos
                 roi_infos["scene_im_id"].append(dataset_dict["scene_im_id"])
+                roi_infos["file_name"].append(dataset_dict["file_name"])
                 roi_infos["file_name_l"].append(dataset_dict["file_name_l"])
-                roi_infos["file_name_r"].append(dataset_dict["file_name_r"])
+                # roi_infos["file_name_r"].append(dataset_dict["file_name_r"])
                 roi_infos["im_H"].append(im_H)
                 roi_infos["im_W"].append(im_W)
                 roi_infos["cam"].append(dataset_dict["cam"].cpu().numpy())
@@ -510,7 +512,7 @@ class GDRN_Stereobj_1m_DatasetFromList(Base_DatasetFromList):
             for _key in roi_keys:
                 if _key in ["roi_img", "roi_coord_2d"]:
                     dataset_dict[_key] = torch.as_tensor(roi_infos[_key]).contiguous()
-                elif _key in ["model_info", "scene_im_id", "file_name_l", "file_name_r"]:  # "im_H", "im_W"
+                elif _key in ["model_info", "scene_im_id", "file_name_l", "file_name"]:  # "im_H", "im_W"
                     # can not convert to tensor
                     dataset_dict[_key] = roi_infos[_key]
                 else:

@@ -982,7 +982,7 @@ def build_gdrn_test_loader(cfg, dataset_name, train_objs=None):
         if cfg.DATALOADER.FILTER_EMPTY_DETS:
             dataset_dicts = filter_empty_dets(dataset_dicts)
 
-    if cfg.DATALOADER == "stereobj_1m":
+    if cfg.DATALOADER.TYPE == "stereobj_1m":
         dataset = GDRN_Stereobj_1m_DatasetFromList(
             cfg,
             split="test",

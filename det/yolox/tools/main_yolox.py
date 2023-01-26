@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import logging
 from loguru import logger as loguru_logger
+from pathlib import Path
 import os.path as osp
 from setproctitle import setproctitle
 from detectron2.engine import (
@@ -9,6 +10,8 @@ from detectron2.engine import (
 )
 from detectron2.engine.defaults import create_ddp_model
 from detectron2.config import LazyConfig, instantiate
+
+import wandb
 
 import cv2
 
@@ -47,6 +50,35 @@ def setup(args):
 @loguru_logger.catch
 def main(args):
     cfg = setup(args)
+    if comm.is_main_process():
+        # if args.no_wandb:
+            # mode = "disabled"
+        # else:
+            # mode = "online"
+        wandb.init(project="yolox", entity="jemrich") #, mode=mode)
+        wandb.config.update(cfg)
+        wandb.config.update({ "method": 'yolox',
+                              "dataset_0": cfg.DATASETS.TRAIN[0],
+                              "seed": cfg.get("SEED", None),
+                              })
+        '''
+        run_name = Path(cfg.OUTPUT_DIR).stem
+        wandb.run.name = run_name
+        path = Path(cfg.OUTPUT_DIR)
+        run = path.parts[3]
+        if run[-1] == 's':
+            run = '_'.join(run.split('_')[:-1])
+        run = run[:-12]
+        wandb.config.update({ "method": path.parts[1],
+                              "dataset_0": cfg.DATASETS.TRAIN[0],
+                              "dataset": path.parts[2],
+                              "run": run,
+                              "batch_size": cfg.SOLVER.IMS_PER_BATCH,
+                              "epochs": cfg.SOLVER.TOTAL_EPOCHS,
+                              "weights": cfg.MODEL.WEIGHTS,
+                              "seed": cfg.get("SEED", None),
+                              })
+        '''
     Trainer = YOLOX_DefaultTrainer
     if args.eval_only:  # eval
         model = Trainer.build_model(cfg)

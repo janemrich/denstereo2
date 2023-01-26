@@ -11,7 +11,7 @@ import weakref
 from collections import OrderedDict
 from typing import Optional, Sequence
 
-import core.utils.my_comm as comm
+import core.utils.my_comm_gdrnpp as comm
 import detectron2.data.transforms as T
 import torch
 from torch import nn

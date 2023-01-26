@@ -29,7 +29,7 @@ from det.yolox.utils import LRScheduler
 # from detectron2.evaluation import COCOEvaluator
 # from det.yolox.evaluators import COCOEvaluator
 from det.yolox.evaluators import YOLOX_COCOEvaluator
-from lib.torch_utils.solver.lr_scheduler import flat_and_anneal_lr_scheduler
+from lib.torch_utils.solver.lr_scheduler_gdrnpp import flat_and_anneal_lr_scheduler
 
 
 # Common training-related configs that are designed for "tools/lazyconfig_train_net.py"
@@ -134,7 +134,7 @@ lr_config = L(flat_and_anneal_lr_scheduler)(
     # optimizer=
     # total_iters=total_iters,  # to be set
     # warmup_iters=epoch_len * 3,
-    # anneal_point=5 / (total_epochs - 15),
+    anneal_point=5 / (train.total_epochs - 15) if train.total_epochs > 15 else 0.72,
     anneal_method="cosine",
     target_lr_factor=0.05,
 )

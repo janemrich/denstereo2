@@ -33,7 +33,7 @@ from det.yolox.utils import (
     time_synchronized,
     xyxy2xywh,
 )
-import core.utils.my_comm as comm
+import core.utils.my_comm_gdrnpp as comm
 
 import ref
 

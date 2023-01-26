@@ -62,7 +62,6 @@ class STEREOBJ_1M_dataset:
             "dataset_root",
             osp.join(DATASETS_ROOT, "BOP_DATASETS/stereobj_1m/")
         )
-        self.scenes = data_cfg['scenes']
         # self.xyz_root_l = data_cfg.get("xyz_root", osp.join(self.dataset_root, "xyz_crop_hd"))
         # self.xyz_root_r = data_cfg.get("xyz_root_right", osp.join(self.dataset_root_r, "xyz_crop_hd"))
         assert osp.exists(self.dataset_root), self.dataset_root
@@ -75,7 +74,7 @@ class STEREOBJ_1M_dataset:
         self.height = data_cfg["height"]  # 480
         self.width = data_cfg["width"]  # 640
 
-        self.cache_dir = data_cfg.get("cache_dir", osp.join(PROJ_ROOT, ".cache/gdrn_stereo/stereobj_1m/"))  # .cache
+        self.cache_dir = data_cfg.get("cache_dir", osp.join(PROJ_ROOT, ".cache/yolox/stereobj_1m/"))  # .cache
         self.use_cache = data_cfg.get("use_cache", True)
         self.num_to_load = data_cfg["num_to_load"]  # -1
         self.filter_invalid = data_cfg.get("filter_invalid", True)
@@ -89,6 +88,10 @@ class STEREOBJ_1M_dataset:
         self.obj2label = OrderedDict((obj, obj_id) for obj_id, obj in enumerate(self.objs))
         ##########################################################
 
+        self.scenes = data_cfg["scenes"]
+        # self.scenes = [f"{i:d}" for i in data_cfg["scenes"]]
+        self.id2scene = {i: scene for i, scene in enumerate(self.scenes)}
+        self.scene2id = {scene: id for id, scene in self.id2scene.items()}
         self.debug_im_id = data_cfg.get("debug_im_id", None)
         self.max_im = data_cfg.get("max_im", None)
 
@@ -127,8 +130,8 @@ class STEREOBJ_1M_dataset:
         if x_min_r is not None:
             mask_r[y_min_r:(y_max_r+1), x_min_r:(x_max_r+1)] = mask_in_bbox_r
 
-        mask_l = resize_binary_map(mask_l, (self.width, self.height))
-        mask_r = resize_binary_map(mask_r, (self.width, self.height))
+        # mask_l = resize_binary_map(mask_l, (self.width, self.height))
+        # mask_r = resize_binary_map(mask_r, (self.width, self.height))
         mask_l = mask_l.astype('uint8')
         mask_r = mask_r.astype('uint8')
 
@@ -174,10 +177,10 @@ class STEREOBJ_1M_dataset:
         dataset_dicts = []  # ######################################################
         # it is slow because of loading and converting masks to rle
         for scene in tqdm(self.scenes):
-            scene_id = ref.stereobj_1m.scene2id[scene]
+            scene_id = self.scene2id[scene]
             scene_root = Path(self.dataset_root) / scene
 
-            str_im_ids = [f.stem for f in scene_root.iterdir() if f.is_file() and f.suffix == '.jpg']
+            str_im_ids = [f.stem[:6] for f in scene_root.iterdir() if f.is_file() and f.suffix == '.json']
 
             for str_im_id in tqdm(str_im_ids, postfix=f"{scene_id}"):
                 int_im_id = int(str_im_id)
@@ -200,14 +203,12 @@ class STEREOBJ_1M_dataset:
                 record = {
                     "dataset_name": self.name,
                     "file_name": str(rgb_path),
-                    "file_name_l": str(rgb_path),
                     "height": self.height,
                     "width": self.width,
                     "image_id": int_im_id,
                     "scene_im_id": scene_im_id,  # for evaluation
                     "cam": K,
                     "baseline": [self.baseline, 0, 0],
-                    # "depth_factor": depth_factor,
                     "img_type": "real",  # NOTE: has background
                 }
                 insts = []
@@ -221,13 +222,6 @@ class STEREOBJ_1M_dataset:
                         if self.debug_im_id != scene_im_anno_id:
                             continue
                     
-                    R = np.array(gt_dict['rt'][obj_number]['R'], dtype="float32")
-                    t = np.array(gt_dict['rt'][obj_number]['t'], dtype="float32")
-                    pose = np.hstack([R, t.reshape(3, 1)])
-                    quat = mat2quat(R).astype("float32")
-                    proj = (record["cam"] @ t.T).T
-                    proj = proj[:2] / proj[2]
-
                     (
                         mask_single_l,
                         mask_single_r,
@@ -244,46 +238,11 @@ class STEREOBJ_1M_dataset:
                         self.num_instances_without_valid_box += 1
                         continue
 
-                    mask_single_erode_l = scin.binary_erosion(mask_single_l.astype(np.int))
-                    mask_single_erode_r = scin.binary_erosion(mask_single_r.astype(np.int))
-                    mask_single_l = mask_single_l.astype(np.bool).astype(np.int)
-                    mask_single_r = mask_single_r.astype(np.bool).astype(np.int)
-                    area_l = mask_single_erode_l.sum()
-                    area_r = mask_single_erode_r.sum()
-                    if (area_l <= 64) or (area_r <= 64):  # filter out too small or nearly invisible instances
-                        self.num_instances_without_valid_segmentation += 1
-                        continue
-
-                    mask_rle_l = binary_mask_to_rle(mask_single_l, compressed=True)
-                    mask_rle_r = binary_mask_to_rle(mask_single_r, compressed=True)
-
-                    xyz_path = osp.join(
-                        scene_root,
-                        f"{int_im_id:06d}_{ref.stereobj_1m.obj2id[obj]:06d}_xyz.npz"
-                    )
                     inst = {
                         "category_id": obj_label,  # 0-based label
-                        "bbox_l": BoxMode.convert(bbox_visib_l, BoxMode.XYXY_ABS, BoxMode.XYWH_ABS),  # TODO: load both bbox_obj and bbox_visib
-                        "bbox_r": BoxMode.convert(bbox_visib_r, BoxMode.XYXY_ABS, BoxMode.XYWH_ABS), # TODO: load both bbox_obj and bbox_visib
+                        "bbox": BoxMode.convert(bbox_visib_l, BoxMode.XYXY_ABS, BoxMode.XYWH_ABS),  # TODO: load both bbox_obj and bbox_visib
                         "bbox_mode": BoxMode.XYWH_ABS,
-                        "pose": pose,
-                        # "pose_l": pose_l,
-                        # "pose_r": pose_r,
-                        "quat": quat,
-                        "quat_l": quat,
-                        # "quat_r": quat_r,
-                        "trans": t,
-                        "trans_l": t,
-                        # "trans_r": t_r,
-                        "centroid_2d": proj,  # absolute (cx, cy)
-                        # "centroid_2d_l": proj_l,  # absolute (cx, cy)
-                        # "centroid_2d_r": proj_r,  # absolute (cx, cy)
-                        "segmentation_l": mask_rle_l, #500 by 500
-                        "segmentation_r": mask_rle_r,
-                        # "mask_full_file_l": mask_file_l,  # TODO: load as mask_full, rle
-                        # "mask_full_file_r": mask_file_r,  # TODO: load as mask_full, rle
-                        "visib_fract": (visib_fract_l + visib_fract_r) / 2,
-                        "xyz_path": xyz_path,
+                        "visib_fract": visib_fract_l,
                     }
 
                     model_info = self.models_info[str(ref.stereobj_1m.obj2id[obj])]
@@ -360,7 +319,7 @@ def get_stereobj_1m_metadata(obj_names, ref_key):
     """task specific metadata."""
     data_ref = ref.__dict__[ref_key]
 
-    # '''
+    '''
     cur_sym_infos = {}  # label based key
     loaded_models_info = data_ref.get_models_info()
 
@@ -373,10 +332,10 @@ def get_stereobj_1m_metadata(obj_names, ref_key):
         else:
             sym_info = None
         cur_sym_infos[i] = sym_info
-    # '''
+    '''
 
-    meta = {"thing_classes": obj_names, "sym_infos": cur_sym_infos}
-    # meta = {"thing_classes": obj_names}
+    # meta = {"thing_classes": obj_names, "sym_infos": cur_sym_infos}
+    meta = {"thing_classes": obj_names}
     return meta
 
 
@@ -402,6 +361,23 @@ SPLITS_STEREOBJ_1M = dict(
         scenes=ref.stereobj_1m.train_scenes,
         ref_key="stereobj_1m",
     ),
+    stereobj_1m_val =dict(
+        name="stereobj_1m_val",
+        objs=ref.stereobj_1m.objects,  # selected objects
+        dataset_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/stereobj_1m/"),
+        models_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/stereobj_1m/models"),
+        # xyz_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/stereobj_1m/train_pbr_left/xyz_crop_hd"),
+        scale_to_meter=1.0,
+        with_masks=True,  # (load masks but may not use it)
+        with_depth=False,  # (load depth path here, but may not use it)
+        height=1440,
+        width=1440,
+        use_cache=True,
+        num_to_load=-1,
+        filter_invalid=True,
+        scenes=ref.stereobj_1m.val_scenes,
+        ref_key="stereobj_1m",
+    ),
     stereobj_1m_test_pbr =dict(
         name="stereobj_1m_test",
         objs=ref.stereobj_1m.objects,  # selected objects
@@ -413,7 +389,7 @@ SPLITS_STEREOBJ_1M = dict(
         with_depth=False,  # (load depth path here, but may not use it)
         height=1440,
         width=1440,
-        use_cache=False,
+        use_cache=True,
         num_to_load=-1,
         filter_invalid=True,
         scenes=ref.stereobj_1m.test_scenes,
@@ -430,11 +406,13 @@ SPLITS_STEREOBJ_1M = dict(
         with_depth=True,  # (load depth path here, but may not use it)
         height=1440,
         width=1440,
-        use_cache=True,
+        use_cache=False,
         num_to_load=-1,
         filter_invalid=True,
         scenes=ref.stereobj_1m.debug_scenes,
         ref_key="stereobj_1m",
+        max_im = 100,
+        
     ),
     stereobj_1m_debug_test =dict(
         name="stereobj_1m_debug_test",
@@ -452,23 +430,6 @@ SPLITS_STEREOBJ_1M = dict(
         filter_invalid=True,
         scenes=ref.stereobj_1m.debug_scenes,
         max_im = 100,
-        ref_key="stereobj_1m",
-    ),
-    stereobj_1m_debug_val =dict(
-        name="stereobj_1m_debug_val",
-        objs=ref.stereobj_1m.mechanics_objects,  # selected objects
-        dataset_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/stereobj_1m"),
-        models_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/stereobj_1m/models"),
-        # xyz_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/stereobj_1m/train_pbr_left/xyz_crop_hd"),
-        scale_to_meter=0.001,
-        with_masks=True,  # (load masks but may not use it)
-        with_depth=True,  # (load depth path here, but may not use it)
-        height=1440,
-        width=1440,
-        use_cache=True,
-        num_to_load=-1,
-        filter_invalid=True,
-        scenes=ref.stereobj_1m.val_scenes,
         ref_key="stereobj_1m",
     ),
 )

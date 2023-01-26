@@ -20,16 +20,16 @@ train.amp.enabled = True
 model.backbone.depth = 1.33
 model.backbone.width = 1.25
 
-model.head.num_classes = 2
+model.head.num_classes = 21
 
 train.init_checkpoint = "pretrained_models/yolox/yolox_x.pth"
 
 # datasets
-DATASETS.TRAIN = ["icbin_pbr_train"]
-DATASETS.TEST = ["icbin_bop_test"]
+DATASETS.TRAIN = ["stereobj_1m_train"]
+DATASETS.TEST = ["stereobj_1m_val"]
 
 dataloader.train.dataset.lst.names = DATASETS.TRAIN
-dataloader.train.total_batch_size = 32
+dataloader.train.total_batch_size = 8
 
 # color aug
 dataloader.train.aug_wrapper.COLOR_AUG_PROB = 0.8
@@ -76,7 +76,7 @@ optimizer = L(Ranger)(
     # nesterov=True,
 )
 
-train.total_epochs = 30
+train.total_epochs = 1
 train.no_aug_epochs = 15
 train.checkpointer = dict(period=2, max_to_keep=10)
 
@@ -88,7 +88,7 @@ test.conf_thr = 0.001
 dataloader.test = [
     L(build_yolox_test_loader)(
         dataset=L(Base_DatasetFromList)(
-            split="test",
+            split="val",
             lst=L(get_detection_dataset_dicts)(names=test_dataset_name, filter_empty=False),
             img_size="${test.test_size}",
             preproc=L(ValTransform)(

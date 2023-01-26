@@ -63,10 +63,15 @@ with open(osp.join(dataset_root, "split", "mechanics_trainval_scenes.txt"), "r")
     # read all lines without newline char
     trainval_scenes.extend(f.read().splitlines())
 
-all_scenes = test_scenes + trainval_scenes
+all_scenes = trainval_scenes + test_scenes
+
 labeled_scenes = trainval_scenes
+    
+id2scene = {i: scene for i, scene in enumerate(sorted(all_scenes))}
+scene2id = {scene: id for id, scene in id2scene.items()}
 
 model_dir = osp.join(dataset_root, "models")
+model_eval_dir = model_dir
 # fine_model_dir = osp.join(dataset_root, "models_fine")
 # model_eval_dir = osp.join(dataset_root, "models_eval")
 # model_scaled_simple_dir = osp.join(dataset_root, "models_rescaled")  # m, .obj
@@ -120,7 +125,7 @@ id2obj = {
 }
 
 
-objects = id2obj.values()
+objects = list(id2obj.values())
 
 obj_num = len(id2obj)
 obj2id = {_name: _id for _id, _name in id2obj.items()}
@@ -130,11 +135,26 @@ obj2id = {_name: _id for _id, _name in id2obj.items()}
 # model_colors = [((i + 1) * 10, (i + 1) * 10, (i + 1) * 10) for i in range(obj_num)]  # for renderer
 
 # yapf: disable
-# diameters = np.array([172.063, 269.573, 198.377, 120.543, 196.463,
-                    #   89.797,  142.543, 114.053, 129.540, 197.796,
-                    #   259.534, 259.566, 161.922, 124.990, 226.170,
-                    #   237.299, 203.973, 121.365, 174.746, 217.094,
-                    #   102.903]) / 1000.0
+diameters = np.array([
+    0.1461045767407543,
+    0.25473471948537085,
+    0.18378781695690202,
+    0.16558196048735566,
+    0.15653643902028683,
+    0.07983673311480846,
+    0.20011998350430626,
+    0.1531628526543576,
+    0.114393357175511,
+    0.15148605326695933,
+    0.2559583108512058,
+    0.22460018049377958,
+    0.23522909301607026,
+    0.21167499334903236,
+    0.21092084041466744,
+    0.2527857901655345,
+    0.22173089545663227,
+    0.2175223953987267,
+])
 # yapf: enable
 # Camera info
 # width = 640
