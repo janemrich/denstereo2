@@ -25,7 +25,7 @@ INPUT = dict(
     ),
 )
 
-SEED = 1
+SEED = 0
 
 SOLVER = dict(
     IMS_PER_BATCH=100,
