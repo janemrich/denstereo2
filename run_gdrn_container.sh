@@ -7,6 +7,7 @@ DATASET=$5
 EVAL=$6
 BRANCH=$7
 WEIGHTS=$8
+EVAL_LOCAL=$9
 
 
 ### setup environment on spool
@@ -47,6 +48,9 @@ if [[ ! $EVAL == "False" ]]; then
     echo "sync eval model from pc3002"
     mkdir -p ${OUTPUT_PATH}/${METHOD}/${DATASET}/${RUN_ID}
     rsync -aP --update --whole-file pc3002:/opt/datasets/jemrich/output/${METHOD}/${DATASET}/${RUN_ID}/model_final.pth ${OUTPUT_PATH}/${METHOD}/${DATASET}/${RUN_ID}/model_final.pth
+    EVALUATE="--evaluate"
+fi
+if [[ $EVAL_LOCAL == "True" ]]; then
     EVALUATE="--evaluate"
 fi
 
