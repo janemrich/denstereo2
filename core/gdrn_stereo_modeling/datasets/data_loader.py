@@ -919,6 +919,7 @@ def build_gdrn_train_loader(cfg, dataset_names):
     if cfg.MODEL.POSE_NET.XYZ_ONLINE:
         dataset = GDRN_Online_DatasetFromList(cfg, split="train", lst=dataset_dicts, copy=False)
     else:
+        loader_type = cfg.DATALOADER.get("TYPE", "")
         if cfg.DATALOADER.TYPE == "stereobj_1m":
             dataset = GDRN_Stereobj_1m_DatasetFromList(cfg, split="train", lst=dataset_dicts, copy=False)
         else:
