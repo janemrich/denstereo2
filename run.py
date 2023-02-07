@@ -83,7 +83,7 @@ def run(config, config_name, args, seed=0):
         # + " start_session.sh {node} {gpus}"
         # + " {config} {run_id} {method} {dataset} {eval} {branch}"
         + " srun {node} --gpus {gpus} --nodes=1 --cpus-per-gpu=10 --mem-per-cpu=8G --pty"
-        + " bash run_gdrn_container.sh {gpus} {config} {run_id} {method} {dataset} {eval} {branch}"
+        + " bash run_gdrn_container.sh {gpus} {config} {run_id} {method} {dataset} {eval} {branch} {weights} {eval_local}"
         # + " bash run_gdrn_container.sh {gpus} {config} {run_id} {method} {dataset} {eval} {docker_session} {branch}"
         # + " 2>&1 | tee ~/log/{run_id}.log"
     )
@@ -97,6 +97,8 @@ def run(config, config_name, args, seed=0):
         eval=evaluate,
         # docker_session=get_tmux_pane(),
         branch='debug' if args.debug else 'denstereo',
+        weights=args.get('weights_local', 'False'),
+        eval_local="True" if args.weights_local else "False",
     )
 
     print(s + '\n')
@@ -115,6 +117,7 @@ if __name__=='__main__':
     parser.add_argument('--eval', action='append', type=str, default=None, help='evaluate run id')
     # parser.add_argument('--eval_ampere', type=str, default=None, help='evaluate run id on ampere')
     parser.add_argument('--node', type=str, default=None, help='node to run on')
+    parser.add_argument('--weights_local', type=str, default=None, help='path to weights to load')
     parser.add_argument('--debug', action='store_true', help='run in debug mode')
     args = parser.parse_args()
 

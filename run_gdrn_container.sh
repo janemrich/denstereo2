@@ -6,6 +6,8 @@ METHOD=$4
 DATASET=$5
 EVAL=$6
 BRANCH=$7
+WEIGHTS=$8
+EVAL_LOCAL=$9
 
 
 ### setup environment on spool
@@ -34,12 +36,21 @@ echo ""
 echo "sync dataset"
 # rsync -aP pc3002:/opt/datasets/BOP_DATASETS/denstereo/ /opt/spool/jemrich/BOP_DATASETS/denstereo
 
+if [[ ! $WEIGHTS == "False" ]]; then
+    CHECKPOINT="--checkpoint ${WEIGHTS}"
+else
+    CHECKPOINT=""
+fi
+
 EVALUATE=""
 if [[ ! $EVAL == "False" ]]; then
     echo ""
     echo "sync eval model from pc3002"
     mkdir -p ${OUTPUT_PATH}/${METHOD}/${DATASET}/${RUN_ID}
     rsync -aP --update --whole-file pc3002:/opt/datasets/jemrich/output/${METHOD}/${DATASET}/${RUN_ID}/model_final.pth ${OUTPUT_PATH}/${METHOD}/${DATASET}/${RUN_ID}/model_final.pth
+    EVALUATE="--evaluate"
+fi
+if [[ $EVAL_LOCAL == "True" ]]; then
     EVALUATE="--evaluate"
 fi
 
@@ -72,7 +83,7 @@ docker images
 docker load -i $IMAGE_CACHE
 
 docker run --shm-size=50G --rm --name prod --gpus $NGPUS -dit -v /denstereo -v $OUTPUT_PATH:/denstereo/output -v ~/denstereo-so/runs:/denstereo/runs -v /opt/spool/jemrich/:/denstereo/datasets -v $DATASET_DICT_CACHE:/denstereo/.cache denstereo-env:latest
-docker exec -it prod sh -c "export LD_LIBRARY_PATH=/opt/llvm/lib/:$LD_LIBRARY__PATH; cd /denstereo; git clone git@git.igd-r.fraunhofer.de:jemrich/denstereo-so.git; cd denstereo-so; git checkout ${BRANCH}; ln -s ../.cache .cache; ln -s ../runs runs; ln -s ../datasets datasets; rm output/.gitignore; rmdir output; ln -s ../output output; python launch_main.py $CONFIG $RUN_ID $EVALUATE $DEBUG"
+docker exec -it prod sh -c "export LD_LIBRARY_PATH=/opt/llvm/lib/:$LD_LIBRARY__PATH; cd /denstereo; git clone git@git.igd-r.fraunhofer.de:jemrich/denstereo-so.git; cd denstereo-so; git checkout ${BRANCH}; ln -s ../.cache .cache; ln -s ../runs runs; ln -s ../datasets datasets; rm output/.gitignore; rmdir output; ln -s ../output output; python launch_main.py $CONFIG $RUN_ID $EVALUATE $DEBUG $CHECKPOINT"
 docker stop prod
 
 echo "sync output..."
