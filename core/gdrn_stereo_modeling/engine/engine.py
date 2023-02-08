@@ -431,7 +431,7 @@ def do_train(cfg, args, model, optimizer, renderer=None, resume=False, pretraine
                 scheduler.step()
 
                 # val forward ============================================================
-                if iteration % 32 == 0:
+                if (val_dataset_name is not None) and (iteration % 32 == 0):
                     data = next(data_loader_val_iter)
 
                     batch = batch_data(cfg, data, renderer=renderer)
