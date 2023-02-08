@@ -152,6 +152,9 @@ def do_train(cfg, args, model, optimizer, renderer=None, resume=False, pretraine
     val_dataset_name = cfg.DATASETS.get("VAL", None)
     data_loader_val = None
     if val_dataset_name is not None:
+        val_cfg = cfg.clone()
+        val_cfg.SOLVER.IMS_PER_BATCH = cfg.VAL.IMS_PER_BATCH // 8
+        val_cfg.DATALOADER.NUM_WORKERS = cfg.DATALOADER.NUM_WORKERS // 8
         data_loader_val = build_gdrn_train_loader(cfg, val_dataset_name)
         data_loader_val_iter = iter(data_loader_val)
 
