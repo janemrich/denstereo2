@@ -149,6 +149,12 @@ def do_train(cfg, args, model, optimizer, renderer=None, resume=False, pretraine
     data_loader = build_gdrn_train_loader(cfg, train_dset_names)
     data_loader_iter = iter(data_loader)
 
+    val_dataset_name = cfg.DATASETS.get("VAL", None)
+    data_loader_val = None
+    if val_dataset_name is not None:
+        data_loader_val = build_gdrn_train_loader(cfg, val_dataset_name)
+        data_loader_val_iter = iter(data_loader_val)
+
     # load 2nd train dataloader if needed
     train_2_dset_names = cfg.DATASETS.get("TRAIN2", ())
     train_2_ratio = cfg.DATASETS.get("TRAIN2_RATIO", 0.0)
@@ -287,19 +293,7 @@ def do_train(cfg, args, model, optimizer, renderer=None, resume=False, pretraine
             # batch = batch_disp(cfg, data, renderer=renderer)
             with autocast(enabled=AMP_ON):
                 if cfg.MODEL.STEREO:
-                    if cfg.MODEL.POSE_NET.NAME == 'disparity_test':
-                        out_dict, loss_dict = model(
-                            batch["roi_img"],
-                            gt_mask_trunc=batch["roi_mask_trunc"],
-                            gt_mask_visib=batch["roi_mask_visib"],
-                            gt_mask_obj=batch["roi_mask_obj"],
-                            gt_mask_erode=batch.get("roi_mask_erode", None),
-                            # disparity parameters
-                            gt_disp=batch.get("depth", None),
-                            # other
-                            E_step=epoch,
-                        ) 
-                    elif cfg.MODEL.DISP_NET:
+                    if cfg.MODEL.DISP_NET:
                         out_dict, loss_dict = model(
                             batch["roi_img"],
                             gt_xyz=batch.get("roi_xyz", None),
@@ -435,6 +429,114 @@ def do_train(cfg, args, model, optimizer, renderer=None, resume=False, pretraine
                     ema.update(model)
                 storage.put_scalar("lr", optimizer.param_groups[0]["lr"], smoothing_hint=False)
                 scheduler.step()
+
+                # val forward ============================================================
+                if iteration % 32 == 0:
+                    data = next(data_loader_val_iter)
+
+                    batch = batch_data(cfg, data, renderer=renderer)
+                    # batch = batch_disp(cfg, data, renderer=renderer)
+                    with autocast(enabled=AMP_ON):
+                        if cfg.MODEL.STEREO:
+                            if cfg.MODEL.DISP_NET:
+                                out_dict, loss_dict = model(
+                                    batch["roi_img"],
+                                    gt_xyz=batch.get("roi_xyz", None),
+                                    gt_mask_trunc=batch["roi_mask_trunc"],
+                                    gt_mask_visib=batch["roi_mask_visib"],
+                                    gt_mask_obj=batch["roi_mask_obj"],
+                                    gt_mask_erode=batch.get("roi_mask_erode", None),
+                                    gt_region=batch.get("roi_region", None),
+                                    gt_ego_rot=batch.get("ego_rot", None),
+                                    gt_points=batch.get("roi_points", None),
+                                    sym_infos=batch.get("sym_info", None),
+                                    baseline=batch.get("baseline", None),
+                                    gt_trans=batch.get("trans", None),
+                                    gt_trans_ratio=batch["roi_trans_ratio"],
+                                    roi_classes=batch["roi_cls"],
+                                    roi_coord_2d=batch.get("roi_coord_2d", None),
+                                    roi_cams=batch["roi_cam"],
+                                    roi_centers=batch["roi_center"],
+                                    roi_whs=batch["roi_wh"],
+                                    roi_extents=batch.get("roi_extent", None),
+                                    resize_ratios=batch["resize_ratio"],
+                                    do_loss=True,
+                                    # disparity parameters
+                                    gt_disp=batch.get("disparity", None),
+                                    # other
+                                    E_step=epoch,
+                                ) 
+                            else:
+                                out_dict, loss_dict = model(
+                                    batch["roi_img"],
+                                    gt_xyz=batch.get("roi_xyz", None),
+                                    gt_mask_trunc=batch["roi_mask_trunc"],
+                                    gt_mask_visib=batch["roi_mask_visib"],
+                                    gt_mask_obj=batch["roi_mask_obj"],
+                                    gt_mask_erode=batch.get("roi_mask_erode", None),
+                                    gt_region=batch.get("roi_region", None),
+                                    gt_ego_rot=batch.get("ego_rot", None),
+                                    gt_points=batch.get("roi_points", None),
+                                    sym_infos=batch.get("sym_info", None),
+                                    baseline=batch.get("baseline", None),
+                                    gt_trans=batch.get("trans", None),
+                                    gt_trans_ratio=batch["roi_trans_ratio"],
+                                    roi_classes=batch["roi_cls"],
+                                    roi_coord_2d=batch.get("roi_coord_2d", None),
+                                    roi_cams=batch["roi_cam"],
+                                    roi_centers=batch["roi_center"],
+                                    roi_whs=batch["roi_wh"],
+                                    roi_extents=batch.get("roi_extent", None),
+                                    resize_ratios=batch["resize_ratio"],
+                                    do_loss=True,
+                                    # selfocc parameters
+                                    E_step=epoch,
+                                ) 
+                        else:
+                            out_dict, loss_dict = model(
+                                batch["roi_img"],
+                                gt_xyz=batch.get("roi_xyz", None),
+                                gt_mask_trunc=batch["roi_mask_trunc"],
+                                gt_mask_visib=batch["roi_mask_visib"],
+                                gt_mask_obj=batch["roi_mask_obj"],
+                                gt_mask_erode=batch.get("roi_mask_erode", None),
+                                gt_region=batch.get("roi_region", None),
+                                gt_ego_rot=batch.get("ego_rot", None),
+                                gt_points=batch.get("roi_points", None),
+                                sym_infos=batch.get("sym_info", None),
+                                gt_trans=batch.get("trans", None),
+                                gt_trans_ratio=batch["roi_trans_ratio"],
+                                roi_classes=batch["roi_cls"],
+                                roi_coord_2d=batch.get("roi_coord_2d", None),
+                                roi_cams=batch["roi_cam"],
+                                roi_centers=batch["roi_center"],
+                                roi_whs=batch["roi_wh"],
+                                roi_extents=batch.get("roi_extent", None),
+                                resize_ratios=batch["resize_ratio"],
+                                do_loss=True,
+                                # selfocc parameters
+                                E_step=epoch,
+                            ) 
+                        losses = sum(loss_dict.values())
+                        if not torch.isfinite(losses).all():
+                            # print with flush
+                            print(cfg, flush=True)
+                            print(loss_dict, flush=True)
+                            print(data, flush=True)
+                            print('iteration', iteration, flush=True)
+
+                        assert torch.isfinite(losses).all(), (loss_dict, data)
+
+                    # loss_dict_reduced = {k: v.item() for k, v in comm.reduce_dict(loss_dict).items()}
+                    # losses_reduced = sum(loss for loss in loss_dict_reduced.values())
+                    losses_reduced = sum(loss for loss in loss_dict.values())
+                    if comm.is_main_process():
+                        # storage.put_scalars(total_loss=losses_reduced, **loss_dict_reduced)
+                        loss_dict = {"val_{}".format(k): v.item() for k, v in loss_dict.items()}
+                        storage.put_scalars(val_loss=losses_reduced, **loss_dict)
+
+                        optimizer.zero_grad()
+                    ### end of validation
 
             if cfg.TEST.EVAL_PERIOD > 0 and (iteration + 1) % cfg.TEST.EVAL_PERIOD == 0 and iteration != max_iter - 1:
                 if ema is not None:
