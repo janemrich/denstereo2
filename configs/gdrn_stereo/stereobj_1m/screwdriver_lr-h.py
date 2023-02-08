@@ -38,7 +38,7 @@ SOLVER = dict(
     ANNEAL_METHOD="cosine",  # "cosine"
     ANNEAL_POINT=0.72,
     # REL_STEPS=(0.3125, 0.625, 0.9375),
-    OPTIMIZER_CFG=dict(_delete_=True, type="Ranger", lr=1e-3, weight_decay=0),
+    OPTIMIZER_CFG=dict(_delete_=True, type="Ranger", lr=5e-3, weight_decay=0),
     WEIGHT_DECAY=0.0,
     WARMUP_FACTOR=0.001,
     WARMUP_ITERS=1000,
@@ -52,6 +52,9 @@ DATASETS = dict(
         "stereobj_1m_screwdriver_train",
         # "denstereo_002_master_chef_can_train_pbr",
         # "denstereo_train_pbr",
+    ),
+    VAL=(
+        "stereobj_1m_val",
     ),
     TEST=(
         "stereobj_1m_val",
