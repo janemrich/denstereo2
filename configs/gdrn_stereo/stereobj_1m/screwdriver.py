@@ -56,11 +56,17 @@ DATASETS = dict(
         # "denstereo_002_master_chef_can_train_pbr",
         # "denstereo_train_pbr",
     ),
+    VAL=(
+        "stereobj_1m_val",
+    ),
     TEST=(
         "stereobj_1m_val",
+        # "stereobj_1m_screwdriver_train",
+        # "denstereo_002_master_chef_can_train_pbr",
     ),
     DET_FILES_TEST=(
         "datasets/BOP_DATASETS/stereobj_1m/test_bboxes/val_left.json",
+        # "datasets/BOP_DATASETS/stereobj_1m/test_bboxes/train_left.json",
     ),
     SYM_OBJS=['centrifuge_tube', 'microplate', 'needle_nose_pliers',
                 'screwdriver', 'side_cutters', 'tube_rack_1.5_2_ml',
