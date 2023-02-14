@@ -94,6 +94,7 @@ class GDRN(nn.Module):
         resize_ratios=None, # no side dimension
         do_loss=False,
         E_step=None,
+        do_val=False,
 
     ):
         cfg = self.cfg
@@ -268,24 +269,25 @@ class GDRN(nn.Module):
                 and (gt_region is not None)
             )
             mean_re, mean_te = compute_mean_re_te(pred_trans, pred_rot_m, gt_trans[:, gt_id], gt_ego_rot[:, gt_id])
+            category = "val" if do_val else "vis"
             vis_dict = {
-                "vis/error_R": mean_re,
-                "vis/error_t": mean_te * 100,  # cm
-                "vis/error_tx": np.abs(pred_trans[0, 0].detach().item() - gt_trans[0, gt_id, 0].detach().item()) * 100,  # cm
-                "vis/error_ty": np.abs(pred_trans[0, 1].detach().item() - gt_trans[0, gt_id, 1].detach().item()) * 100,  # cm
-                "vis/error_tz": np.abs(pred_trans[0, 2].detach().item() - gt_trans[0, gt_id, 2].detach().item()) * 100,  # cm
-                "vis/tx_pred": pred_trans[0, 0].detach().item(),
-                "vis/ty_pred": pred_trans[0, 1].detach().item(),
-                "vis/tz_pred": pred_trans[0, 2].detach().item(),
-                "vis/tx_net": pred_t_[0, 0].detach().item(),
-                "vis/ty_net": pred_t_[0, 1].detach().item(),
-                "vis/tz_net": pred_t_[0, 2].detach().item(),
-                "vis/tx_gt": gt_trans[0, gt_id, 0].detach().item(),
-                "vis/ty_gt": gt_trans[0, gt_id, 1].detach().item(),
-                "vis/tz_gt": gt_trans[0, gt_id, 2].detach().item(),
-                "vis/tx_rel_gt": gt_trans_ratio[0, gt_id, 0].detach().item(),
-                "vis/ty_rel_gt": gt_trans_ratio[0, gt_id, 1].detach().item(),
-                "vis/tz_rel_gt": gt_trans_ratio[0, gt_id, 2].detach().item(),
+                category + "/error_R": mean_re,
+                category + "/error_t": mean_te * 100,  # cm
+                category + "/error_tx": np.abs(pred_trans[0, 0].detach().item() - gt_trans[0, gt_id, 0].detach().item()) * 100,  # cm
+                category + "/error_ty": np.abs(pred_trans[0, 1].detach().item() - gt_trans[0, gt_id, 1].detach().item()) * 100,  # cm
+                category + "/error_tz": np.abs(pred_trans[0, 2].detach().item() - gt_trans[0, gt_id, 2].detach().item()) * 100,  # cm
+                category + "/tx_pred": pred_trans[0, 0].detach().item(),
+                category + "/ty_pred": pred_trans[0, 1].detach().item(),
+                category + "/tz_pred": pred_trans[0, 2].detach().item(),
+                category + "/tx_net": pred_t_[0, 0].detach().item(),
+                category + "/ty_net": pred_t_[0, 1].detach().item(),
+                category + "/tz_net": pred_t_[0, 2].detach().item(),
+                category + "/tx_gt": gt_trans[0, gt_id, 0].detach().item(),
+                category + "/ty_gt": gt_trans[0, gt_id, 1].detach().item(),
+                category + "/tz_gt": gt_trans[0, gt_id, 2].detach().item(),
+                category + "/tx_rel_gt": gt_trans_ratio[0, gt_id, 0].detach().item(),
+                category + "/ty_rel_gt": gt_trans_ratio[0, gt_id, 1].detach().item(),
+                category + "/tz_rel_gt": gt_trans_ratio[0, gt_id, 2].detach().item(),
             }
             if E_step is not None:
                 if E_step > self.epoch_flag:
