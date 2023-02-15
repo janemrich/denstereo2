@@ -78,6 +78,22 @@ def move_images():
         for f in images_annotations.glob(scene + '/*'):
             f.rename(test_left / scene / f.name)
 
+def downscale_images():
+    total = 0
+    for split in bop_splits.keys():
+        for scene in scenes[split]:
+            total += len(list(images_annotations.glob(scene + '/*.jpg')))
+
+    with tqdm(total=total) as pbar:
+        for split in tqdm(bop_splits.keys(), desc='Splits'):
+            for scene in tqdm(scenes[split], leave=False, desc='Scenes'):
+                for f in tqdm(images_annotations.glob(scene + '/*.jpg'), leave=False, desc='Images'):
+                    im = Image.open(f)
+                    w, h = im.size
+                    im = im.resize((w//2, h//2))
+                    path = f.name.replace('.jpg', '_downscaled.jpg')
+                    print(path)
+                    # im.save(path)
 
 def transform_images():
     total = 0
@@ -135,4 +151,5 @@ def transform_masks():
 
 # create_folders()
 # transform_images()
-transform_masks()
+# transform_masks()
+downscale_images()
