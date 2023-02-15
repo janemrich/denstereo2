@@ -53,9 +53,9 @@ DATASETS = dict(
         # "denstereo_002_master_chef_can_train_pbr",
         # "denstereo_train_pbr",
     ),
-    VAL=(
-        "stereobj_1m_val",
-    ),
+    # VAL=(
+        # "stereobj_1m_val",
+    # ),
     TEST=(
         "stereobj_1m_val",
     ),
