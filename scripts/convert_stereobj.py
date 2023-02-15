@@ -4,15 +4,16 @@ from tqdm import tqdm
 import numpy as np
 import json
 
+dataset_path = Path('/opt/spool/jemrich/BOP_DATASETS/stereobj_1m')
 
-split = Path('/opt/spool/jemrich/stereobj_1m/split')
-train_left = Path('/opt/spool/jemrich/stereobj_1m/train~left')
-train_right = Path('/opt/spool/jemrich/stereobj_1m/train~right')
-test_right = Path('/opt/spool/jemrich/stereobj_1m/test~right')
-test_left = Path('/opt/spool/jemrich/stereobj_1m/test~left')
-val_left = Path('/opt/spool/jemrich/stereobj_1m/val~left')
-val_right = Path('/opt/spool/jemrich/stereobj_1m/val~right')
-images_annotations = Path('/opt/spool/jemrich/stereobj_1m/images_annotations')
+split = dataset_path / 'split'
+train_left = dataset_path / 'train~left'
+train_right = dataset_path / 'train~right'
+test_right = dataset_path / 'test~right'
+test_left = dataset_path / 'test~left'
+val_left = dataset_path / 'val~left'
+val_right = dataset_path / 'val~right'
+images_annotations = dataset_path / 'images_annotations'
 
 bop_splits = {
     'train': {
@@ -87,13 +88,12 @@ def downscale_images():
     with tqdm(total=total) as pbar:
         for split in tqdm(bop_splits.keys(), desc='Splits'):
             for scene in tqdm(scenes[split], leave=False, desc='Scenes'):
-                for f in tqdm(images_annotations.glob(scene + '/*.jpg'), leave=False, desc='Images'):
+                for f in tqdm(dataset_path.glob(scene + '/*.jpg'), leave=False, desc='Images'):
                     im = Image.open(f)
                     w, h = im.size
                     im = im.resize((w//2, h//2))
-                    path = f.name.replace('.jpg', '_downscaled.jpg')
-                    print(path)
-                    # im.save(path)
+                    path = dataset_path / scene / f.name.replace('.jpg', '_downscaled.jpg')
+                    im.save(path)
 
 def transform_images():
     total = 0
