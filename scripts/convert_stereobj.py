@@ -3,6 +3,7 @@ from PIL import Image
 from tqdm import tqdm
 import numpy as np
 import json
+from multiprocessing import Pool
 
 dataset_path = Path('/opt/spool/jemrich/BOP_DATASETS/stereobj_1m')
 
@@ -79,21 +80,35 @@ def move_images():
         for f in images_annotations.glob(scene + '/*'):
             f.rename(test_left / scene / f.name)
 
-def downscale_images():
-    total = 0
-    for split in bop_splits.keys():
-        for scene in scenes[split]:
-            total += len(list(images_annotations.glob(scene + '/*.jpg')))
+def downscale_task(scene):
+    for f in tqdm(dataset_path.glob(scene + '/*.jpg'), leave=False, desc='Images'):
+        im = Image.open(f)
+        w, h = im.size
+        im = im.resize((w//2, h//2))
+        path = dataset_path / scene / f.name.replace('.jpg', '_downscaled.jpg')
+        im.save(path)
 
-    with tqdm(total=total) as pbar:
+def downscale_images(filter=None):
+    # total = 0
+    # for split in bop_splits.keys():
+        # for scene in scenes[split]:
+            # total += len(list(images_annotations.glob(scene + '/*.jpg')))
+
+    # with tqdm(total=total) as pbar:
         for split in tqdm(bop_splits.keys(), desc='Splits'):
-            for scene in tqdm(scenes[split], leave=False, desc='Scenes'):
-                for f in tqdm(dataset_path.glob(scene + '/*.jpg'), leave=False, desc='Images'):
-                    im = Image.open(f)
-                    w, h = im.size
-                    im = im.resize((w//2, h//2))
-                    path = dataset_path / scene / f.name.replace('.jpg', '_downscaled.jpg')
-                    im.save(path)
+            # for scene in tqdm(scenes[split], leave=False, desc='Scenes'):
+                # if filter is not None:
+                    # if not filter in scene:
+                        # continue
+                # run task in parallel in python
+            # def gen_P(scenes):
+                # downscale_task(scene)
+
+            # scenes = np.array(range(50)).reshape((50, 1))
+            scene_pool = np.array(scenes[split], dtype=str)#.reshape((len(scenes[split]), 1))
+            print(scene_pool)
+            with Pool(20) as p:
+                p.map(downscale_task, scene_pool)
 
 def transform_images():
     total = 0
