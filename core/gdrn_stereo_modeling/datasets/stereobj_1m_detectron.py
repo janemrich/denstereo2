@@ -96,11 +96,18 @@ class STEREOBJ_1M_dataset:
         with open(cam_param_filename, 'r') as f:
             cam_param = json.load(f)
 
-        self.proj_matrix_l = np.array(cam_param['left']['P'])
-        self.proj_matrix_r = np.array(cam_param['right']['P'])
+        self.downscaled = data_cfg.get("downscaled", False)
+
+        if self.downscaled:
+            self.proj_matrix_l = np.array(cam_param['left']['P']) / 2
+            self.proj_matrix_r = np.array(cam_param['right']['P']) / 2
+        else:
+            self.proj_matrix_l = np.array(cam_param['left']['P'])
+            self.proj_matrix_r = np.array(cam_param['right']['P'])
 
         self.baseline = abs(self.proj_matrix_r[0, -1] / self.proj_matrix_r[0, 0])
             # self.baseline = np.array(json.load(cam_file)['baseline'], dtype=np.float32)
+        
 
     def load_masks_and_bboxes(self, scene_root, int_im_id, obj):
         mask_visib_file = scene_root / "{:06d}_mask_label.npz".format(int_im_id)
@@ -129,6 +136,16 @@ class STEREOBJ_1M_dataset:
 
         mask_l = resize_binary_map(mask_l, (self.width, self.height))
         mask_r = resize_binary_map(mask_r, (self.width, self.height))
+        if self.downscaled and (x_min_l is not None) and (x_min_r is not None):
+            x_min_l = x_min_l // 2
+            x_max_l = x_max_l // 2
+            y_min_l = y_min_l // 2
+            y_max_l = y_max_l // 2
+            x_min_r = x_min_r // 2
+            x_max_r = x_max_r // 2
+            y_min_r = y_min_r // 2
+            y_max_r = y_max_r // 2
+
         mask_l = mask_l.astype('uint8')
         mask_r = mask_r.astype('uint8')
 
@@ -179,7 +196,7 @@ class STEREOBJ_1M_dataset:
             scene_id = ref.stereobj_1m.scene2id[scene]
             scene_root = Path(self.dataset_root) / scene
 
-            str_im_ids = [f.stem for f in scene_root.iterdir() if f.is_file() and f.suffix == '.jpg']
+            str_im_ids = [f.stem[:6] for f in scene_root.iterdir() if f.is_file() and f.suffix == '.jpg']
 
             for str_im_id in tqdm(str_im_ids, postfix=f"{scene_id}"):
                 int_im_id = int(str_im_id)
@@ -193,7 +210,10 @@ class STEREOBJ_1M_dataset:
                     continue
                 gt_dict = json.load((gt_path).open())
 
-                rgb_path = scene_root / "{}.jpg".format(str_im_id)
+                if self.downscaled:
+                    rgb_path = scene_root / "{}_downscaled.jpg".format(str_im_id)
+                else:
+                    rgb_path = scene_root / "{}.jpg".format(str_im_id)
                 assert osp.exists(rgb_path), rgb_path
 
                 scene_im_id = f"{scene_id}/{int_im_id}"
@@ -260,9 +280,10 @@ class STEREOBJ_1M_dataset:
                     mask_rle_l = binary_mask_to_rle(mask_single_l, compressed=True)
                     mask_rle_r = binary_mask_to_rle(mask_single_r, compressed=True)
 
+                    xyz_file_ending = '_xyz_downscaled.npz' if self.downscaled else '_xyz.npz'
                     xyz_path = osp.join(
                         scene_root,
-                        f"{int_im_id:06d}_{ref.stereobj_1m.obj2id[obj]:06d}_xyz.npz"
+                        f"{int_im_id:06d}_{ref.stereobj_1m.obj2id[obj]:06d}{xyz_file_ending}"
                     )
                     if not osp.exists(xyz_path):
                         self.num_instances_without_xyz += 1
@@ -420,6 +441,24 @@ SPLITS_STEREOBJ_1M = dict(
         scenes=ref.stereobj_1m.train_scenes,
         ref_key="stereobj_1m",
     ),
+    stereobj_1m_train_downscaled =dict(
+        name="stereobj_1m_train_downscaled",
+        objs=ref.stereobj_1m.objects,  # selected objects
+        dataset_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/stereobj_1m/"),
+        models_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/stereobj_1m/models"),
+        # xyz_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/stereobj_1m/train_pbr_left/xyz_crop_hd"),
+        scale_to_meter=1.0,
+        with_masks=True,  # (load masks but may not use it)
+        with_depth=False,  # (load depth path here, but may not use it)
+        height=720,
+        width=720,
+        use_cache=True,
+        num_to_load=-1,
+        filter_invalid=True,
+        downscaled=True,
+        scenes=ref.stereobj_1m.train_scenes,
+        ref_key="stereobj_1m",
+    ),
     stereobj_1m_test =dict(
         name="stereobj_1m_test",
         objs=ref.stereobj_1m.objects,  # selected objects
@@ -431,9 +470,27 @@ SPLITS_STEREOBJ_1M = dict(
         with_depth=False,  # (load depth path here, but may not use it)
         height=1440,
         width=1440,
-        use_cache=False,
+        use_cache=True,
         num_to_load=-1,
         filter_invalid=True,
+        scenes=ref.stereobj_1m.test_scenes,
+        ref_key="stereobj_1m",
+    ),
+    stereobj_1m_test_downscaled =dict(
+        name="stereobj_1m_test_downscaled",
+        objs=ref.stereobj_1m.objects,  # selected objects
+        dataset_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/stereobj_1m"),
+        models_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/stereobj_1m/models"),
+        # xyz_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/stereobj_1m/train_pbr_left/xyz_crop_hd"),
+        scale_to_meter=1.0,
+        with_masks=True,  # (load masks but may not use it)
+        with_depth=False,  # (load depth path here, but may not use it)
+        height=720,
+        width=720,
+        use_cache=True,
+        num_to_load=-1,
+        filter_invalid=True,
+        downscaled=True,
         scenes=ref.stereobj_1m.test_scenes,
         ref_key="stereobj_1m",
     ),
@@ -454,6 +511,24 @@ SPLITS_STEREOBJ_1M = dict(
         scenes=ref.stereobj_1m.val_scenes,
         ref_key="stereobj_1m",
     ),
+    stereobj_1m_val_downscaled =dict(
+        name="stereobj_1m_val_downscaled",
+        objs=ref.stereobj_1m.objects,  # selected objects
+        dataset_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/stereobj_1m"),
+        models_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/stereobj_1m/models"),
+        # xyz_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/stereobj_1m/train_pbr_left/xyz_crop_hd"),
+        scale_to_meter=1.0,
+        with_masks=True,  # (load masks but may not use it)
+        with_depth=False,  # (load depth path here, but may not use it)
+        height=720,
+        width=720,
+        use_cache=True,
+        num_to_load=-1,
+        filter_invalid=True,
+        downscaled=True,
+        scenes=ref.stereobj_1m.val_scenes,
+        ref_key="stereobj_1m",
+    ),
     stereobj_1m_debug_train =dict(
         name="stereobj_1m_debug_train",
         objs=ref.stereobj_1m.mechanics_objects,  # selected objects
@@ -469,6 +544,24 @@ SPLITS_STEREOBJ_1M = dict(
         num_to_load=-1,
         filter_invalid=True,
         scenes=ref.stereobj_1m.debug_scenes,
+        ref_key="stereobj_1m",
+    ),
+    stereobj_1m_debug_train_downscaled =dict(
+        name="stereobj_1m_debug_train_downscaled",
+        objs=ref.stereobj_1m.mechanics_objects,  # selected objects
+        dataset_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/stereobj_1m"),
+        models_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/stereobj_1m/models"),
+        # xyz_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/stereobj_1m/train_pbr_left/xyz_crop_hd"),
+        scale_to_meter=1.0,
+        with_masks=True,  # (load masks but may not use it)
+        with_depth=True,  # (load depth path here, but may not use it)
+        height=1440//2,
+        width=1440//2,
+        use_cache=True,
+        num_to_load=-1,
+        filter_invalid=True,
+        scenes=ref.stereobj_1m.debug_scenes,
+        downscaled=True,
         ref_key="stereobj_1m",
     ),
     stereobj_1m_debug_test =dict(
@@ -509,33 +602,35 @@ SPLITS_STEREOBJ_1M = dict(
 )
 
 # single obj splits
-for obj in ref.stereobj_1m.objects:
-    for split in ["train"]:
-        name = "stereobj_1m_{}_{}".format(obj, split)
-        if split in ["train"]:
-            filter_invalid = True
-        elif split in ["test"]:
-            filter_invalid = False
-        else:
-            raise ValueError("{}".format(split))
-        if name not in SPLITS_STEREOBJ_1M:
-            SPLITS_STEREOBJ_1M[name] = dict(
-                name=name,
-                objs=[obj],  # only this obj
-                dataset_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/stereobj_1m"),
-                models_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/stereobj_1m/models"),
-                # xyz_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/stereobj_1m/train_pbr_left/xyz_crop_hd"),
-                scale_to_meter=1,
-                with_masks=True,  # (load masks but may not use it)
-                with_depth=True,  # (load depth path here, but may not use it)
-                height=1440,
-                width=1440,
-                use_cache=True,
-                num_to_load=-1,
-                filter_invalid=filter_invalid,
-                scenes=ref.stereobj_1m.train_scenes,
-                ref_key="stereobj_1m",
-            )
+for scale in ["", "_downscaled"]:
+    for obj in ref.stereobj_1m.objects:
+        for split in ["train"]:
+            name = "stereobj_1m_{}_{}{}".format(obj, split, scale)
+            if split in ["train"]:
+                filter_invalid = True
+            elif split in ["test"]:
+                filter_invalid = False
+            else:
+                raise ValueError("{}".format(split))
+            if name not in SPLITS_STEREOBJ_1M:
+                SPLITS_STEREOBJ_1M[name] = dict(
+                    name=name,
+                    objs=[obj],  # only this obj
+                    dataset_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/stereobj_1m"),
+                    models_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/stereobj_1m/models"),
+                    # xyz_root=osp.join(DATASETS_ROOT, "BOP_DATASETS/stereobj_1m/train_pbr_left/xyz_crop_hd"),
+                    scale_to_meter=1,
+                    with_masks=True,  # (load masks but may not use it)
+                    with_depth=True,  # (load depth path here, but may not use it)
+                    height=720 if scale == "_downscaled" else 1440,
+                    width=720 if scale == "_downscaled" else 1440,
+                    use_cache=True,
+                    num_to_load=-1,
+                    filter_invalid=filter_invalid,
+                    downscaled=True if scale == "_downscaled" else False,
+                    scenes=ref.stereobj_1m.train_scenes,
+                    ref_key="stereobj_1m",
+                )
 
 for obj in ref.stereobj_1m.objects:
     for split in ["test_pbr"]:
